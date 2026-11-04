@@ -1,7 +1,13 @@
 name = "tidori-ministries"
+main = "./worker/index.js"
 compatibility_date = "2026-11-04"
 account_id = "685d3b233f85dcb18e56515ee219d4f3"
 
 [assets]
 directory = "./dist"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[vars]
+PESAPAL_CURRENCY = "USD"

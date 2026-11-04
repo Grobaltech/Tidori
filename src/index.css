@@ -1,0 +1,24 @@
+@import './assets/flaticon/flaticon.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply font-sans text-[#777] bg-white antialiased; font-size: 16px; }
+  h1, h2, h3, h4, h5 { @apply text-navy font-bold; }
+  a { @apply transition-colors; }
+}
+
+@layer components {
+  .container-page { @apply mx-auto w-full max-w-page px-4; }
+
+  /* Template button: gold outline, fills on hover */
+  .btn-custom {
+    @apply inline-block border-2 border-gold px-5 py-3 text-center text-base font-medium text-[#777]
+           transition-all duration-300 ease-out cursor-pointer;
+  }
+  .btn-custom:hover { @apply bg-gold text-white; }
+  .btn-custom.btn-gold { @apply bg-gold text-white; }
+  .btn-custom.btn-gold:hover { @apply bg-transparent text-[#777]; }
+}

@@ -16,9 +16,24 @@
   /* Template button: gold outline, fills on hover */
   .btn-custom {
     @apply inline-block border-2 border-gold px-5 py-3 text-center text-base font-medium text-[#777]
-           transition-all duration-300 ease-out cursor-pointer;
+           transition-all duration-300 ease-out cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+    box-shadow: inset 0 0 0 0 #fdbe33;
   }
-  .btn-custom:hover { @apply bg-gold text-white; }
-  .btn-custom.btn-gold { @apply bg-gold text-white; }
-  .btn-custom.btn-gold:hover { @apply bg-transparent text-[#777]; }
+  .btn-custom:hover:not(:disabled), .btn-custom.is-active { @apply text-ink; box-shadow: inset 0 0 0 40px #fdbe33; }
+  .btn-light { @apply text-white; }
+
+  .section-header { @apply relative mx-auto mb-11 w-full max-w-[700px]; }
+  .section-header p { @apply mb-1 text-[22px] font-semibold capitalize text-gold; }
+  .section-header h2 { @apply m-0 text-[35px] font-bold sm:text-[40px] md:text-[45px] leading-tight; }
+
+  .field { @apply w-full border border-gray-300 bg-white px-4 py-3 text-base text-[#555] outline-none focus:border-gold; }
+  .field-dark { @apply w-full border border-white/30 bg-transparent px-4 py-3 text-base text-white placeholder-white/70 outline-none focus:border-gold; }
+
+  .page-header-bg {
+    background: linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,.5)), url('/img/page-header.jpg') center/cover fixed no-repeat;
+  }
 }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fadeIn .6s ease; }
+@keyframes spin { to { transform: rotate(360deg); } }

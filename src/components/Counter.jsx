@@ -1,26 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useInView } from '../hooks/hooks';
 
-export default function Counter({ value, label, icon }) {
+export default function Counter({ value, suffix = '' }) {
   const [ref, seen] = useInView();
   const [n, setN] = useState(0);
   useEffect(() => {
     if (!seen) return;
-    const end = Number(value) || 0;
-    const step = Math.max(1, Math.floor(end / 40));
-    let cur = 0;
-    const id = setInterval(() => {
-      cur = Math.min(end, cur + step);
-      setN(cur);
-      if (cur >= end) clearInterval(id);
-    }, 30);
-    return () => clearInterval(id);
+    const duration = 1800;
+    const start = performance.now();
+    let raf;
+    const tick = (t) => {
+      const p = Math.min(1, (t - start) / duration);
+      setN(Math.round(value * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [seen, value]);
-  return (
-    <div ref={ref} className="text-center">
-      {icon && <i className={`${icon} mb-3 block text-4xl text-gold`} />}
-      <div className="text-4xl font-bold text-navy">{n}+</div>
-      <div className="mt-1 text-sm uppercase tracking-wide">{label}</div>
-    </div>
-  );
+  return <span ref={ref}>{n.toLocaleString()}{suffix}</span>;
 }

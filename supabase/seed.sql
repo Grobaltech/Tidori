@@ -10,8 +10,8 @@ insert into public.events (title, description, image_url, location, starts_at) v
  ('Community Prayer Night', 'An evening of prayer for our city and families.', '/img/event-2.jpg', 'Fellowship Hall', now() + interval '14 days');
 
 insert into public.posts (slug, title, excerpt, body, image_url, author) values
- ('welcome-to-tidori-ministries', 'Welcome to Tidori Ministries', 'A word of welcome from our church family.', E'We are glad you are here.\n\nReplace this with your own message.', '/img/blog-1.jpg', 'Tidori Ministries'),
- ('walking-in-faith', 'Walking in Faith', E'Replace this devotional with your own writing.', '/img/blog-2.jpg', 'Tidori Ministries'),
+ ('welcome-to-tidori-ministries', 'Welcome to Tidori Ministries', 'A word of welcome from our church family.', E'We are glad you are here.\\n\\nReplace this with your own message.', '/img/blog-1.jpg', 'Tidori Ministries'),
+ ('walking-in-faith', 'Walking in Faith', 'A devotional reflection on trusting God each day.', E'Replace this devotional with your own writing.', '/img/blog-2.jpg', 'Tidori Ministries'),
  ('serving-our-community', 'Serving Our Community', 'How we are meeting needs near us.', E'Replace this with an update from your outreach team.', '/img/blog-3.jpg', 'Tidori Ministries');
 
 insert into public.team_members (name, role, photo_url, sort_order) values

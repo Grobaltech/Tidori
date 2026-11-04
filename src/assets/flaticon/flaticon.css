@@ -1,0 +1,26 @@
+/* Flaticon icon font bundled with the HELPZ template (license: LICENSE-TEMPLATE.txt / flaticon license) */
+@font-face {
+  font-family: "Flaticon";
+  src: url("./Flaticon.woff2") format("woff2"),
+       url("./Flaticon.woff") format("woff"),
+       url("./Flaticon.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+[class^="flaticon-"]:before, [class*=" flaticon-"]:before {
+  font-family: Flaticon;
+  font-style: normal;
+  font-size: inherit;
+  margin-left: 0;
+}
+.flaticon-water:before { content: "\f100"; }
+.flaticon-healthcare:before { content: "\f101"; }
+.flaticon-diet:before { content: "\f102"; }
+.flaticon-education:before { content: "\f103"; }
+.flaticon-home:before { content: "\f104"; }
+.flaticon-charity:before { content: "\f105"; }
+.flaticon-social-care:before { content: "\f106"; }
+.flaticon-kindness:before { content: "\f107"; }
+.flaticon-donation:before { content: "\f108"; }
+.flaticon-woman:before { content: "\f109"; }

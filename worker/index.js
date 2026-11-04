@@ -65,6 +65,16 @@ async function verifyPayment(env, trackingId, merchantReference) {
     throw new Error(data.error?.message || "Could not verify the Pesapal transaction reference.");
   }
 
+  const records = await supabaseRequest(env,
+    `donation_pledges?select=amount,currency&merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}&limit=1`
+  );
+  const donation = records?.[0];
+  if (!donation) throw new Error("No matching donation record exists for this Pesapal transaction.");
+  if (String(data.currency || "").toUpperCase() !== String(donation.currency).toUpperCase()
+      || Math.abs(Number(data.amount) - Number(donation.amount)) > 0.01) {
+    throw new Error("The verified Pesapal amount or currency does not match the donation.");
+  }
+
   const status = String(data.payment_status_description || "").toUpperCase();
   const paymentStatus = status === "COMPLETED" || Number(data.status_code) === 1
     ? "paid"
@@ -163,21 +173,6 @@ async function createPayment(request, env) {
   }
 }
 
-async function registerIpn(request, env) {
-  if (!env.PESAPAL_SETUP_TOKEN) return json({ error: "IPN setup is not enabled." }, 503);
-  if (request.headers.get("authorization") !== `Bearer ${env.PESAPAL_SETUP_TOKEN}`) return json({ error: "Unauthorized." }, 401);
-  if (env.PESAPAL_IPN_ID) return json({ ipn_id: env.PESAPAL_IPN_ID, already_registered: true });
-  const missing = requiredEnv(env);
-  if (missing.length) return json({ error: `Cloudflare is missing: ${missing.join(", ")}` }, 503);
-  const token = await pesapalToken(env);
-  const origin = new URL(request.url).origin;
-  const result = await pesapalCall(env, "/api/URLSetup/RegisterIPN", token, {
-    url: `${origin}/api/payments/pesapal/ipn`,
-    ipn_notification_type: "GET",
-  });
-  if (!result.ipn_id) throw new Error("Pesapal did not return an IPN ID.");
-  return json({ ipn_id: result.ipn_id, url: result.url, status: result.ipn_status_description || result.status });
-}
 
 async function handleNotification(request, env, isCallback) {
   const url = new URL(request.url);
@@ -223,9 +218,6 @@ export default {
     try {
       if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
         return await createPayment(request, env);
-      }
-      if (url.pathname === "/api/payments/pesapal/register-ipn" && request.method === "POST") {
-        return await registerIpn(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
         return await handleNotification(request, env, false);

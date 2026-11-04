@@ -7,7 +7,7 @@ account_id = "685d3b233f85dcb18e56515ee219d4f3"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = true
 
 [vars]
 PESAPAL_CURRENCY = "USD"

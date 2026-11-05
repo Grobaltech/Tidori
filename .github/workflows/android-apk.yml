@@ -26,6 +26,8 @@ jobs:
           java-version: '17'
       - name: Install dependencies
         run: npm install
+      - name: Build website assets
+        run: npm run build
       - name: Prepare Android project
         run: |
           npx cap add android

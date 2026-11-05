@@ -125,3 +125,23 @@ from (values
 where not exists (select 1 from public.site_facts);
 
 -- New public tables may need to be explicitly exposed in Supabase Data API settings.
+
+
+-- Public website media bucket. Public read is limited to this bucket; only Tidori admins can upload or manage files.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('tidori-website','tidori-website',true,8388608,array['image/png','image/jpeg','image/webp'])
+on conflict (id) do update set public = true, file_size_limit = 8388608, allowed_mime_types = array['image/png','image/jpeg','image/webp'];
+
+drop policy if exists "Public reads Tidori website media" on storage.objects;
+create policy "Public reads Tidori website media" on storage.objects
+ for select to anon, authenticated using (bucket_id = 'tidori-website');
+drop policy if exists "Tidori admins upload website media" on storage.objects;
+create policy "Tidori admins upload website media" on storage.objects
+ for insert to authenticated with check (bucket_id = 'tidori-website' and (select private.is_tidori_admin()));
+drop policy if exists "Tidori admins update website media" on storage.objects;
+create policy "Tidori admins update website media" on storage.objects
+ for update to authenticated using (bucket_id = 'tidori-website' and (select private.is_tidori_admin()))
+ with check (bucket_id = 'tidori-website' and (select private.is_tidori_admin()));
+drop policy if exists "Tidori admins delete website media" on storage.objects;
+create policy "Tidori admins delete website media" on storage.objects
+ for delete to authenticated using (bucket_id = 'tidori-website' and (select private.is_tidori_admin()));

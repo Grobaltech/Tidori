@@ -21,7 +21,7 @@ function AboutTabs() {
   return (
     <section className="py-11">
       <div className="container-page grid items-center gap-10 lg:grid-cols-2">
-        <div className="h-[420px] bg-cover bg-center lg:h-[560px]" style={{ backgroundImage: "url('/img/about.jpg')" }} role="img" aria-label="Church community" />
+        <div className="h-[420px] bg-cover bg-center lg:h-[560px]" style={{ backgroundImage: `url('${activeSite.about?.imageUrl || '/img/about.jpg'}')` }} role="img" aria-label="Church community" />
         <div>
           <SectionHeader center={false} kicker="Learn About Us" title="A church family serving with love" />
           <div className="flex">

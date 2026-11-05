@@ -33,3 +33,28 @@
 .tidori-admin .admin-mobile-overlay{display:none}
 @media(max-width:991px){.tidori-admin .admin-sidebar{transform:translateX(-100%)}.tidori-admin.sidebar-open .admin-sidebar{transform:translateX(0)}.tidori-admin .admin-main{margin-left:0}.tidori-admin.sidebar-open .admin-mobile-overlay{display:block;position:fixed;inset:0;background:rgba(25,28,36,.35);z-index:35}}
 @media(max-width:640px){.tidori-admin .admin-topbar{padding:10px 14px}.tidori-admin .admin-content{padding:18px 14px}.tidori-admin .admin-page-title{font-size:21px}.tidori-admin .admin-stat{padding:16px;min-height:100px}.tidori-admin .admin-stat-value{font-size:23px}}
+
+/* Functional topbar menus */
+.tidori-admin .admin-topbar-menu{position:relative;display:flex;align-items:center}
+.tidori-admin .admin-topbar-action{position:relative}
+.tidori-admin .admin-topbar-dot{position:absolute;top:7px;right:7px;width:8px;height:8px;border:2px solid #fff;border-radius:50%;background:#ef4444}
+.tidori-admin .admin-profile-trigger{border:0;background:transparent;padding:2px 4px;cursor:pointer}
+.tidori-admin .admin-dropdown{position:absolute;top:calc(100% + 12px);right:0;z-index:60;width:min(390px,calc(100vw - 28px));max-height:min(480px,70vh);overflow-y:auto;border:1px solid #edf0f5;border-radius:10px;background:#fff;box-shadow:0 12px 35px rgba(25,28,36,.14);color:#52576d}
+.tidori-admin .admin-dropdown-heading{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px;border-bottom:1px solid #edf0f5;background:#fff;color:#191c24;font-size:14px}
+.tidori-admin .admin-dropdown-heading button{border:0;background:transparent;color:#009cff;font-size:12px;font-weight:700;cursor:pointer}
+.tidori-admin .admin-dropdown-heading span{color:#9aa0b2;font-size:11px;font-weight:500}
+.tidori-admin .admin-dropdown-item{display:flex;width:100%;align-items:center;gap:10px;padding:12px 14px;border:0;border-bottom:1px solid #f1f3f7;background:#fff;text-align:left;cursor:pointer}
+.tidori-admin .admin-dropdown-item:hover,.tidori-admin .admin-dropdown-link:hover{background:#f8fafc}
+.tidori-admin .admin-dropdown-item-icon{display:grid;width:34px;height:34px;flex:none;place-items:center;border-radius:50%;background:#eaf6ff;color:#009cff}
+.tidori-admin .admin-dropdown-item strong,.tidori-admin .admin-dropdown-item small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tidori-admin .admin-dropdown-item strong{color:#191c24;font-size:12px}
+.tidori-admin .admin-dropdown-item span small{max-width:210px;margin-top:3px;color:#8b91a3;font-size:11px}
+.tidori-admin .admin-dropdown-item>small{max-width:85px;color:#9aa0b2;font-size:10px}
+.tidori-admin .admin-dropdown-empty{margin:0;padding:25px 16px;text-align:center;color:#9aa0b2;font-size:12px}
+.tidori-admin .admin-profile-dropdown{width:min(280px,calc(100vw - 28px))}
+.tidori-admin .admin-profile-summary{display:flex;align-items:center;gap:11px;padding:16px;border-bottom:1px solid #edf0f5}
+.tidori-admin .admin-profile-summary strong,.tidori-admin .admin-profile-summary small{display:block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tidori-admin .admin-profile-summary strong{color:#191c24;font-size:13px}
+.tidori-admin .admin-profile-summary small{margin-top:3px;color:#8b91a3;font-size:11px}
+.tidori-admin .admin-dropdown-link{display:flex;width:100%;align-items:center;gap:10px;padding:12px 16px;border:0;background:#fff;color:#52576d;text-align:left;font-size:13px;cursor:pointer}
+@media(max-width:420px){.tidori-admin .admin-dropdown-item>small{display:none}.tidori-admin .admin-dropdown-item span small{max-width:185px}}

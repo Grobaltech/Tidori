@@ -21,6 +21,10 @@ const sections = [
   { id: 'content', label: 'Website CMS', icon: FaNewspaper },
   { id: 'messages', label: 'Messages', icon: FaEnvelope },
   { id: 'settings', label: 'Settings', icon: FaCog },
+  { id: 'volunteers', label: 'Volunteers', icon: FaUserCheck },
+  { id: 'team', label: 'Church team', icon: FaChurch },
+  { id: 'newsletter', label: 'Subscribers', icon: FaInbox },
+  { id: 'pledges', label: 'Giving pledges', icon: FaHandsHelping },
 ];
 
 const tableConfig = {
@@ -186,11 +190,7 @@ export default function AdminDashboard() {
         <div className="admin-nav-label">Main menu</div>
         <nav className="admin-nav" aria-label="Administrator navigation">
           {visibleSections.map(item => { const ItemIcon = item.icon; return <button key={item.id} className={activeSection === item.id ? 'active' : ''} onClick={() => changeSection(item.id)}><span className="admin-nav-icon"><ItemIcon /></span>{item.label}</button>; })}
-          <div className="admin-nav-label mt-5">Records</div>
-          <button className={activeSection === 'volunteers' ? 'active' : ''} onClick={()=>changeSection('volunteers')}><span className="admin-nav-icon"><FaUserCheck /></span>Volunteers</button>
-          <button className={activeSection === 'team' ? 'active' : ''} onClick={()=>changeSection('team')}><span className="admin-nav-icon"><FaChurch /></span>Church team</button>
-          <button className={activeSection === 'newsletter' ? 'active' : ''} onClick={()=>changeSection('newsletter')}><span className="admin-nav-icon"><FaInbox /></span>Subscribers</button>
-          <button className={activeSection === 'pledges' ? 'active' : ''} onClick={()=>changeSection('pledges')}><span className="admin-nav-icon"><FaHandsHelping /></span>Giving pledges</button>
+
         </nav>
         <div className="mx-5 mt-8 rounded-lg bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#191c24]"><FaUserShield className="text-[#009cff]" /> Secure administration</div><p className="m-0 text-xs leading-5 text-gray-400">Access is restricted to authorised Tidori administrators.</p></div>
       </aside>

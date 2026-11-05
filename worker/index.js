@@ -211,9 +211,9 @@ async function adminUsers(request, env) {
       for (const field of ["full_name", "email", "phone", "role", "member_status"]) {
         if (Object.prototype.hasOwnProperty.call(input, field)) profilePatch[field] = field === "email" ? clean(input[field], 200).toLowerCase() : clean(input[field], field === "full_name" ? 120 : 80);
       }
-      if (profilePatch.email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(profilePatch.email)) return json({ error: "Enter a valid email address." }, 400);
+      if (profilePatch.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profilePatch.email)) return json({ error: "Enter a valid email address." }, 400);
       if (Object.keys(profilePatch).some((key) => ["email", "phone", "full_name"].includes(key))) {
-        const current = await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`);
+        const currentResult = await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`);\n        const current = currentResult.user || currentResult;
         await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`, "PUT", {
           ...(profilePatch.email ? { email: profilePatch.email } : {}),
           ...(profilePatch.phone !== undefined ? { phone: profilePatch.phone || null } : {}),
@@ -237,7 +237,7 @@ async function adminUsers(request, env) {
       if (action === "invite") {
         const email = clean(input.email, 200).toLowerCase();
         const fullName = clean(input.full_name, 120);
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || fullName.length < 2) return json({ error: "Enter a valid email and full name." }, 400);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || fullName.length < 2) return json({ error: "Enter a valid email and full name." }, 400);
         const origin = new URL(request.url).origin;
         const invited = await authAdminRequest(env, "/invite", "POST", {
           email,
@@ -253,7 +253,7 @@ async function adminUsers(request, env) {
         return json({ success: true, message: action === "suspend" ? "Account suspended." : "Account suspension lifted." });
       }
       if (action === "reset_password") {
-        const target = await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`);
+        const targetResult = await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`);\n        const target = targetResult.user || targetResult;
         if (!target.email) return json({ error: "This account has no email address for password recovery." }, 400);
         const origin = new URL(request.url).origin;
         await authAdminRequest(env, `/recover?redirect_to=${encodeURIComponent(`${origin}/profile`)}`, "POST", { email: target.email });

@@ -1,64 +1,65 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaAngleLeft, FaAngleRight } from 'react-icons/fa';
 import { site } from '../config/site';
 import VideoModal from './VideoModal';
 import { useAsync } from '../hooks/hooks';
 import { getHomepageSlides, getSiteContent } from '../lib/api';
 
-const defaultSlides = [
+const defaults = [
   { img: '/img/carousel-1.jpg', title: 'Welcome to Tidori Ministries', text: 'A community of faith, hope and service. Come as you are and grow with us.' },
   { img: '/img/carousel-2.jpg', title: 'Get involved with a helping hand', text: 'Serve alongside our church family as we love our neighbours in practical ways.' },
   { img: '/img/carousel-3.jpg', title: 'Bringing hope to our community', text: 'Your giving and prayers help us reach families in need.' },
 ];
 
 export default function Hero() {
-  const { data: cmsSlides } = useAsync(getHomepageSlides);
-  const { data: cmsSite } = useAsync(getSiteContent);
-  const slides = cmsSlides?.length ? cmsSlides : defaultSlides;
-  const activeSite = cmsSite || site;
-  const [i, setI] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const ref = useRef(null);
   const [video, setVideo] = useState(false);
-  const go = (d) => setI((x) => (x + d + slides.length) % slides.length);
-  useEffect(() => { if (i >= slides.length) setI(0); }, [i, slides.length]);
+  const { data: remoteSlides } = useAsync(getHomepageSlides);
+  const { data: remoteSite } = useAsync(getSiteContent);
+  const slides = remoteSlides?.length ? remoteSlides : defaults;
+  const activeSite = remoteSite || site;
 
   useEffect(() => {
-    if (paused) return;
-    const t = setInterval(() => setI((x) => (x + 1) % slides.length), 5500);
-    return () => clearInterval(t);
-  }, [paused, slides.length]);
+    const jq = window.jQuery;
+    if (!jq || !jq.fn.owlCarousel || !ref.current) return;
+    const carousel = jq(ref.current);
+    carousel.owlCarousel({
+      autoplay: true, autoplayTimeout: 5500, autoplayHoverPause: true,
+      animateOut: 'fadeOut', animateIn: 'fadeIn', items: 1,
+      smartSpeed: 700, dots: false, loop: slides.length > 1, nav: true,
+      navText: ['<i class="fa fa-angle-left"></i>', '<i class="fa fa-angle-right"></i>']
+    });
+    return () => {
+      if (carousel.hasClass('owl-loaded')) carousel.trigger('destroy.owl.carousel');
+    };
+  }, [slides]);
 
   return (
-    <section className="relative h-[520px] overflow-hidden bg-ink sm:h-[600px] lg:h-[700px]"
-      onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      {slides.map((s, idx) => (
-        <div key={s.id || s.title} className={`absolute inset-0 transition-opacity duration-700 ${idx === i ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
-          <img src={s.image_url || s.img} alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-black/55" />
-          <div className="absolute inset-0 flex items-center justify-center px-4">
-            <div className="max-w-[700px] text-center">
-              <h1 className="mb-5 text-4xl font-bold !text-white sm:text-5xl lg:text-6xl">{s.title}</h1>
-              <p className="mb-6 text-lg text-white sm:text-xl">{s.description || s.text}</p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <Link to={s.button_url || "/give"} className="btn-custom btn-light">{s.button_label || "Give Now"}</Link>
-                {activeSite.videoUrl ? (
-                  <button className="btn-custom btn-light" onClick={() => setVideo(true)}>Watch Video</button>
-                ) : (
-                  <Link to="/about" className="btn-custom btn-light">Learn More</Link>
-                )}
+    <>
+      <section className="carousel">
+        <div className="container-fluid">
+          <div className="owl-carousel" ref={ref}>
+            {slides.map((slide, index) => (
+              <div className="carousel-item" key={slide.id || slide.title || index}>
+                <div className="carousel-img">
+                  <img src={slide.image_url || slide.img} alt={slide.image_alt || 'Tidori Ministries'} />
+                </div>
+                <div className="carousel-text">
+                  <h1>{slide.title}</h1>
+                  <p>{slide.description || slide.text}</p>
+                  <div className="carousel-btn">
+                    <Link className="btn btn-custom" to={slide.button_url || '/give'}>{slide.button_label || 'Give Now'}</Link>
+                    {activeSite.videoUrl
+                      ? <button className="btn btn-custom btn-play" type="button" onClick={() => setVideo(true)}>Watch Video</button>
+                      : <Link className="btn btn-custom" to="/about">Learn More</Link>}
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
-      ))}
-      {[[-1, FaAngleLeft, 'left-0', 'Previous'], [1, FaAngleRight, 'right-0', 'Next']].map(([d, Icon, pos, label]) => (
-        <button key={label} aria-label={label} onClick={() => go(d)}
-          className={`absolute ${pos} top-1/2 z-10 flex h-14 w-12 -translate-y-1/2 items-center justify-center bg-black/40 text-3xl text-white hover:bg-gold hover:text-ink`}>
-          <Icon />
-        </button>
-      ))}
+      </section>
       {video && <VideoModal src={activeSite.videoUrl} onClose={() => setVideo(false)} />}
-    </section>
+    </>
   );
 }

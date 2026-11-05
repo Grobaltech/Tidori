@@ -11,10 +11,12 @@ import GiveForm from '../components/GiveForm';
 import Loading from '../components/Loading';
 import { site } from '../config/site';
 import { useAsync, useDocTitle } from '../hooks/hooks';
-import { getOutreach, getEvents, getPosts } from '../lib/api';
+import { getOutreach, getEvents, getPosts, getSiteContent, getMinistries as getPublishedMinistries, getSiteFacts } from '../lib/api';
 
 function AboutTabs() {
   const [tab, setTab] = useState('about');
+  const { data: cmsSite } = useAsync(getSiteContent);
+  const activeSite = cmsSite || site;
   const tabs = [['about', 'About'], ['mission', 'Mission'], ['vision', 'Vision']];
   return (
     <section className="py-11">
@@ -30,7 +32,7 @@ function AboutTabs() {
               </button>
             ))}
           </div>
-          <p className="pt-5 leading-7">{site.about[tab]}</p>
+          <p className="pt-5 leading-7">{activeSite.about[tab]}</p>
           <Link to="/about" className="btn-custom mt-5">Read More</Link>
         </div>
       </div>
@@ -39,12 +41,14 @@ function AboutTabs() {
 }
 
 function Ministries() {
+  const { data: ministries } = useAsync(getPublishedMinistries);
+  const items = ministries?.length ? ministries : site.ministries;
   return (
     <section className="py-11">
       <div className="container-page">
         <SectionHeader kicker="What We Do" title="We believe we can change lives together with you" />
         <div className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
-          {site.ministries.map((m) => (
+          {items.map((m) => (
             <div key={m.title} className="flex">
               <i className={`${m.icon} block w-[60px] shrink-0 text-[60px] leading-[60px] text-gold`} />
               <div className="relative ml-5 border-l border-black/10 pl-5">
@@ -60,11 +64,13 @@ function Ministries() {
 }
 
 export function Facts() {
+  const { data: cmsFacts } = useAsync(getSiteFacts);
+  const facts = cmsFacts?.length ? cmsFacts : site.facts;
   return (
     <section className="my-11 flex min-h-[400px] items-center bg-black/50 bg-cover bg-fixed bg-center bg-blend-overlay"
       style={{ backgroundImage: "url('/img/facts.jpg')" }}>
       <div className="container-page grid gap-6 py-10 sm:grid-cols-2 lg:grid-cols-4">
-        {site.facts.map((f) => (
+        {facts.map((f) => (
           <div key={f.label} className="flex items-center">
             <i className={`${f.icon} text-[60px] leading-[60px] text-gold`} />
             <div className="pl-5">

@@ -6,7 +6,7 @@ import {
   FaUserShield, FaChartLine, FaArrowUp, FaSearch
 } from 'react-icons/fa';
 import { supabase, supabaseReady } from '../lib/supabase';
-import './admin-theme.css';
+import '../admin/admin-theme.css';
 
 const sections = [
   { id: 'overview', label: 'Dashboard', icon: FaTachometerAlt },

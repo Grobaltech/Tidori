@@ -67,8 +67,8 @@ function Navbar() {
   return (
     <header className={`sticky top-0 z-50 bg-ink transition-shadow ${y > 0 ? 'shadow-lg shadow-black/30' : ''}`}>
       <div className="mx-auto flex max-w-wide items-center justify-between px-4 py-3">
-        <Link to="/" className="text-3xl font-bold uppercase tracking-[4px] text-white sm:text-4xl">
-          Tidori<span className="text-gold">.</span>
+        <Link to="/" aria-label="Tidori Ministries home" className="flex items-center">
+          <img src="/img/grok_1793863968139.jpg" alt="Tidori Ministries" className="h-14 w-auto max-w-[190px] object-contain sm:h-16" />
         </Link>
         <button className="p-2 text-2xl text-white lg:hidden" aria-label="Menu" onClick={() => setOpen(!open)}>
           {open ? <FaTimes /> : <FaBars />}
@@ -109,6 +109,7 @@ function Footer() {
     <footer className="mt-11 bg-ink pt-20 text-white">
       <div className="container-page grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
+          <img src="/img/grok_1793863968139.jpg" alt="Tidori Ministries" className="mb-6 h-16 w-auto max-w-[190px] object-contain" />
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Our Church</h2>
           <p className="mb-2 flex items-center"><FaMapMarkerAlt className="mr-3 text-gold" /> {site.address}</p>
           <p className="mb-2 flex items-center"><FaPhoneAlt className="mr-3 text-gold" /> {site.phone}</p>

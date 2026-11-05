@@ -20,7 +20,7 @@ export default function Ministries() {
                 <i className={`${m.icon} block w-[60px] shrink-0 text-[60px] leading-[60px] text-gold`} />
                 <div className="ml-5 border-l border-black/10 pl-5">
                   <h3 className="mb-2 text-xl">{m.title}</h3>
-                  <p>{m.text}</p>
+                  <p>{m.description || m.text}</p>
                 </div>
               </div>
             ))}

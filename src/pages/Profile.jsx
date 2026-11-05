@@ -19,6 +19,9 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [recovering, setRecovering] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     if (!supabaseReady) { setBusy(false); return; }
@@ -48,13 +51,31 @@ export default function Profile() {
       setBusy(false);
     };
     load();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
       if (!session) navigate('/login');
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [navigate]);
 
   const change = (key, value) => setProfile(current => ({ ...current, [key]: value }));
+
+  const updatePassword = async (e) => {
+    e.preventDefault();
+    setError(''); setMessage('');
+    if (newPassword.length < 8) { setError('Use a password with at least 8 characters.'); return; }
+    if (newPassword !== confirmPassword) { setError('The passwords do not match.'); return; }
+    setSaving(true);
+    try {
+      const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
+      if (passwordError) throw passwordError;
+      setRecovering(false); setNewPassword(''); setConfirmPassword('');
+      setMessage('Your password has been changed successfully.');
+    } catch (err) {
+      console.error('Tidori password update failed:', err);
+      setError(err.message || 'Could not update your password. Please request a new reset link.');
+    } finally { setSaving(false); }
+  };
 
   const save = async (e) => {
     e.preventDefault();
@@ -115,7 +136,17 @@ export default function Profile() {
     <PageHeader title="My Profile" />
     <section className="container-page max-w-3xl py-12">
       <div className="bg-mist p-6 sm:p-10">
-        <div className="mb-8 flex flex-wrap items-center gap-5">
+        {recovering ? <div className="mx-auto max-w-lg">
+          <h1 className="mb-3 text-3xl">Choose a new password</h1>
+          <p className="mb-6 text-sm text-gray-600">Enter and confirm your new Tidori account password.</p>
+          <form onSubmit={updatePassword} className="space-y-4">
+            <label className="block text-sm font-semibold text-navy">New password<input className="field mt-2" type="password" autoComplete="new-password" minLength={8} required value={newPassword} onChange={e => setNewPassword(e.target.value)} /></label>
+            <label className="block text-sm font-semibold text-navy">Confirm new password<input className="field mt-2" type="password" autoComplete="new-password" minLength={8} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label>
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+            {message && <p role="status" className="text-sm text-green-700">{message}</p>}
+            <button type="submit" className="btn-custom w-full" disabled={saving}>{saving ? 'Updating password...' : 'Update Password'}</button>
+          </form>
+        </div> : <><div className="mb-8 flex flex-wrap items-center gap-5">
           {profile.photo_url
             ? <img src={profile.photo_url} alt="Your profile" className="h-24 w-24 rounded-full object-cover" />
             : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gray-200 text-3xl text-gray-500">{profile.full_name?.charAt(0) || 'T'}</div>}
@@ -172,6 +203,7 @@ export default function Profile() {
           <Link to="/" className="text-sm text-navy underline">Back to website</Link>
           <button onClick={logout} className="text-sm font-semibold text-red-700 underline">Sign out</button>
         </div>
+        </>}
       </div>
     </section>
   </>;

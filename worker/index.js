@@ -240,10 +240,9 @@ async function adminUsers(request, env) {
         const fullName = clean(input.full_name, 120);
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || fullName.length < 2) return json({ error: "Enter a valid email and full name." }, 400);
         const origin = new URL(request.url).origin;
-        const invited = await authAdminRequest(env, "/invite", "POST", {
+        const invited = await authAdminRequest(env, `/invite?redirect_to=${encodeURIComponent(`${origin}/profile`)}`, "POST", {
           email,
           data: { full_name: fullName },
-          redirect_to: `${origin}/profile`,
         });
         return json({ success: true, message: "Invitation email sent.", user_id: invited.id || invited.user?.id || null });
       }

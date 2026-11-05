@@ -1,4 +1,5 @@
 -- Tidori website CMS: run in Supabase SQL Editor for project yrsywklfharhkllrfdun.
+-- Prerequisite: run supabase/admin_access.sql first so private.is_tidori_admin() exists.
 -- Public visitors can read only published website content. Only Tidori admins can manage it.
 create table if not exists public.site_content (
   id text primary key default 'main' check (id = 'main'),

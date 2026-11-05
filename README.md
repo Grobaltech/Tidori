@@ -1,5 +1,4 @@
 # Tidori Ministries Website
-
 React + Vite + Tailwind CSS front end, Supabase database, hosted on Cloudflare Pages.
 Built from the HELPZ free charity template (design, colours, images and icon font kept).
 
@@ -13,12 +12,12 @@ The site works without Supabase (it shows sample content); forms need Supabase.
 
 ## 2. Set up Supabase
 1. Create a project at supabase.com.
-2. SQL Editor > run `supabase/schema.sql` (tables + security rules).
+2. SQL Editor > run `supabase/schema.sql` (public content + visitor submissions).
 3. Optional: run `supabase/seed.sql` for starter content.
-4. Settings > API: copy **Project URL** and **anon public key** into `.env`.
-   Never put the `service_role` key in this project.
+4. Settings > API Keys: copy the **Project URL** and **Publishable key** into `.env`.
+   The legacy anon public key is also accepted. Never put a Supabase secret/service_role key in this frontend project.
 
-Visitors can only read published content and insert form submissions
+Visitors can read published content and insert form submissions
 (contact, volunteer, newsletter, giving pledges). View submissions and edit
 content in the Supabase **Table Editor**.
 
@@ -30,15 +29,23 @@ git remote add origin https://github.com/YOUR-USER/tidori-ministries.git
 git push -u origin main
 ```
 
-## 4. Deploy on Cloudflare Pages
-Workers & Pages > Create > Pages > Connect to Git > pick the repo.
+## 4. Deploy on Cloudflare
+Workers & Pages > select the Tidori project > Settings > Variables and Secrets.
+Add these as **build-time variables** (not only Worker runtime secrets):
+
+| Variable | Value |
+|---|---|
+| `VITE_SUPABASE_URL` | Your Tidori Supabase Project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Your Tidori Supabase Publishable key |
+
+Existing deployments using `VITE_SUPABASE_ANON_KEY` continue to work. After changing build variables, trigger a **new deployment** so Vite embeds them in the frontend bundle.
+
+For the Worker runtime, keep any Supabase secret/service_role key separate and server-side only. Never prefix it with `VITE_` or expose it in browser code.
 
 | Setting | Value |
 |---|---|
-| Framework preset | None (or Vite) |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
-| Environment variables | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (+ optional `VITE_GIVE_URL`, `VITE_VIDEO_URL`) |
 
 `public/_redirects` makes page refreshes and deep links work (single-page app).
 Add your custom domain under the project's Custom domains tab.
@@ -50,9 +57,7 @@ Add your custom domain under the project's Custom domains tab.
 - Content (events, blog, outreach, leaders): edit rows in Supabase.
 
 ## Giving / payments
-The Give form records a **pledge** in Supabase; it does not process cards.
-Set `VITE_GIVE_URL` to your payment page (Paystack, Stripe Payment Link, PayPal, etc.)
-and it opens after each pledge.
+The Give form records a giving intent and uses the configured payment provider. Set `VITE_GIVE_URL` only if using an external payment page.
 
 ## Licence note
 The template's CC BY 4.0 licence requires keeping the "Designed by HTML Codex"

@@ -14,7 +14,7 @@ export default function About() {
       <PageHeader title="About Us" />
       <section className="py-11">
         <div className="container-page grid items-center gap-10 lg:grid-cols-2">
-          <img src="/img/about.jpg" alt="Tidori Ministries community" className="w-full" />
+          <img src={activeSite.about?.imageUrl || "/img/about.jpg"} alt="Tidori Ministries community" className="w-full" />
           <div>
             <SectionHeader center={false} kicker="Learn About Us" title="Who we are" />
             <h3 className="mb-2 text-xl">Our Story</h3>

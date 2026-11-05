@@ -51,7 +51,8 @@ jobs:
           PY
       - name: Apply Tidori logo as Android app icon
         run: |
-          python3 -m pip install --quiet Pillow
+          sudo apt-get update
+          sudo apt-get install -y python3-pil
           curl --fail --silent --show-error 'https://tidori-ministries.grobaltechtechnologies.workers.dev/img/grok_1793864104245.jpg' -o /tmp/tidori-logo.jpg
           python3 - <<'PY'
           from PIL import Image, ImageOps, ImageDraw

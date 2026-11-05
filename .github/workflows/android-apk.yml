@@ -28,6 +28,8 @@ jobs:
         run: npm install
       - name: Build website assets
         run: npm run build
+      - name: Install TypeScript for Capacitor config
+        run: npm install --no-save typescript
       - name: Prepare Android project
         run: |
           npx cap add android

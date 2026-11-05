@@ -54,7 +54,12 @@ export default function Login() {
         }
 
         const accountRole = String(accountProfile?.role || 'member').trim().toLowerCase();
-        navigate(['admin', 'super_admin'].includes(accountRole) ? '/admin' : '/profile', { replace: true });
+        let hasPortalAccess = ['admin', 'super_admin'].includes(accountRole);
+        if (!hasPortalAccess) {
+          const { data: grants, error: grantsError } = await supabase.from('user_permissions').select('permission').eq('user_id', authData.user.id).limit(1);
+          hasPortalAccess = !grantsError && Boolean(grants?.length);
+        }
+        navigate(hasPortalAccess ? '/admin' : '/profile', { replace: true });
       }
     } catch (err) {
       console.error('Tidori authentication failed:', err);

@@ -1,33 +1,37 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase now issues sb_publishable_ keys. Keep the anon-key variable as a
-// backwards-compatible fallback for existing Cloudflare deployments.
-const url = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+// These are public browser-side Supabase settings. The publishable key is
+// designed to be exposed in client applications; database access must still
+// be protected by Supabase Auth, grants, and Row Level Security (RLS).
+// Cloudflare build variables can override these repository defaults.
+const url = (
+  import.meta.env.VITE_SUPABASE_URL ||
+  'https://yrsywklfharhkllrfdun.supabase.co'
+).trim();
 const publishableKey = (
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  ''
+  'sb_publishable_hDiEMqPFt0NhanuNUO8seA_TcVHa4Rc'
 ).trim();
 
 let configError = '';
 try {
   if (!url || !publishableKey) {
-    configError = 'Supabase is not configured in this deployment. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or the legacy VITE_SUPABASE_ANON_KEY) to the Cloudflare build environment, then trigger a new deployment.';
+    configError = 'Supabase is not configured in this deployment. Check the public Supabase project URL and publishable key.';
   } else {
     const parsedUrl = new URL(url);
     if (!['https:', 'http:'].includes(parsedUrl.protocol) || parsedUrl.hostname.includes('YOUR-PROJECT')) {
-      configError = 'The Supabase project URL is invalid. Check VITE_SUPABASE_URL in the Cloudflare build environment.';
+      configError = 'The Supabase project URL is invalid. Check the Supabase project URL.';
     }
   }
 } catch {
-  configError = 'The Supabase project URL is invalid. Check VITE_SUPABASE_URL in the Cloudflare build environment.';
+  configError = 'The Supabase project URL is invalid. Check the Supabase project URL.';
 }
 
 export const supabaseReady = !configError;
 export const supabaseConfigError = configError;
 
-// Publishable/anon keys are intended for browser use. Never place a
-// Supabase secret or service_role key in a VITE_ variable.
+// Never place a Supabase secret or service_role key in browser code or VITE_ variables.
 export const supabase = supabaseReady
   ? createClient(url, publishableKey, {
       auth: {

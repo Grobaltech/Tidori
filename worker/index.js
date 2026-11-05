@@ -258,15 +258,10 @@ export default {
       }
       if (url.pathname.startsWith("/api/")) return json({ error: "Not found." }, 404);
 
-      // React Router owns client-side paths such as /admin and /profile.
-      // With run_worker_first enabled, explicitly serve the SPA entry point
-      // for browser document navigations while leaving static assets intact.
-      const acceptsHtml = request.method === "GET"
-        && (request.headers.get("accept") || "").includes("text/html");
-      if (acceptsHtml && !url.pathname.includes(".")) {
-        const appUrl = new URL("/index.html", url.origin);
-        return env.ASSETS.fetch(new Request(appUrl, request));
-      }
+      // Cloudflare's [assets] not_found_handling = "single-page-application"
+      // serves index.html for React Router paths (including /admin).
+      // Let the asset binding handle that fallback; avoid constructing a
+      // second document request which can cause redirect loops.
       return env.ASSETS.fetch(request);
     } catch (error) {
       console.error("Tidori Worker request failed:", error);

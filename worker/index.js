@@ -293,11 +293,11 @@ function base64Url(value) {
   const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : value;
   let binary = '';
   for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');
+  return btoa(binary).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 }
 
 function pemBytes(pem) {
-  const body = String(pem).replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, '');
+  const body = String(pem).replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, '');
   const binary = atob(body);
   return Uint8Array.from(binary, char => char.charCodeAt(0));
 }
@@ -377,7 +377,7 @@ async function sendPushToAdmins(env, title, body, path = '/admin') {
 
 async function authenticatePushUser(request, env) {
   const authorization = request.headers.get('authorization') || '';
-  const accessToken = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
+  const accessToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!accessToken) return { error: json({ error: 'Sign in to register this device for Tidori alerts.' }, 401) };
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${accessToken}` },

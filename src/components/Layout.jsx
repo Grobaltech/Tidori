@@ -116,7 +116,7 @@ function Footer() {
     <footer className="mt-11 bg-ink pt-20 text-white">
       <div className="container-page grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <img src="/img/grok_1793864104245.jpg" alt="Tidori Ministries" className="mb-6 h-16 w-auto max-w-[190px] object-contain" />
+          <img src={activeSite.logoUrl || "/img/grok_1793864104245.jpg"} alt={activeSite.name || "Tidori Ministries"} className="mb-6 h-16 w-auto max-w-[190px] object-contain" />
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Our Church</h2>
           <p className="mb-2 flex items-center"><FaMapMarkerAlt className="mr-3 text-gold" /> {activeSite.address}</p>
           <p className="mb-2 flex items-center"><FaPhoneAlt className="mr-3 text-gold" /> {activeSite.phone}</p>

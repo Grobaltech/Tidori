@@ -26,7 +26,7 @@ export default function Hero() {
     if (paused) return;
     const t = setInterval(() => setI((x) => (x + 1) % slides.length), 5500);
     return () => clearInterval(t);
-  }, [paused]);
+  }, [paused, slides.length]);
 
   return (
     <section className="relative h-[520px] overflow-hidden bg-ink sm:h-[600px] lg:h-[700px]"

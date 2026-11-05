@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   FaBars, FaTimes, FaTachometerAlt, FaUsers, FaPrayingHands, FaCalendarAlt,
   FaHandsHelping, FaNewspaper, FaEnvelope, FaCog, FaSignOutAlt, FaChurch,
-  FaUserShield, FaChartLine, FaSearch, FaSyncAlt, FaInbox, FaUserCheck
+  FaUserShield, FaChartLine, FaSearch, FaSyncAlt, FaInbox, FaUserCheck, FaBell, FaUserCircle, FaChevronDown
 } from 'react-icons/fa';
 import { supabase, supabaseReady } from '../lib/supabase';
 import '../admin/admin-theme.css';
@@ -56,6 +56,7 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [loadingData, setLoadingData] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [topbarMenu, setTopbarMenu] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -169,7 +170,33 @@ export default function AdminDashboard() {
       <main className="admin-main">
         <header className="admin-topbar">
           <div className="flex items-center gap-3"><button className="admin-icon-button" aria-label="Toggle sidebar" onClick={() => setSidebarOpen(v => !v)}>{sidebarOpen ? <FaTimes /> : <FaBars />}</button><img src="/img/grok_1793863968139.jpg" alt="Tidori Ministries" className="h-10 w-10 rounded-md bg-white object-contain p-0.5 sm:hidden" /><div className="hidden sm:block"><div className="text-sm font-bold text-[#191c24]">Administration</div><div className="text-xs text-gray-400">Tidori Ministries</div></div></div>
-          <div className="flex items-center gap-4"><span className="hidden items-center gap-2 text-xs text-gray-400 md:flex"><FaSearch /> Live Supabase records</span><div className="admin-profile"><span className="admin-avatar">{initials}</span><span className="hidden sm:block">{profile?.full_name || user?.email}</span></div><button className="admin-icon-button" title="Sign out" aria-label="Sign out" onClick={signOut}><FaSignOutAlt /></button></div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden items-center gap-2 text-xs text-gray-400 xl:flex"><FaSearch /> Live Supabase records</span>
+            <div className="admin-topbar-menu">
+              <button type="button" className="admin-icon-button admin-topbar-action" title="Messages" aria-label="Messages" aria-expanded={topbarMenu === 'messages'} onClick={() => setTopbarMenu(v => v === 'messages' ? null : 'messages')}><FaEnvelope />{(records.messages || []).length > 0 && <span className="admin-topbar-dot" />}</button>
+              {topbarMenu === 'messages' && <div className="admin-dropdown admin-message-dropdown">
+                <div className="admin-dropdown-heading"><strong>Messages</strong><button type="button" onClick={() => { changeSection('messages'); setTopbarMenu(null); }}>View all</button></div>
+                {(records.messages || []).slice(0,5).map(row => <button type="button" className="admin-dropdown-item" key={row.id} onClick={() => { changeSection('messages'); setSelectedRecord(row); setTopbarMenu(null); }}><span className="admin-dropdown-item-icon"><FaEnvelope /></span><span className="min-w-0 flex-1"><strong>{row.name || 'Website visitor'}</strong><small>{row.subject || row.message || row.email || 'New contact message'}</small></span><small>{formatValue(row.created_at)}</small></button>)}
+                {!records.messages?.length && <p className="admin-dropdown-empty">No contact messages found.</p>}
+              </div>}
+            </div>
+            <div className="admin-topbar-menu">
+              <button type="button" className="admin-icon-button admin-topbar-action" title="Notifications" aria-label="Notifications" aria-expanded={topbarMenu === 'notifications'} onClick={() => setTopbarMenu(v => v === 'notifications' ? null : 'notifications')}><FaBell />{(records.messages || []).length + (records.volunteers || []).length + (records.pledges || []).length > 0 && <span className="admin-topbar-dot" />}</button>
+              {topbarMenu === 'notifications' && <div className="admin-dropdown admin-notification-dropdown">
+                <div className="admin-dropdown-heading"><strong>Recent activity</strong><span>{(records.messages || []).length + (records.volunteers || []).length + (records.pledges || []).length} records</span></div>
+                {[...(records.messages || []).map(row => ({...row, _kind:'messages', _label:'New contact message', _name:row.name || row.email || 'Website visitor'})), ...(records.volunteers || []).map(row => ({...row, _kind:'volunteers', _label:'Volunteer submission', _name:row.name || row.email || 'Applicant'})), ...(records.pledges || []).map(row => ({...row, _kind:'pledges', _label:'Donation pledge', _name:row.name || row.email || 'Contributor'}))].sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0,8).map((row,i) => <button type="button" className="admin-dropdown-item" key={row.id || row._kind + '-' + i} onClick={() => { changeSection(row._kind); setSelectedRecord(row); setTopbarMenu(null); }}><span className="admin-dropdown-item-icon"><FaBell /></span><span className="min-w-0 flex-1"><strong>{row._label}</strong><small>{row._name} · {row.subject || row.message || row.amount || 'Open record'}</small></span><small>{formatValue(row.created_at)}</small></button>)}
+                {!records.messages?.length && !records.volunteers?.length && !records.pledges?.length && <p className="admin-dropdown-empty">You're all caught up. No recent activity.</p>}
+              </div>}
+            </div>
+            <div className="admin-topbar-menu">
+              <button type="button" className="admin-profile admin-profile-trigger" aria-label="Open administrator profile menu" aria-expanded={topbarMenu === 'profile'} onClick={() => setTopbarMenu(v => v === 'profile' ? null : 'profile')}><span className="admin-avatar">{initials}</span><span className="hidden sm:block">{profile?.full_name || user?.email}</span><FaChevronDown className="text-xs text-gray-400" /></button>
+              {topbarMenu === 'profile' && <div className="admin-dropdown admin-profile-dropdown">
+                <div className="admin-profile-summary"><span className="admin-avatar">{initials}</span><span><strong>{profile?.full_name || 'Administrator'}</strong><small>{user?.email}</small><small className="capitalize">{String(profile?.role || 'admin').replaceAll('_',' ')}</small></span></div>
+                <button type="button" className="admin-dropdown-link" onClick={() => { changeSection('settings'); setTopbarMenu(null); }}><FaUserCircle /> Account & settings</button>
+                <button type="button" className="admin-dropdown-link" onClick={() => { setTopbarMenu(null); signOut(); }}><FaSignOutAlt /> Sign out</button>
+              </div>}
+            </div>
+          </div>
         </header>
         <div className="admin-content">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#009cff]">Tidori Ministries</p><h1 className="admin-page-title">{current.label}</h1><p className="admin-muted mt-1">Live records from the Tidori Supabase project.</p></div><div className="flex items-center gap-2"><span className="admin-pill">Administrator</span><button onClick={loadOverview} disabled={loadingData} className="admin-icon-button" title="Refresh live records"><FaSyncAlt className={loadingData ? 'animate-spin' : ''} /></button></div></div>

@@ -11,7 +11,7 @@ const input = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-
 const tabs = [
   ['identity','Identity & contact'],['about','About / mission / vision'],
   ['social','Social links & video'],['slides','Homepage slideshow'],
-  ['ministries','Ministries'],['facts','Homepage statistics'],
+  ['ministries','Ministries'],['facts','Homepage statistics'],['events','Events'],['outreach','Outreach projects'],['posts','Blog & news'],['team','Church leaders'],
 ];
 
 export default function WebsiteCMS() {
@@ -21,6 +21,10 @@ export default function WebsiteCMS() {
   const [slides,setSlides] = useState([]);
   const [ministries,setMinistries] = useState([]);
   const [facts,setFacts] = useState([]);
+  const [events,setEvents] = useState([]);
+  const [outreach,setOutreach] = useState([]);
+  const [posts,setPosts] = useState([]);
+  const [leaders,setLeaders] = useState([]);
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState('');
   const [notice,setNotice] = useState('');
@@ -33,12 +37,17 @@ export default function WebsiteCMS() {
       supabase.from('homepage_slides').select('*').order('sort_order'),
       supabase.from('site_ministries').select('*').order('sort_order'),
       supabase.from('site_facts').select('*').order('sort_order'),
+      supabase.from('events').select('*').order('starts_at',{ascending:false}),
+      supabase.from('outreach_projects').select('*').order('sort_order'),
+      supabase.from('posts').select('*').order('published_at',{ascending:false}),
+      supabase.from('team_members').select('*').order('sort_order'),
     ]);
     const failed = results.find(r => r.error);
     if (failed) setError(failed.error.message);
     if (results[0].data?.content) setSite({...emptySite,...results[0].data.content, social:{...emptySite.social,...results[0].data.content.social}, about:{...emptySite.about,...results[0].data.content.about}});
     setPublished(results[0].data?.published ?? true);
     setSlides(results[1].data || []); setMinistries(results[2].data || []); setFacts(results[3].data || []);
+    setEvents(results[4].data || []); setOutreach(results[5].data || []); setPosts(results[6].data || []); setLeaders(results[7].data || []);
     setBusy(false);
   };
   useEffect(()=>{load();},[]);
@@ -52,7 +61,7 @@ export default function WebsiteCMS() {
   };
   const saveItem = async (table,item) => {
     setBusy(true); setError(''); setNotice('');
-    const payload = {...item,updated_at:new Date().toISOString()};
+    const payload = ['homepage_slides','site_ministries','site_facts'].includes(table) ? {...item,updated_at:new Date().toISOString()} : item;
     const {error:saveError} = await supabase.from(table).upsert(payload).select().single();
     if (saveError) setError(saveError.message);
     else {setNotice('Record saved.');setEditing(null);await load();}
@@ -69,6 +78,10 @@ export default function WebsiteCMS() {
     if(tab==='slides') setEditing({table:'homepage_slides',item:{title:'',description:'',image_url:'',button_label:'Learn More',button_url:'/about',sort_order:slides.length,published:false}});
     if(tab==='ministries') setEditing({table:'site_ministries',item:{title:'',description:'',icon:'flaticon-social-care',image_url:'',page_url:'',sort_order:ministries.length,published:false}});
     if(tab==='facts') setEditing({table:'site_facts',item:{label:'',value:0,icon:'flaticon-home',sort_order:facts.length,published:false}});
+    if(tab==='events') setEditing({table:'events',item:{title:'',description:'',image_url:'',location:'',starts_at:new Date().toISOString(),ends_at:'',published:false}});
+    if(tab==='outreach') setEditing({table:'outreach_projects',item:{title:'',summary:'',image_url:'',goal_amount:0,raised_amount:0,sort_order:outreach.length,published:false}});
+    if(tab==='posts') setEditing({table:'posts',item:{slug:'',title:'',excerpt:'',body:'',image_url:'',author:'Tidori Ministries',published_at:new Date().toISOString(),published:false}});
+    if(tab==='team') setEditing({table:'team_members',item:{name:'',role:'',photo_url:'',sort_order:leaders.length,published:false}});
   };
   const field=(label,key,value,onChange,type='text')=><label className="block text-xs font-semibold text-gray-600">{label}<input className={input+' mt-1'} type={type} value={value ?? ''} onChange={e=>onChange(key,type==='number'?Number(e.target.value):e.target.value)} /></label>;
   const editor=(table,items,fields)=> <section className="admin-card overflow-hidden">
@@ -91,9 +104,13 @@ export default function WebsiteCMS() {
     {tab==='slides'&&editor('homepage_slides',slides)}
     {tab==='ministries'&&editor('site_ministries',ministries)}
     {tab==='facts'&&editor('site_facts',facts)}
-    {editing&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">Edit {editing.table==='homepage_slides'?'homepage slide':editing.table==='site_ministries'?'ministry':'statistic'}</h3><div className="grid gap-4 sm:grid-cols-2">
-      {Object.entries(editing.item).filter(([key])=>!['id','created_at','updated_at','starts_at','ends_at'].includes(key)).map(([key,value])=>key==='published'?<label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(value)} onChange={e=>setEditing(v=>({...v,item:{...v.item,published:e.target.checked}}))}/> Published on website</label>:key==='description'?<label key={key} className="block text-xs font-semibold text-gray-600 sm:col-span-2">{key.replaceAll('_',' ')}<textarea rows="4" className={input+' mt-1'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:e.target.value}}))}/></label>:<label key={key} className="block text-xs font-semibold text-gray-600">{key.replaceAll('_',' ')}<input className={input+' mt-1'} type={typeof value==='number'?'number':'text'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:typeof value==='number'?Number(e.target.value):e.target.value}}))}/></label>)}
+    {tab==='events'&&editor('events',events)}
+    {tab==='outreach'&&editor('outreach_projects',outreach)}
+    {tab==='posts'&&editor('posts',posts)}
+    {tab==='team'&&editor('team_members',leaders)}
+    {editing&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">Edit {editing.table==='homepage_slides'?'homepage slide':editing.table==='site_ministries'?'ministry':editing.table==='site_facts'?'statistic':editing.table==='events'?'event':editing.table==='outreach_projects'?'outreach project':editing.table==='posts'?'post': 'church leader'}</h3><div className="grid gap-4 sm:grid-cols-2">
+      {Object.entries(editing.item).filter(([key])=>!['id','created_at','updated_at','starts_at','ends_at'].includes(key)).map(([key,value])=>key==='published'?<label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(value)} onChange={e=>setEditing(v=>({...v,item:{...v.item,published:e.target.checked}}))}/> Published on website</label>:['description','summary','body','excerpt'].includes(key)?<label key={key} className="block text-xs font-semibold text-gray-600 sm:col-span-2">{key.replaceAll('_',' ')}<textarea rows="4" className={input+' mt-1'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:e.target.value}}))}/></label>:<label key={key} className="block text-xs font-semibold text-gray-600">{key.replaceAll('_',' ')}<input className={input+' mt-1'} type={typeof value==='number'?'number':'text'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:typeof value==='number'?Number(e.target.value):e.target.value}}))}/></label>)}
     </div><div className="mt-4 flex gap-2"><button disabled={busy} onClick={()=>saveItem(editing.table,editing.item)} className="rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white">Save record</button><button onClick={()=>setEditing(null)} className="rounded border px-5 py-2.5 text-sm">Cancel</button></div></section>}
-    <div className="text-xs leading-5 text-gray-500">Publishing requires the Tidori administrator access policy. The public website reads only published content. Keep personal records, donor details and internal notes out of these public content fields.</div>
+    <div className="text-xs leading-5 text-gray-500">Publishing requires the Tidori administrator access policy. The public website reads only published content. Events, outreach projects, posts and leaders are managed here too; their existing page layouts remain unchanged. Keep personal records, donor details and internal notes out of these public content fields.</div>
   </div>;
 }

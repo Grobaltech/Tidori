@@ -20,7 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: ''
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -39,6 +38,21 @@ jobs:
           mkdir -p android/app
           printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           npx cap sync android
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('android/build.gradle')
+          text = root.read_text()
+          if 'com.google.gms:google-services' not in text:
+              text = text.replace('dependencies {', "dependencies {\\n        classpath 'com.google.gms:google-services:4.4.2'", 1)
+              root.write_text(text)
+          app = Path('android/app/build.gradle')
+          text = app.read_text()
+          if 'com.google.gms.google-services' not in text:
+              app.write_text(text + "\\napply plugin: 'com.google.gms.google-services'\\n")
+          config = Path('android/app/google-services.json').read_text()
+          if 'com.grobaltech.tidori' not in config:
+              raise SystemExit('google-services.json must contain package_name com.grobaltech.tidori')
+          PY
       - name: Build installable debug APK
         working-directory: android
         run: |

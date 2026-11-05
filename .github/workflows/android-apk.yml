@@ -43,12 +43,12 @@ jobs:
           root = Path('android/build.gradle')
           text = root.read_text()
           if 'com.google.gms:google-services' not in text:
-              text = text.replace('dependencies {', "dependencies {\\n        classpath 'com.google.gms:google-services:4.4.2'", 1)
+              text = text.replace('dependencies {', 'dependencies {' + chr(10) + "        classpath 'com.google.gms:google-services:4.4.2'", 1)
               root.write_text(text)
           app = Path('android/app/build.gradle')
           text = app.read_text()
           if 'com.google.gms.google-services' not in text:
-              app.write_text(text + "\\napply plugin: 'com.google.gms.google-services'\\n")
+              app.write_text(text + chr(10) + "apply plugin: 'com.google.gms.google-services'" + chr(10))
           config = Path('android/app/google-services.json').read_text()
           if 'com.grobaltech.tidori' not in config:
               raise SystemExit('google-services.json must contain package_name com.grobaltech.tidori')

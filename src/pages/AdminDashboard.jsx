@@ -192,6 +192,7 @@ export default function AdminDashboard() {
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Authentication</p><p className="mt-1 text-sm text-gray-600">{user?.app_metadata?.provider || 'Email/password'}</p></div>
               </div>
             </section>
+            <PesapalIpnSettings user={user} role={profile?.role} />
             <div className="grid gap-5 lg:grid-cols-2">
               <section className="admin-card p-5">
                 <div className="mb-3 flex items-center gap-2"><FaUserShield className="text-xl text-[#009cff]" /><h2 className="admin-section-title">Access and security</h2></div>
@@ -222,4 +223,61 @@ export default function AdminDashboard() {
       </main>
     </div>
   );
+}
+
+
+function PesapalIpnSettings({ user, role }) {
+  const [status, setStatus] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const requestIpn = async (method = "GET") => {
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("Your session has expired. Sign in again.");
+      const response = await fetch("/api/admin/pesapal/ipn", {
+        method,
+        headers: { authorization: `Bearer ${token}`, ...(method === "POST" ? { "content-type": "application/json" } : {}) },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Unable to retrieve Pesapal IPN settings.");
+      setStatus(data);
+      setMessage(data.message || "");
+    } catch (err) {
+      setError(err.message || "Pesapal IPN request failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (role === "super_admin") requestIpn("GET");
+  }, [role]);
+
+  return <section className="admin-card overflow-hidden">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+      <div><div className="flex items-center gap-2"><FaHandsHelping className="text-lg text-[#009cff]" /><h2 className="admin-section-title">Pesapal IPN settings</h2></div><p className="admin-muted mt-1">Manage the payment notification endpoint used for donation status updates.</p></div>
+      {role === "super_admin" && <span className={`admin-pill ${status?.registered ? "text-emerald-700" : ""}`}>{busy ? "Checking…" : status?.registered ? "IPN active" : "Status not confirmed"}</span>}
+    </div>
+    {role !== "super_admin" ? <div className="p-5 text-sm text-gray-600">Only the Tidori super administrator can view or change Pesapal IPN registration.</div> : <div className="space-y-4 p-5">
+      <div><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Notification URL</p><p className="mt-1 break-all rounded-lg bg-gray-50 p-3 text-sm text-[#191c24]">https://tidori-ministries.grobaltechtechnologies.workers.dev/api/payments/pesapal/ipn</p></div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div><p className="text-xs text-gray-400">Registration status</p><p className="mt-1 text-sm font-semibold text-[#191c24]">{status ? (status.registered ? "Active" : "Not registered / inactive") : "Not checked"}</p></div>
+        <div><p className="text-xs text-gray-400">Notification method</p><p className="mt-1 text-sm font-semibold text-[#191c24]">{status?.ipn?.ipn_notification_type_description || "GET (expected)"}</p></div>
+        <div><p className="text-xs text-gray-400">Registered date</p><p className="mt-1 text-sm font-semibold text-[#191c24]">{status?.ipn?.created_date ? formatValue(status.ipn.created_date) : "—"}</p></div>
+      </div>
+      {status?.ipn?.ipn_id && <div><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Pesapal IPN ID</p><p className="mt-1 break-all text-sm text-gray-700">{status.ipn.ipn_id}</p></div>}
+      {message && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
+      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => requestIpn("GET")} disabled={busy} className="rounded border border-gray-200 px-4 py-2 text-sm font-semibold text-[#191c24] disabled:opacity-50"><FaSyncAlt className={`mr-2 inline ${busy ? "animate-spin" : ""}`} />Check IPN status</button>
+        <button type="button" onClick={() => requestIpn("POST")} disabled={busy} className="rounded bg-[#009cff] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Please wait…" : "Register / repair IPN"}</button>
+      </div>
+      <p className="text-xs leading-5 text-gray-500">Registration checks for an existing active URL before creating one, preventing duplicate registrations. Pesapal credentials remain stored as Cloudflare secrets and are never displayed here.</p>
+    </div>}
+  </section>;
 }

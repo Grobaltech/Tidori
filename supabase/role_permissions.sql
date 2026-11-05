@@ -215,7 +215,7 @@ end $$;
 -- Profile directory access: self-service remains; explicit members.view enables directory access.
 drop policy if exists "Tidori permission view profiles" on public.profiles;
 create policy "Tidori permission view profiles" on public.profiles
-for select to authenticated using ((select private.has_tidori_permission('members.view')));
+for select to authenticated using ((select private.has_tidori_permission('members.view')) or (select private.has_tidori_permission('ministries.view')));
 
 comment on table public.user_permissions is 'Individual permissions granted by Tidori administrators to church user accounts.';
 comment on table public.access_audit_log is 'Audit history for Tidori access-control changes.';

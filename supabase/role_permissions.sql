@@ -1,6 +1,6 @@
 -- Tidori role hierarchy and per-user permissions.
 -- Apply to the ACTIVE Tidori project: yrsywklfharhkllrfdun.
--- Requires supabase/admin_access.sql to have been applied first.
+-- Prerequisites: apply supabase/admin_access.sql and supabase/website_cms.sql first.
 -- This migration does not create Auth users or expose service-role credentials.
 
 create table if not exists public.user_permissions (

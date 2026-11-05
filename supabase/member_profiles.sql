@@ -73,6 +73,15 @@ begin
 end;
 $$;
 
+-- Backfill accounts that existed before this profile migration.
+insert into public.profiles (id, full_name, email)
+select
+  u.id,
+  coalesce(u.raw_user_meta_data ->> 'full_name', ''),
+  u.email
+from auth.users u
+on conflict (id) do nothing;
+
 drop trigger if exists on_auth_user_created_profile on auth.users;
 create trigger on_auth_user_created_profile
   after insert on auth.users

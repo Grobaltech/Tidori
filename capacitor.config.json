@@ -1,0 +1,19 @@
+{
+  "appId": "com.grobaltech.tidori",
+  "appName": "Tidori Ministries",
+  "webDir": "dist",
+  "server": {
+    "url": "https://tidori-ministries.grobaltechtechnologies.workers.dev",
+    "cleartext": false,
+    "allowNavigation": [
+      "tidori-ministries.grobaltechtechnologies.workers.dev",
+      "*.supabase.co",
+      "pay.pesapal.com"
+    ]
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

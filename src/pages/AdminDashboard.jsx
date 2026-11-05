@@ -98,16 +98,20 @@ export default function AdminDashboard() {
       ['pledges', supabase.from('donation_pledges').select('*').order('created_at',{ascending:false}).limit(100)],
     ];
     const settled = await Promise.all(requests.map(async ([key, query]) => {
-      const result = await query;
-      return [key, result.data || [], result.error];
+      const [result, countResult] = await Promise.all([
+        query,
+        supabase.from(tableConfig[key].table).select('*', { count: 'exact', head: true })
+      ]);
+      return [key, result.data || [], result.error, countResult.count, countResult.error];
     }));
     const nextRecords = {};
     const nextCounts = {};
     const failures = [];
-    for (const [key, rows, err] of settled) {
+    for (const [key, rows, err, exactCount, countError] of settled) {
       nextRecords[key] = rows;
-      nextCounts[key] = rows.length;
+      nextCounts[key] = exactCount ?? rows.length;
       if (err) failures.push(`${tableConfig[key].title}: ${err.message}`);
+      if (countError && !err) failures.push(`${tableConfig[key].title} count: ${countError.message}`);
     }
     setRecords(nextRecords);
     setCounts(nextCounts);

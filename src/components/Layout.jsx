@@ -91,6 +91,7 @@ function Navbar() {
                 <li key={item.to}><NavLink to={item.to} end={item.to === '/'} className={link}>{item.label}</NavLink></li>
               )
             )}
+            <li><NavLink to={signedIn ? '/profile' : '/login'} className={link}>{signedIn ? 'My Profile' : 'Login / Register'}</NavLink></li>
           </ul>
         </nav>
       </div>

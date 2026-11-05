@@ -152,7 +152,7 @@ export default function AdminDashboard() {
     <div className={`tidori-admin ${sidebarOpen ? 'sidebar-open' : ''}`}>
       <aside className="admin-sidebar">
         <Link to="/" className="admin-brand !gap-3">
-          <img src="/img/grok_1793863968139.jpg" alt="Tidori Ministries" className="h-12 w-12 rounded-lg bg-white object-contain p-1" />
+          <img src="/img/grok_1793864104245.jpg" alt="Tidori Ministries" className="h-12 w-12 rounded-lg bg-white object-contain p-1" />
           <span>TIDORI <small className="block text-[10px] font-semibold tracking-[2px] text-gray-400">ADMINISTRATION</small></span>
         </Link>
         <div className="admin-nav-label">Main menu</div>
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
       <button className="admin-mobile-overlay" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />
       <main className="admin-main">
         <header className="admin-topbar">
-          <div className="flex items-center gap-3"><button className="admin-icon-button" aria-label="Toggle sidebar" onClick={() => setSidebarOpen(v => !v)}>{sidebarOpen ? <FaTimes /> : <FaBars />}</button><img src="/img/grok_1793863968139.jpg" alt="Tidori Ministries" className="h-10 w-10 rounded-md bg-white object-contain p-0.5 sm:hidden" /><div className="hidden sm:block"><div className="text-sm font-bold text-[#191c24]">Administration</div><div className="text-xs text-gray-400">Tidori Ministries</div></div></div>
+          <div className="flex items-center gap-3"><button className="admin-icon-button" aria-label="Toggle sidebar" onClick={() => setSidebarOpen(v => !v)}>{sidebarOpen ? <FaTimes /> : <FaBars />}</button><img src="/img/grok_1793864104245.jpg" alt="Tidori Ministries" className="h-10 w-10 rounded-md bg-white object-contain p-0.5 sm:hidden" /><div className="hidden sm:block"><div className="text-sm font-bold text-[#191c24]">Administration</div><div className="text-xs text-gray-400">Tidori Ministries</div></div></div>
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="hidden items-center gap-2 text-xs text-gray-400 xl:flex"><FaSearch /> Live Supabase records</span>
             <div className="admin-topbar-menu">

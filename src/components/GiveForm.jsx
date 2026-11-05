@@ -12,6 +12,8 @@ export default function GiveForm({ projectId = null, dark = false }) {
   const [trap, setTrap] = useState('');
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
+  const [checkoutUrl, setCheckoutUrl] = useState('');
+  const [reference, setReference] = useState('');
   const final = custom ? Number(custom) : amount;
   const cls = dark ? 'field-dark' : 'field';
 
@@ -31,12 +33,43 @@ export default function GiveForm({ projectId = null, dark = false }) {
       });
       const data = await response.json();
       if (!response.ok || !data.redirect_url) throw new Error(data.error || 'Unable to start payment. Please try again.');
-      window.location.assign(data.redirect_url);
+      setCheckoutUrl(data.redirect_url);
+      setReference(data.reference || '');
+      setStatus('checkout');
     } catch (err) {
       setStatus('error');
       setError(err.message || 'Unable to start payment. Please try again.');
     }
   };
+
+  if (checkoutUrl) {
+    return (
+      <section className={dark ? 'bg-ink/80 p-4 sm:p-6' : 'bg-mist p-4 sm:p-6'} aria-label="Secure Pesapal checkout">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className={dark ? 'text-lg font-semibold text-white' : 'text-lg font-semibold text-ink'}>Complete your donation</h3>
+            <p className={dark ? 'text-sm text-white/75' : 'text-sm text-ink/70'}>Secure payment powered by Pesapal. You are still on Tidori Ministries.</p>
+          </div>
+          <button type="button" onClick={() => { setCheckoutUrl(''); setStatus('idle'); }}
+            className={`btn-custom !px-4 ${dark ? 'btn-light' : ''}`}>
+            Back
+          </button>
+        </div>
+        <iframe
+          title="Pesapal secure payment"
+          src={checkoutUrl}
+          className="block w-full rounded-lg bg-white"
+          style={{ height: 'min(780px, 78vh)', minHeight: '560px', border: 0 }}
+          allow="payment *"
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+        <p className={dark ? 'mt-3 text-xs text-white/70' : 'mt-3 text-xs text-ink/65'}>
+          If the payment window does not load, <a className="underline" href={checkoutUrl} target="_blank" rel="noopener noreferrer">open secure checkout in a new tab</a>.
+          {reference ? ` Reference: ${reference}` : ''}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <form onSubmit={onSubmit} className={dark ? 'bg-ink/80 p-8' : 'bg-mist p-8'}>
@@ -57,7 +90,7 @@ export default function GiveForm({ projectId = null, dark = false }) {
         {status === 'sending' ? 'Connecting to Pesapal...' : 'Continue to Secure Payment'}
       </button>
       {status === 'error' && <p className="mt-3 text-red-500">{error}</p>}
-      <p className={`mt-3 text-sm ${dark ? 'text-white/80' : 'text-ink/70'}`}>You will complete your donation securely on Pesapal.</p>
+      <p className={`mt-3 text-sm ${dark ? 'text-white/80' : 'text-ink/70'}`}>Your payment options will appear securely here, without leaving Tidori Ministries.</p>
     </form>
   );
 }

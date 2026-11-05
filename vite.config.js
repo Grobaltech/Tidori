@@ -18,6 +18,11 @@ function publishOriginalTemplate() {
     name: 'publish-original-template-assets',
     buildStart() { copy(); },
     configureServer() { copy(); },
+    closeBundle() {
+      if (!existsSync(source)) return;
+      mkdirSync(resolve(process.cwd(), 'dist'), { recursive: true });
+      cpSync(source, resolve(process.cwd(), 'dist/original'), { recursive: true, force: true });
+    },
   };
 }
 

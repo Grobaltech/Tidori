@@ -116,7 +116,7 @@ export default function AdminDashboard() {
     ];
     const isAdministrator = ['admin','super_admin'].includes(profile.role);
     const permissionFor = { users:'users.view', members:'members.view', events:'events.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
-    const allowedRequests = requests.filter(([key]) => isAdministrator || profile.permissions?.includes(permissionFor[key]));
+    const allowedRequests = requests.filter(([key]) => isAdministrator || profile.permissions?.includes(permissionFor[key]) || (key === 'members' && profile.permissions?.includes('ministries.view')));
     const settled = await Promise.all(allowedRequests.map(async ([key, query]) => {
       const [result, countResult] = await Promise.all([
         query,
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
   const signOut = async () => { await supabase.auth.signOut(); navigate('/login'); };
   const changeSection = (id) => { setActiveSection(id); setSearch(''); setSelectedRecord(null); setSidebarOpen(false); };
   const isAdministrator = ['admin','super_admin'].includes(profile?.role);
-  const modulePermission = { users:'users.view', members:'members.view', ministries:'members.view', events:'events.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
+  const modulePermission = { users:'users.view', members:'members.view', ministries:'ministries.view', events:'events.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
   const canOpen = (id) => isAdministrator || Boolean(profile?.permissions?.includes(modulePermission[id]));
   const visibleSections = useMemo(() => sections.filter(item => {
     if (item.id === 'access') return isAdministrator;

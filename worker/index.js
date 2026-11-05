@@ -8,9 +8,12 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 const clean = (value, max = 160) => String(value ?? "").trim().slice(0, max);
 
 function requiredEnv(env) {
-  const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "PESAPAL_CONSUMER_KEY", "PESAPAL_CONSUMER_SECRET"]
+  return ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "PESAPAL_CONSUMER_KEY", "PESAPAL_CONSUMER_SECRET"]
     .filter((key) => !env[key]);
-  return missing;
+}
+
+function missingPesapalEnv(env) {
+  return ["PESAPAL_CONSUMER_KEY", "PESAPAL_CONSUMER_SECRET"].filter((key) => !env[key]);
 }
 
 async function supabaseRequest(env, path, options = {}) {
@@ -98,10 +101,19 @@ async function requireSuperAdmin(request, env) {
 }
 
 async function adminPesapalIpn(request, env) {
-  const missing = requiredEnv(env);
-  if (missing.length) return json({ error: `Cloudflare is missing: ${missing.join(", ")}` }, 503);
+  const missingSupabase = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter((key) => !env[key]);
+  if (missingSupabase.length) {
+    return json({ code: "SUPABASE_WORKER_CONFIG_MISSING", missing: missingSupabase,
+      error: "The Worker is missing its Supabase connection settings. Add the listed variables in Cloudflare before managing Pesapal." }, 503);
+  }
   const access = await requireSuperAdmin(request, env);
   if (access.error) return access.error;
+
+  const missing = missingPesapalEnv(env);
+  if (missing.length) {
+    return json({ code: "PESAPAL_CONFIG_MISSING", missing,
+      error: "Pesapal API credentials have not been configured in this Cloudflare Worker. Add the missing secrets, deploy, then check again." }, 503);
+  }
 
   try {
     const token = await pesapalToken(env);

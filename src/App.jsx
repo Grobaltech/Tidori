@@ -14,10 +14,12 @@ import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
+import AdminDashboard from './pages/AdminDashboard';
 
 export default function App() {
   return (
     <Routes>
+      <Route path="/admin/*" element={<AdminDashboard />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />

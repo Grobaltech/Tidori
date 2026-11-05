@@ -55,6 +55,34 @@ async function pesapalCall(env, path, token, body) {
   return data;
 }
 
+async function ensurePesapalIpn(env, token, origin) {
+  const ipnUrl = `${origin}/api/payments/pesapal/ipn`;
+  const headers = { accept: "application/json", authorization: `Bearer ${token}` };
+
+  // Reuse an existing registration so retries/deployments never create duplicates.
+  const listResponse = await fetch(`${PESAPAL_BASE}/api/URLSetup/GetIpnList`, { headers });
+  const listData = await listResponse.json();
+  if (!listResponse.ok || listData.error) {
+    throw new Error(listData.error?.message || "Could not check registered Pesapal IPNs.");
+  }
+  const registered = Array.isArray(listData)
+    ? listData
+    : Array.isArray(listData.ipn_list) ? listData.ipn_list
+      : Array.isArray(listData.data) ? listData.data : [];
+  const existing = registered.find((item) =>
+    String(item.url || "").replace(/\\/$/, "") === ipnUrl.replace(/\\/$/, "")
+    && String(item.ipn_status ?? 1) !== "0"
+  );
+  if (existing?.ipn_id) return existing.ipn_id;
+
+  const created = await pesapalCall(env, "/api/URLSetup/RegisterIPN", token, {
+    url: ipnUrl,
+    ipn_notification_type: "GET",
+  });
+  if (!created.ipn_id) throw new Error("Pesapal did not return an IPN registration ID.");
+  return created.ipn_id;
+}
+
 async function verifyPayment(env, trackingId, merchantReference) {
   const token = await pesapalToken(env);
   const url = new URL(`${PESAPAL_BASE}/api/Transactions/GetTransactionStatus`);
@@ -135,9 +163,9 @@ async function createPayment(request, env) {
   if (!rows?.[0]?.id) throw new Error("Could not save your donation record.");
 
   try {
-    if (!env.PESAPAL_IPN_ID) throw new Error("Pesapal IPN is not registered yet. Complete the IPN setup first.");
     const token = await pesapalToken(env);
     const origin = new URL(request.url).origin;
+    const notificationId = await ensurePesapalIpn(env, token, origin);
     const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
       id: merchantReference,
       currency,
@@ -145,7 +173,7 @@ async function createPayment(request, env) {
       description: "Donation to Tidori Ministries",
       callback_url: `${origin}/api/payments/pesapal/callback`,
       cancellation_url: `${origin}/give?payment=cancelled&reference=${encodeURIComponent(merchantReference)}`,
-      notification_id: env.PESAPAL_IPN_ID,
+      notification_id: notificationId,
       billing_address: {
         email_address: email,
         phone_number: phone || undefined,

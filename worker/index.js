@@ -207,7 +207,8 @@ async function createPayment(request, env) {
   try {
     const token = await pesapalToken(env);
     const origin = new URL(request.url).origin;
-    const ipnRegistration = await ensurePesapalIpn(env, token, origin);\n    const notificationId = ipnRegistration.ipn_id;
+    const ipnRegistration = await ensurePesapalIpn(env, token, origin);
+    const notificationId = ipnRegistration.ipn_id;
     const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
       id: merchantReference,
       currency,
@@ -286,7 +287,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
-      if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {\n        return await adminPesapalIpn(request, env);\n      }\n      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
+      if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
+        return await adminPesapalIpn(request, env);
+      }
+      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
         return await createPayment(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {

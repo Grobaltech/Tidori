@@ -256,7 +256,7 @@ async function adminUsers(request, env) {
         const target = await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`);
         if (!target.email) return json({ error: "This account has no email address for password recovery." }, 400);
         const origin = new URL(request.url).origin;
-        await authAdminRequest(env, "/recover", "POST", { email: target.email, redirect_to: `${origin}/profile` });
+        await authAdminRequest(env, `/recover?redirect_to=${encodeURIComponent(`${origin}/profile`)}`, "POST", { email: target.email });
         return json({ success: true, message: `Password reset email sent to ${target.email}.` });
       }
       if (action === "delete") {

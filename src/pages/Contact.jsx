@@ -2,6 +2,7 @@ import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope } from 'react-icons/fa';
 import PageHeader from '../components/PageHeader';
 import SectionHeader from '../components/SectionHeader';
 import ContactForm from '../components/ContactForm';
+import AppointmentForm from '../components/AppointmentForm';
 import { site } from '../config/site';
 import { useAsync } from '../hooks/hooks';
 import { getSiteContent } from '../lib/api';
@@ -33,6 +34,7 @@ export default function Contact() {
             </div>
             <ContactForm />
           </div>
+          <div className="mt-12"><AppointmentForm /></div>
         </div>
       </section>
     </>

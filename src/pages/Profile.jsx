@@ -22,6 +22,11 @@ export default function Profile() {
   const [recovering, setRecovering] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [messageSent, setMessageSent] = useState('');
+  const [messageError, setMessageError] = useState('');
 
   useEffect(() => {
     if (!supabaseReady) { setBusy(false); return; }
@@ -126,6 +131,25 @@ export default function Profile() {
     finally { setUploading(false); event.target.value = ''; }
   };
 
+  const sendMemberMessage = async (e) => {
+    e.preventDefault();
+    setSendingMessage(true); setMessageSent(''); setMessageError('');
+    try {
+      const { error: insertError } = await supabase.from('contact_messages').insert({
+        name: profile.full_name.trim() || user.email,
+        email: user.email,
+        subject: contactSubject.trim() || 'Message from member portal',
+        message: contactMessage.trim(),
+      });
+      if (insertError) throw insertError;
+      setContactSubject('');
+      setContactMessage('');
+      setMessageSent('Your message has been sent to the Tidori administration team.');
+    } catch (err) {
+      setMessageError(err.message || 'Your message could not be sent. Please try again.');
+    } finally { setSendingMessage(false); }
+  };
+
   const logout = async () => { await supabase.auth.signOut(); navigate('/'); };
 
   if (busy) return <div className="container-page py-20 text-center">Loading your profile...</div>;
@@ -199,6 +223,21 @@ export default function Profile() {
           {message && <p role="status" className="text-sm text-green-700">{message}</p>}
           <button className="btn-custom w-full" disabled={saving}>{saving ? 'Saving...' : 'Save Member Profile'}</button>
         </form>
+        <section className="mt-8 border-t border-gray-300 pt-6">
+          <h2 className="mb-2 text-xl font-semibold">Send a message to Tidori</h2>
+          <p className="mb-4 text-sm text-gray-600">Send a question or request directly to the church administration team. Your account name and email will be attached automatically.</p>
+          <form onSubmit={sendMemberMessage} className="space-y-4">
+            <label className="block text-sm font-semibold text-navy">Subject
+              <input className="field mt-2" maxLength={200} value={contactSubject} onChange={e => setContactSubject(e.target.value)} placeholder="What is your message about?" />
+            </label>
+            <label className="block text-sm font-semibold text-navy">Your message
+              <textarea className="field mt-2" rows="5" maxLength={4000} required value={contactMessage} onChange={e => setContactMessage(e.target.value)} placeholder="Write your message here..." />
+            </label>
+            {messageError && <p role="alert" className="text-sm text-red-600">{messageError}</p>}
+            {messageSent && <p role="status" className="text-sm text-green-700">{messageSent}</p>}
+            <button type="submit" className="btn-custom" disabled={sendingMessage || !contactMessage.trim()}>{sendingMessage ? 'Sending message...' : 'Send Message'}</button>
+          </form>
+        </section>
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-gray-300 pt-5">
           <Link to="/" className="text-sm text-navy underline">Back to website</Link>
           <button onClick={logout} className="text-sm font-semibold text-red-700 underline">Sign out</button>

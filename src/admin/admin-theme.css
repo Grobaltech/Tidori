@@ -1,0 +1,35 @@
+/* Tidori private administration theme — adapted from Grobaltech/admin-dashboard.
+   Scoped to .tidori-admin so public pages keep their existing styles. */
+.tidori-admin{--admin-primary:#009cff;--admin-light:#f3f6f9;--admin-dark:#191c24;min-height:100vh;background:#fff;color:#6c7293;font-family:inherit}
+.tidori-admin *{box-sizing:border-box}
+.tidori-admin .admin-sidebar{position:fixed;inset:0 auto 0 0;width:250px;overflow-y:auto;background:var(--admin-light);transition:transform .25s ease;z-index:40;padding:22px 0}
+.tidori-admin .admin-brand{display:flex;align-items:center;gap:12px;padding:0 22px 28px;color:var(--admin-dark);font-size:22px;font-weight:800;letter-spacing:.5px;text-decoration:none}
+.tidori-admin .admin-brand-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--admin-primary);color:white;font-size:19px}
+.tidori-admin .admin-nav-label{padding:12px 22px 8px;color:#9ca3af;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase}
+.tidori-admin .admin-nav{display:grid;gap:4px;padding:0 12px}
+.tidori-admin .admin-nav a,.tidori-admin .admin-nav button{display:flex;align-items:center;gap:13px;width:100%;padding:11px 13px;border:0;border-left:3px solid transparent;border-radius:0 24px 24px 0;background:transparent;color:#52576d;text-align:left;text-decoration:none;font:500 14px inherit;cursor:pointer;transition:.2s}
+.tidori-admin .admin-nav a:hover,.tidori-admin .admin-nav a.active,.tidori-admin .admin-nav button:hover,.tidori-admin .admin-nav button.active{border-left-color:var(--admin-primary);background:#fff;color:var(--admin-primary)}
+.tidori-admin .admin-nav-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#fff;color:#7d8499;flex:none}
+.tidori-admin .admin-nav a.active .admin-nav-icon{background:var(--admin-light);color:var(--admin-primary)}
+.tidori-admin .admin-main{min-height:100vh;margin-left:250px;background:#fff;transition:margin .25s ease}
+.tidori-admin .admin-topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:74px;padding:12px 28px;background:#fff;box-shadow:0 2px 12px rgba(25,28,36,.06)}
+.tidori-admin .admin-icon-button{display:inline-grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:var(--admin-light);color:var(--admin-dark);cursor:pointer}
+.tidori-admin .admin-content{padding:28px}
+.tidori-admin .admin-page-title{margin:0;color:var(--admin-dark);font-size:25px;font-weight:750;letter-spacing:-.5px}
+.tidori-admin .admin-muted{color:#9aa0b2;font-size:13px}
+.tidori-admin .admin-card{border:1px solid #edf0f5;border-radius:8px;background:#fff;box-shadow:0 2px 12px rgba(25,28,36,.035)}
+.tidori-admin .admin-stat{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px;min-height:120px}
+.tidori-admin .admin-stat-label{margin:0 0 8px;color:#9aa0b2;font-size:13px}
+.tidori-admin .admin-stat-value{margin:0;color:var(--admin-dark);font-size:27px;font-weight:750}
+.tidori-admin .admin-stat-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:8px;background:rgba(0,156,255,.1);color:var(--admin-primary);font-size:20px}
+.tidori-admin .admin-section-title{margin:0;color:var(--admin-dark);font-size:17px;font-weight:700}
+.tidori-admin .admin-table{width:100%;border-collapse:collapse;font-size:13px}
+.tidori-admin .admin-table th,.tidori-admin .admin-table td{padding:14px 16px;border-bottom:1px solid #edf0f5;text-align:left}
+.tidori-admin .admin-table th{color:#9299aa;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.tidori-admin .admin-pill{display:inline-flex;align-items:center;padding:5px 10px;border-radius:20px;background:#f3f6f9;color:#737b91;font-size:11px;font-weight:700}
+.tidori-admin .admin-empty{padding:32px 18px;text-align:center;color:#9aa0b2;font-size:13px}
+.tidori-admin .admin-profile{display:flex;align-items:center;gap:10px;color:var(--admin-dark);font-size:13px;font-weight:650}
+.tidori-admin .admin-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#e6f5ff;color:var(--admin-primary);font-weight:800}
+.tidori-admin .admin-mobile-overlay{display:none}
+@media(max-width:991px){.tidori-admin .admin-sidebar{transform:translateX(-100%)}.tidori-admin.sidebar-open .admin-sidebar{transform:translateX(0)}.tidori-admin .admin-main{margin-left:0}.tidori-admin.sidebar-open .admin-mobile-overlay{display:block;position:fixed;inset:0;background:rgba(25,28,36,.35);z-index:35}}
+@media(max-width:640px){.tidori-admin .admin-topbar{padding:10px 14px}.tidori-admin .admin-content{padding:18px 14px}.tidori-admin .admin-page-title{font-size:21px}.tidori-admin .admin-stat{padding:16px;min-height:100px}.tidori-admin .admin-stat-value{font-size:23px}}

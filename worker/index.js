@@ -70,7 +70,7 @@ async function ensurePesapalIpn(env, token, origin) {
     : Array.isArray(listData.ipn_list) ? listData.ipn_list
       : Array.isArray(listData.data) ? listData.data : [];
   const existing = registered.find((item) =>
-    String(item.url || "").replace(/\\/$/, "") === ipnUrl.replace(/\\/$/, "")
+    String(item.url || "").replace(/\/$/, "") === ipnUrl.replace(/\/$/, "")
     && String(item.ipn_status ?? 1) !== "0"
   );
   if (existing?.ipn_id) return existing.ipn_id;

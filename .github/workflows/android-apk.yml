@@ -2,15 +2,6 @@ name: Build Tidori Android APK
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'android/**'
-      - 'capacitor.config.ts'
-      - 'src/components/MobileAppBridge.jsx'
-      - 'src/App.jsx'
-      - 'package.json'
-      - '.github/workflows/android-apk.yml'
-    branches: [main]
 
 jobs:
   build-apk:

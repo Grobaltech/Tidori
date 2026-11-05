@@ -212,6 +212,18 @@ begin
   end loop;
 end $$;
 
+-- Permit explicitly authorised website managers to upload and maintain CMS media.
+drop policy if exists "Tidori website managers upload media" on storage.objects;
+create policy "Tidori website managers upload media" on storage.objects
+for insert to authenticated with check (bucket_id = 'tidori-website' and (select private.has_tidori_permission('website.manage')));
+drop policy if exists "Tidori website managers update media" on storage.objects;
+create policy "Tidori website managers update media" on storage.objects
+for update to authenticated using (bucket_id = 'tidori-website' and (select private.has_tidori_permission('website.manage')))
+with check (bucket_id = 'tidori-website' and (select private.has_tidori_permission('website.manage')));
+drop policy if exists "Tidori website managers delete media" on storage.objects;
+create policy "Tidori website managers delete media" on storage.objects
+for delete to authenticated using (bucket_id = 'tidori-website' and (select private.has_tidori_permission('website.manage')));
+
 -- Profile directory access: self-service remains; explicit members.view enables directory access.
 drop policy if exists "Tidori permission view profiles" on public.profiles;
 create policy "Tidori permission view profiles" on public.profiles

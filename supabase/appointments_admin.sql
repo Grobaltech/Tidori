@@ -1,5 +1,18 @@
 -- Pastor appointment administration and payment tracking.
 -- Run this in the SQL Editor of the Supabase project used by the Tidori website.
+-- This is safe to run whether or not the appointments table already exists.
+
+create table if not exists public.appointments (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null check (char_length(full_name) between 2 and 120),
+  email text check (email is null or char_length(email) <= 200),
+  phone text check (phone is null or char_length(phone) <= 40),
+  appointment_type text not null default 'Appointment with the Pastor',
+  requested_at timestamptz,
+  notes text check (notes is null or char_length(notes) <= 2000),
+  status text not null default 'requested' check (status in ('requested','confirmed','completed','cancelled')),
+  created_at timestamptz not null default now()
+);
 
 alter table public.appointments
   add column if not exists payment_status text not null default 'unpaid',
@@ -41,11 +54,7 @@ drop policy if exists "Tidori administrators can view appointments" on public.ap
 create policy "Tidori administrators can view appointments" on public.appointments
   for select to authenticated
   using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = (select auth.uid())
-        and p.role in ('admin', 'super_admin')
-    )
+    (select private.is_tidori_admin())
   );
 
 drop policy if exists "Tidori administrators can update appointments" on public.appointments;

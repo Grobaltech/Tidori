@@ -164,7 +164,7 @@ begin
   for item in select * from (values
     ('events','events'),
     ('outreach_projects','outreach'),
-    ('posts','website'),
+    ('posts','website_manage'),
     ('team_members','team')
   ) as x(table_name,module_key)
   loop
@@ -173,10 +173,10 @@ begin
     execute format('drop policy if exists %I on public.%I','Tidori permission insert '||item.table_name,item.table_name);
     execute format('drop policy if exists %I on public.%I','Tidori permission update '||item.table_name,item.table_name);
     execute format('drop policy if exists %I on public.%I','Tidori permission delete '||item.table_name,item.table_name);
-    execute format('create policy %I on public.%I for select to authenticated using ((select private.has_tidori_permission(%L)))','Tidori permission select '||item.table_name,item.table_name,item.module_key||'.view');
-    execute format('create policy %I on public.%I for insert to authenticated with check ((select private.has_tidori_permission(%L)))','Tidori permission insert '||item.table_name,item.table_name,item.module_key||'.add');
-    execute format('create policy %I on public.%I for update to authenticated using ((select private.has_tidori_permission(%L))) with check ((select private.has_tidori_permission(%L)))','Tidori permission update '||item.table_name,item.table_name,item.module_key||'.edit',item.module_key||'.edit');
-    execute format('create policy %I on public.%I for delete to authenticated using ((select private.has_tidori_permission(%L)))','Tidori permission delete '||item.table_name,item.table_name,item.module_key||'.delete');
+    execute format('create policy %I on public.%I for select to authenticated using ((select private.has_tidori_permission(%L)))','Tidori permission select '||item.table_name,item.table_name,case when item.module_key = 'website_manage' then 'website.manage' else item.module_key||'.view' end);
+    execute format('create policy %I on public.%I for insert to authenticated with check ((select private.has_tidori_permission(%L)))','Tidori permission insert '||item.table_name,item.table_name,case when item.module_key = 'website_manage' then 'website.manage' else item.module_key||'.add' end);
+    execute format('create policy %I on public.%I for update to authenticated using ((select private.has_tidori_permission(%L))) with check ((select private.has_tidori_permission(%L)))','Tidori permission update '||item.table_name,item.table_name,case when item.module_key = 'website_manage' then 'website.manage' else item.module_key||'.edit' end,case when item.module_key = 'website_manage' then 'website.manage' else item.module_key||'.edit' end);
+    execute format('create policy %I on public.%I for delete to authenticated using ((select private.has_tidori_permission(%L)))','Tidori permission delete '||item.table_name,item.table_name,case when item.module_key = 'website_manage' then 'website.manage' else item.module_key||'.delete' end);
     execute format('grant select,insert,update,delete on public.%I to authenticated',item.table_name);
   end loop;
 end $$;
@@ -194,7 +194,7 @@ begin
   loop
     execute format('drop policy if exists %I on public.%I','Tidori administrators read '||item.table_name,item.table_name);
     execute format('drop policy if exists %I on public.%I','Tidori permission select '||item.table_name,item.table_name);
-    execute format('create policy %I on public.%I for select to authenticated using ((select private.has_tidori_permission(%L)))','Tidori permission select '||item.table_name,item.table_name,item.module_key||'.view');
+    execute format('create policy %I on public.%I for select to authenticated using ((select private.has_tidori_permission(%L)))','Tidori permission select '||item.table_name,item.table_name,case when item.module_key = 'website_manage' then 'website.manage' else item.module_key||'.view' end);
     execute format('grant select on public.%I to authenticated',item.table_name);
   end loop;
 end $$;

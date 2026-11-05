@@ -3,12 +3,16 @@ import PageHeader from '../components/PageHeader';
 import SectionHeader from '../components/SectionHeader';
 import ContactForm from '../components/ContactForm';
 import { site } from '../config/site';
+import { useAsync } from '../hooks/hooks';
+import { getSiteContent } from '../lib/api';
 
 export default function Contact() {
+  const { data: cmsSite } = useAsync(getSiteContent);
+  const activeSite = cmsSite || site;
   const info = [
-    [FaMapMarkerAlt, 'Address', site.address],
-    [FaPhoneAlt, 'Phone', site.phone],
-    [FaEnvelope, 'Email', site.email],
+    [FaMapMarkerAlt, 'Address', activeSite.address],
+    [FaPhoneAlt, 'Phone', activeSite.phone],
+    [FaEnvelope, 'Email', activeSite.email],
   ];
   return (
     <>
@@ -24,7 +28,7 @@ export default function Contact() {
                   <div><h3 className="text-xl">{label}</h3><p>{val}</p></div>
                 </div>
               ))}
-              <p><strong className="text-navy">Service times:</strong> {site.serviceTimes}</p>
+              <p><strong className="text-navy">Service times:</strong> {activeSite.serviceTimes}</p>
               <img src="/img/contact.jpg" alt="" className="mt-6 w-full" loading="lazy" />
             </div>
             <ContactForm />

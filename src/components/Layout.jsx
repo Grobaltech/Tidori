@@ -34,7 +34,7 @@ function TopBar() {
   const { data: cmsSite } = useAsync(getSiteContent);
   const activeSite = cmsSite || site;
   return (
-    <div className="hidden border-b border-white/30 bg-ink md:block">
+    <div className="top-bar hidden border-b border-white/30 bg-ink md:block">
       <div className="mx-auto flex h-11 max-w-wide items-center justify-between px-4 text-white">
         <div className="flex h-full items-center">
           <span className="flex h-full items-center border-l border-white/30 px-3 text-sm">
@@ -113,7 +113,7 @@ function Footer() {
     </Link>
   ));
   return (
-    <footer className="mt-11 bg-ink pt-20 text-white">
+    <footer className="footer mt-11 bg-ink pt-20 text-white">
       <div className="container-page grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <img src={activeSite.logoUrl || "/img/grok_1793864104245.jpg"} alt={activeSite.name || "Tidori Ministries"} className="mb-6 h-16 w-auto max-w-[190px] object-contain" />

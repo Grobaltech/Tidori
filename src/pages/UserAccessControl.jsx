@@ -19,6 +19,7 @@ const actionLabels = { view:'View', add:'Add', edit:'Edit', delete:'Delete', app
 export default function UserAccessControl({ role }) {
   const [users,setUsers] = useState([]);
   const [grants,setGrants] = useState([]);
+  const [audit,setAudit] = useState([]);
   const [selected,setSelected] = useState('');
   const [chosen,setChosen] = useState([]);
   const [search,setSearch] = useState('');
@@ -29,12 +30,13 @@ export default function UserAccessControl({ role }) {
 
   const load = async () => {
     setLoading(true); setError('');
-    const [u,p] = await Promise.all([
+    const [u,p,a] = await Promise.all([
       supabase.from('profiles').select('id,full_name,email,role,member_status').in('role',['member','leader']).order('full_name'),
       supabase.from('user_permissions').select('user_id,permission,granted_at,granted_by').order('permission'),
+      supabase.from('access_audit_log').select('*').order('created_at',{ascending:false}).limit(20),
     ]);
-    if(u.error || p.error) setError([u.error?.message,p.error?.message].filter(Boolean).join(' · '));
-    setUsers(u.data || []); setGrants(p.data || []);
+    if(u.error || p.error || a.error) setError([u.error?.message,p.error?.message,a.error?.message].filter(Boolean).join(' · '));
+    setUsers(u.data || []); setGrants(p.data || []); setAudit(a.data || []);
     setLoading(false);
   };
   useEffect(()=>{load();},[]);
@@ -75,6 +77,7 @@ export default function UserAccessControl({ role }) {
         </div>
       </div>
     </section>
+    <section className="admin-card overflow-hidden"><div className="border-b border-gray-100 px-5 py-4"><h3 className="text-sm font-bold text-[#191c24]">Recent access changes</h3><p className="admin-muted mt-1">Latest permission grants and revocations.</p></div><div className="overflow-x-auto"><table className="admin-table w-full"><thead><tr><th>Action</th><th>Target account</th><th>Permissions</th><th>Date</th></tr></thead><tbody>{audit.map(row=><tr key={row.id}><td>{row.action}</td><td className="font-mono text-xs">{row.target_user_id||'—'}</td><td className="max-w-sm truncate text-xs">{row.permission||'—'}</td><td>{row.created_at?new Date(row.created_at).toLocaleString():'—'}</td></tr>)}</tbody></table>{!audit.length&&<p className="p-4 text-sm text-gray-500">No access changes have been recorded yet.</p>}</div></section>
     <section className="admin-card p-5"><h3 className="text-sm font-bold text-[#191c24]">Authority boundaries</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-gray-500"><li>Only Tidori administrators can grant or revoke access.</li><li>Church users cannot grant permissions to themselves or other users.</li><li>Only Super Administrator can promote an account to Tidori Administrator.</li><li>Access changes are recorded in the audit log and enforced by database policies for protected modules.</li></ul></section>
   </div>;
 }

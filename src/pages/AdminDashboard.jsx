@@ -10,6 +10,7 @@ import '../admin/admin-theme.css';
 import WebsiteCMS from './WebsiteCMS';
 import UserAccessControl from './UserAccessControl';
 import AppointmentsManager from '../admin/AppointmentsManager';
+import TeamManager from '../admin/TeamManager';
 
 const sections = [
   { id: 'overview', label: 'Dashboard', icon: FaTachometerAlt },
@@ -234,7 +235,7 @@ export default function AdminDashboard() {
         <div className="admin-content">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#009cff]">Tidori Ministries</p><h1 className="admin-page-title">{current.label}</h1><p className="admin-muted mt-1">Live records from the Tidori Supabase project.</p></div><div className="flex items-center gap-2"><span className="admin-pill">Administrator</span><button onClick={loadOverview} disabled={loadingData} className="admin-icon-button" title="Refresh live records"><FaSyncAlt className={loadingData ? 'animate-spin' : ''} /></button></div></div>
           {dataError && <div role="alert" className="mb-5 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><strong>Some records could not be loaded.</strong> {dataError} <span className="block mt-1">Run the administrator access SQL file supplied with this update in the Tidori Supabase SQL Editor, then refresh.</span></div>}
-          {activeSection === 'access' ? <UserAccessControl role={profile?.role} /> : activeSection === 'appointments' ? <AppointmentsManager canManage={isAdministrator} /> : activeSection === 'content' ? <WebsiteCMS /> : activeSection === 'overview' ? <>
+          {activeSection === 'access' ? <UserAccessControl role={profile?.role} /> : activeSection === 'appointments' ? <AppointmentsManager canManage={isAdministrator} /> : activeSection === 'team' ? <TeamManager canManage={isAdministrator} /> : activeSection === 'content' ? <WebsiteCMS /> : activeSection === 'overview' ? <>
             <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 ['Users',counts.users,FaUserShield,'users'],['Members',counts.members,FaUsers,'members'],['Ministries',new Set((records.members||[]).map(r=>r.ministry).filter(Boolean)).size,FaPrayingHands,'ministries'],['Upcoming events',(records.events||[]).filter(r=>r.published && new Date(r.starts_at)>=new Date()).length,FaCalendarAlt,'events'],['Pastor appointments',counts.appointments,FaCalendarAlt,'appointments'],['Outreach projects',counts.outreach,FaHandsHelping,'outreach'],

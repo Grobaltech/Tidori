@@ -42,18 +42,25 @@ export default function Login() {
         if (authError) throw authError;
         navigate('/profile');
       }
-    } catch (err) { setError(err.message || 'Unable to continue. Please try again.'); }
+    } catch (err) {
+      console.error('Tidori authentication failed:', err);
+      setError([err.message, err.code ? `Code: ${err.code}` : '', err.status ? `Status: ${err.status}` : ''].filter(Boolean).join(' — ') || 'Unable to continue. Please try again.');
+    }
     finally { setBusy(false); }
   };
 
   const resetPassword = async () => {
-    if (!supabaseReady || !email.trim()) { setError('Enter your email address first.'); return; }
+    if (!supabaseReady || !supabase) { setError('Login is not connected to the Tidori database. The administrator must add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the Cloudflare build variables, then redeploy.'); return; }
+    if (!email.trim()) { setError('Enter your email address first.'); return; }
     setBusy(true); setError(''); setMessage('');
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/profile` });
       if (resetError) throw resetError;
       setMessage('Password reset instructions have been sent to your email, if an account exists.');
-    } catch (err) { setError(err.message || 'Could not send reset email.'); }
+    } catch (err) {
+      console.error('Tidori password reset failed:', err);
+      setError([err.message, err.code ? `Code: ${err.code}` : '', err.status ? `Status: ${err.status}` : ''].filter(Boolean).join(' — ') || 'Could not send reset email. Please try again.');
+    }
     finally { setBusy(false); }
   };
 
@@ -70,9 +77,9 @@ export default function Login() {
           <input className="field" type="password" required minLength={6} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder="Password (at least 6 characters)" value={password} onChange={e => setPassword(e.target.value)} />
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           {message && <p role="status" className="text-sm text-green-700">{message}</p>}
-          <button className="btn-custom w-full" disabled={busy || !supabaseReady}>{busy ? 'Please wait...' : mode === 'signup' ? 'Create Account' : 'Sign In'}</button>
+          <button type="submit" className="btn-custom w-full" disabled={busy}>{busy ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'signup' ? 'Create Account' : 'Sign In'}</button>
         </form>
-        {mode === 'login' && <button type="button" onClick={resetPassword} disabled={busy} className="mt-4 text-sm text-navy underline">Forgot your password?</button>}
+        {mode === 'login' && <button type="button" onClick={resetPassword} disabled={busy} aria-busy={busy} className="mt-4 text-sm text-navy underline">{busy ? 'Please wait...' : 'Forgot your password?'}</button>}
         <div className="mt-6 border-t border-gray-300 pt-5 text-center text-sm">
           {mode === 'login' ? <>Don't have an account? <Link className="font-semibold text-navy underline" to="/register">Register here</Link></> : <>Already registered? <Link className="font-semibold text-navy underline" to="/login">Sign in</Link></>}
         </div>

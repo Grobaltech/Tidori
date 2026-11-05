@@ -10,6 +10,7 @@ import '../admin/admin-theme.css';
 
 const sections = [
   { id: 'overview', label: 'Dashboard', icon: FaTachometerAlt },
+  { id: 'users', label: 'Users', icon: FaUserShield },
   { id: 'members', label: 'Members', icon: FaUsers },
   { id: 'ministries', label: 'Ministries', icon: FaPrayingHands },
   { id: 'events', label: 'Events', icon: FaCalendarAlt },
@@ -20,6 +21,7 @@ const sections = [
 ];
 
 const tableConfig = {
+  users: { table: 'profiles', title: 'User accounts', columns: [['full_name','Full name'],['email','Email'],['phone','Phone'],['role','Account role'],['member_status','Membership status'],['created_at','Registered']], search: ['full_name','email','phone','role','member_status'] },
   members: { table: 'profiles', title: 'Member records', columns: [['full_name','Full name'],['email','Email'],['phone','Phone'],['role','Account role'],['member_status','Church status'],['created_at','Joined']], search: ['full_name','email','phone','role','member_status'] },
   events: { table: 'events', title: 'Events', columns: [['title','Title'],['location','Location'],['starts_at','Starts'],['published','Published']], search: ['title','location','description'] },
   outreach: { table: 'outreach_projects', title: 'Outreach projects', columns: [['title','Project'],['goal_amount','Goal'],['raised_amount','Raised'],['published','Published']], search: ['title','summary'] },
@@ -88,6 +90,7 @@ export default function AdminDashboard() {
     if (!supabase || !profile) return;
     setLoadingData(true); setDataError('');
     const requests = [
+      ['users', supabase.from('profiles').select('id,full_name,email,phone,role,member_status,created_at').order('created_at',{ascending:false}).limit(100)],
       ['members', supabase.from('profiles').select('id,full_name,email,phone,role,member_status,created_at').order('created_at',{ascending:false}).limit(100)],
       ['events', supabase.from('events').select('*').order('starts_at',{ascending:false}).limit(100)],
       ['outreach', supabase.from('outreach_projects').select('*').order('created_at',{ascending:false}).limit(100)],
@@ -204,7 +207,7 @@ export default function AdminDashboard() {
           {activeSection === 'overview' ? <>
             <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
-                ['Members',counts.members,FaUsers,'members'],['Ministries',new Set((records.members||[]).map(r=>r.ministry).filter(Boolean)).size,FaPrayingHands,'ministries'],['Upcoming events',(records.events||[]).filter(r=>r.published && new Date(r.starts_at)>=new Date()).length,FaCalendarAlt,'events'],['Outreach projects',counts.outreach,FaHandsHelping,'outreach'],
+                ['Users',counts.users,FaUserShield,'users'],['Members',counts.members,FaUsers,'members'],['Ministries',new Set((records.members||[]).map(r=>r.ministry).filter(Boolean)).size,FaPrayingHands,'ministries'],['Upcoming events',(records.events||[]).filter(r=>r.published && new Date(r.starts_at)>=new Date()).length,FaCalendarAlt,'events'],['Outreach projects',counts.outreach,FaHandsHelping,'outreach'],
               ].map(([label,value,StatIcon,target]) => <button type="button" onClick={()=>changeSection(target)} className="admin-card admin-stat text-left" key={label}><div><p className="admin-stat-label">{label}</p><p className="admin-stat-value">{value ?? (loadingData?'…':'0')}</p><p className="admin-muted">Live database count · open records</p></div><span className="admin-stat-icon"><StatIcon /></span></button>)}
             </div>
             <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">

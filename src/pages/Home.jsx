@@ -67,7 +67,7 @@ export function Facts() {
   const { data: cmsFacts } = useAsync(getSiteFacts);
   const facts = cmsFacts?.length ? cmsFacts : site.facts;
   return (
-    <section className="my-11 flex min-h-[400px] items-center bg-black/50 bg-cover bg-fixed bg-center bg-blend-overlay"
+    <section className="facts my-11 flex min-h-[400px] items-center bg-black/50 bg-cover bg-fixed bg-center bg-blend-overlay"
       style={{ backgroundImage: "url('/img/facts.jpg')" }}>
       <div className="container-page grid gap-6 py-10 sm:grid-cols-2 lg:grid-cols-4">
         {facts.map((f) => (

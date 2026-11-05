@@ -120,7 +120,7 @@ export default function AdminDashboard() {
     ];
     const isAdministrator = ['admin','super_admin'].includes(profile.role);
     const permissionFor = { users:'users.view', members:'members.view', events:'events.view', appointments:'appointments.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
-    const allowedRequests = requests.filter(([key]) => isAdministrator || profile.permissions?.includes(permissionFor[key]) || (key === 'members' && profile.permissions?.includes('ministries.view')));
+    const allowedRequests = requests.filter(([key]) => key === 'appointments' ? isAdministrator : isAdministrator || profile.permissions?.includes(permissionFor[key]) || (key === 'members' && profile.permissions?.includes('ministries.view')));
     const settled = await Promise.all(allowedRequests.map(async ([key, query]) => {
       const [result, countResult] = await Promise.all([
         query,
@@ -152,6 +152,7 @@ export default function AdminDashboard() {
   const modulePermission = { users:'users.view', members:'members.view', ministries:'ministries.view', events:'events.view', appointments:'appointments.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
   const canOpen = (id) => isAdministrator || Boolean(profile?.permissions?.includes(modulePermission[id]));
   const visibleSections = useMemo(() => sections.filter(item => {
+    if (item.id === 'appointments') return isAdministrator;
     if (item.id === 'access') return isAdministrator;
     if (item.id === 'users') return profile?.role === 'super_admin';
     if (item.id === 'overview') return isAdministrator || profile?.permissions?.includes('reports.view');

@@ -40,7 +40,7 @@ begin
 end $$;
 
 alter table public.appointments enable row level security;
-revoke all on public.appointments from anon;
+revoke all on public.appointments from anon, authenticated;
 grant insert on public.appointments to anon, authenticated;
 grant select, update on public.appointments to authenticated;
 grant all on public.appointments to service_role;
@@ -61,11 +61,7 @@ drop policy if exists "Tidori administrators can update appointments" on public.
 create policy "Tidori administrators can update appointments" on public.appointments
   for update to authenticated
   using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = (select auth.uid())
-        and p.role in ('admin', 'super_admin')
-    )
+    (select private.is_tidori_admin())
   )
   with check (
     exists (

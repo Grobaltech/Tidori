@@ -91,7 +91,7 @@ on conflict (id) do nothing;
 
 -- Existing hardcoded homepage content is seeded as editable drafts. Review and publish each record.
 insert into public.homepage_slides (title, description, image_url, button_label, button_url, sort_order, published)
-select v.title, v.description, v.image_url, v.button_label, v.button_url, v.sort_order, false
+select v.title, v.description, v.image_url, v.button_label, v.button_url, v.sort_order, true
 from (values
  ('Welcome to Tidori Ministries','A community of faith, hope and service. Come as you are and grow with us.','/img/carousel-1.jpg','Learn More','/about',0),
  ('Get involved with a helping hand','Serve alongside our church family as we love our neighbours in practical ways.','/img/carousel-2.jpg','Serve With Us','/volunteer',1),

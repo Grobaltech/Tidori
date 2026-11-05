@@ -158,7 +158,19 @@ function BackToTop() {
 
 export default function Layout() {
   const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const animated = document.querySelectorAll('.section-header, .service-item, .event-item, .team-item, .blog-item, .facts-item, .about-img, .contact-img');
+    animated.forEach((element) => element.classList.add('wow', 'fadeInUp'));
+    if (window.WOW) {
+      if (!window.tidoriWow) {
+        window.tidoriWow = new window.WOW({ boxClass: 'wow', animateClass: 'animated', offset: 60, mobile: true, live: true });
+        window.tidoriWow.init();
+      } else {
+        window.tidoriWow.sync();
+      }
+    }
+  }, [pathname]);
   return (
     <>
       <TopBar />

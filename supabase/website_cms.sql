@@ -76,6 +76,7 @@ values ('main', jsonb_build_object(
  'logoUrl','/img/grok_1793864104245.jpg',
  'shortName','Tidori',
  'tagline','A community of faith, hope and service',
+ 'motto','', 'registrationNumber','', 'foundingDate','', 'websiteUrl','', 'postalAddress','',
  'address','Your church address here',
  'phone','+000 000 000 000',
  'email','info@tidoriministries.org',
@@ -85,7 +86,8 @@ values ('main', jsonb_build_object(
  'about', jsonb_build_object(
    'about','Tidori Ministries is a church family devoted to worshipping God, growing in the Word and serving our community with love.',
    'mission','Our mission is to share the good news of Jesus Christ and to meet practical needs in His name.',
-   'vision','We envision lives and communities transformed by faith, hope and love.'
+   'vision','We envision lives and communities transformed by faith, hope and love.',
+   'history','', 'beliefs','', 'objectives','', 'values',''
  )
 ), true)
 on conflict (id) do nothing;

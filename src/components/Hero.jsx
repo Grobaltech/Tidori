@@ -21,6 +21,7 @@ export default function Hero() {
   const [paused, setPaused] = useState(false);
   const [video, setVideo] = useState(false);
   const go = (d) => setI((x) => (x + d + slides.length) % slides.length);
+  useEffect(() => { if (i >= slides.length) setI(0); }, [i, slides.length]);
 
   useEffect(() => {
     if (paused) return;
@@ -32,7 +33,7 @@ export default function Hero() {
     <section className="relative h-[520px] overflow-hidden bg-ink sm:h-[600px] lg:h-[700px]"
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       {slides.map((s, idx) => (
-        <div key={s.title} className={`absolute inset-0 transition-opacity duration-700 ${idx === i ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
+        <div key={s.id || s.title} className={`absolute inset-0 transition-opacity duration-700 ${idx === i ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
           <img src={s.image_url || s.img} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-black/55" />
           <div className="absolute inset-0 flex items-center justify-center px-4">

@@ -7,6 +7,7 @@ import {
 import { site } from '../config/site';
 import { useScrollY } from '../hooks/hooks';
 import NewsletterForm from './NewsletterForm';
+import { supabase, supabaseReady } from '../lib/supabase';
 
 const socials = [
   ['facebook', FaFacebookF], ['twitter', FaTwitter], ['youtube', FaYoutube],
@@ -50,8 +51,15 @@ function Navbar() {
   const y = useScrollY();
   const [open, setOpen] = useState(false);
   const [sub, setSub] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => { setOpen(false); setSub(false); }, [pathname]);
+  useEffect(() => {
+    if (!supabaseReady) return;
+    supabase.auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session)));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setSignedIn(Boolean(session)));
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const link = ({ isActive }) =>
     `block px-4 py-2 text-white hover:text-gold ${isActive ? 'text-gold' : ''}`;

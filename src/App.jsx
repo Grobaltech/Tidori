@@ -15,9 +15,12 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
+import MobileAppBridge from './components/MobileAppBridge';
 
 export default function App() {
   return (
+    <>
+    <MobileAppBridge />
     <Routes>
       <Route path="/admin/*" element={<AdminDashboard />} />
       <Route element={<Layout />}>
@@ -38,5 +41,6 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+    </>
   );
 }

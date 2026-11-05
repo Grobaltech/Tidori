@@ -6,7 +6,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default function GiveForm({ projectId = null, dark = false }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [amount, setAmount] = useState(20);
+  const [amount, setAmount] = useState(20000);
   const [custom, setCustom] = useState('');
   const [phone, setPhone] = useState('');
   const [trap, setTrap] = useState('');
@@ -47,11 +47,11 @@ export default function GiveForm({ projectId = null, dark = false }) {
         {presets.map((p) => (
           <button type="button" key={p} onClick={() => { setAmount(p); setCustom(''); }}
             className={`btn-custom !px-4 ${dark ? 'btn-light' : ''} ${!custom && amount === p ? 'is-active' : ''}`}>
-            ${p}
+            UGX {p.toLocaleString('en-UG')}
           </button>
         ))}
       </div>
-      <input className={`${cls} mb-4`} type="number" min="1" step="0.01" placeholder="Other amount (UGX)" value={custom} onChange={(e) => setCustom(e.target.value)} />
+      <input className={`${cls} mb-4`} type="number" min="1" step="1" placeholder="Other amount (UGX)" value={custom} onChange={(e) => setCustom(e.target.value)} />
       <input className="hidden" tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => setTrap(e.target.value)} aria-hidden="true" />
       <button className={`btn-custom ${dark ? 'btn-light' : ''}`} disabled={status === 'sending'}>
         {status === 'sending' ? 'Connecting to Pesapal...' : 'Continue to Secure Payment'}

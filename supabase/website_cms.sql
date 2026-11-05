@@ -73,6 +73,7 @@ grant insert, update, delete, select on public.site_content to authenticated;
 insert into public.site_content (id, content, published)
 values ('main', jsonb_build_object(
  'name','Tidori Ministries',
+ 'logoUrl','/img/grok_1793864104245.jpg',
  'shortName','Tidori',
  'tagline','A community of faith, hope and service',
  'address','Your church address here',

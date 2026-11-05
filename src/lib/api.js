@@ -73,10 +73,14 @@ const publicRows = async (table, fallbackRows) => {
   return data?.length ? data : fallbackRows;
 };
 
-export const getHomepageSlides = () => publicRows('homepage_slides', [
-  { id:'fallback-1', title:'Welcome to Tidori Ministries', description:'A community of faith, hope and service. Come as you are and grow with us.', image_url:'/img/carousel-1.jpg', button_label:'Learn More', button_url:'/about', sort_order:0 },
-  { id:'fallback-2', title:'Get involved with a helping hand', description:'Serve alongside our church family as we love our neighbours in practical ways.', image_url:'/img/carousel-2.jpg', button_label:'Serve With Us', button_url:'/volunteer', sort_order:1 },
-  { id:'fallback-3', title:'Bringing hope to our community', description:'Your giving and prayers help us reach families in need.', image_url:'/img/carousel-3.jpg', button_label:'Give Now', button_url:'/give', sort_order:2 },
-]);
+export const getHomepageSlides = async () => {
+  const rows = await publicRows('homepage_slides', [
+    { id:'fallback-1', title:'Welcome to Tidori Ministries', description:'A community of faith, hope and service. Come as you are and grow with us.', image_url:'/img/carousel-1.jpg', button_label:'Learn More', button_url:'/about', sort_order:0 },
+    { id:'fallback-2', title:'Get involved with a helping hand', description:'Serve alongside our church family as we love our neighbours in practical ways.', image_url:'/img/carousel-2.jpg', button_label:'Serve With Us', button_url:'/volunteer', sort_order:1 },
+    { id:'fallback-3', title:'Bringing hope to our community', description:'Your giving and prayers help us reach families in need.', image_url:'/img/carousel-3.jpg', button_label:'Give Now', button_url:'/give', sort_order:2 },
+  ]);
+  const now = Date.now();
+  return rows.filter(slide => (!slide.starts_at || new Date(slide.starts_at).getTime() <= now) && (!slide.ends_at || new Date(slide.ends_at).getTime() >= now));
+};
 export const getMinistries = () => publicRows('site_ministries', defaultSite.ministries);
 export const getSiteFacts = () => publicRows('site_facts', defaultSite.facts);

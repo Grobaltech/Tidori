@@ -52,6 +52,24 @@ export default function WebsiteCMS() {
   };
   useEffect(()=>{load();},[]);
 
+  const uploadImage = async (file, target, key) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Please choose an image file.'); return; }
+    if (file.size > 8 * 1024 * 1024) { setError('Images must be 8 MB or smaller.'); return; }
+    setBusy(true); setError(''); setNotice('');
+    const safeName = file.name.toLowerCase().replace(/[^a-z0-9.-]+/g,'-');
+    const path = `${target}/${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage.from('tidori-website').upload(path,file,{upsert:true,contentType:file.type});
+    if (uploadError) setError(uploadError.message);
+    else {
+      const { data } = supabase.storage.from('tidori-website').getPublicUrl(path);
+      if (target === 'site') setSite(v=>({...v,[key]:data.publicUrl}));
+      else setEditing(v=>({...v,item:{...v.item,[key]:data.publicUrl}}));
+      setNotice('Image uploaded. Save the record to apply the new image.');
+    }
+    setBusy(false);
+  };
+
   const saveSite = async () => {
     setBusy(true); setError(''); setNotice('');
     const {data:userData} = await supabase.auth.getUser();
@@ -98,7 +116,7 @@ export default function WebsiteCMS() {
     </section>
     {tab==='identity'&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">Organisation identity and contact information</h3><div className="grid gap-4 sm:grid-cols-2">
       {['name','shortName','logoUrl','tagline','motto','registrationNumber','foundingDate','websiteUrl','postalAddress','address','phone','email','serviceTimes','videoUrl'].map(key=>field(({name:'Ministry name',shortName:'Short name',logoUrl:'Logo image URL',tagline:'Tagline',motto:'Motto',registrationNumber:'Registration number',foundingDate:'Founding date',websiteUrl:'Official website',postalAddress:'Postal address',address:'Physical address',phone:'Telephone',email:'Public email',serviceTimes:'Service times',videoUrl:'Video URL'})[key],key,site[key],setField,key==='email'?'email':'text'))}
-    </div><label className="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" checked={published} onChange={e=>setPublished(e.target.checked)}/> Publish organisation information on the website</label><button disabled={busy} onClick={saveSite} className="mt-4 rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy?'Saving…':'Save organisation details'}</button></section>}
+    </div><label className="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" checked={published} onChange={e=>setPublished(e.target.checked)}/> Publish organisation information on the website</label><label className="mt-4 block text-xs font-semibold text-gray-600">Upload ministry logo (PNG, JPG, WEBP; max 8 MB)<input type="file" accept="image/png,image/jpeg,image/webp" className="mt-1 block w-full text-sm" onChange={e=>uploadImage(e.target.files?.[0],'site','logoUrl')} /></label><button disabled={busy} onClick={saveSite} className="mt-4 rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy?'Saving…':'Save organisation details'}</button></section>}
     {tab==='about'&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">About, mission and vision</h3><div className="space-y-4">{[['about','About the ministry'],['history','History and background'],['mission','Mission statement'],['vision','Vision statement'],['beliefs','Statement of faith / beliefs'],['objectives','Aims and objectives'],['values','Core values']].map(([key,label])=><label key={key} className="block text-xs font-semibold text-gray-600">{label}<textarea rows="5" className={input+' mt-1'} value={site.about?.[key]||''} onChange={e=>setNested('about',key,e.target.value)}/></label>)}</div><label className="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" checked={published} onChange={e=>setPublished(e.target.checked)}/> Publish About information</label><button disabled={busy} onClick={saveSite} className="mt-4 rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white">{busy?'Saving…':'Save About information'}</button></section>}
     {tab==='social'&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">Social media and homepage video</h3><div className="grid gap-4 sm:grid-cols-2">{Object.keys(site.social||{}).map(key=>field(key+' URL',key,site.social[key],(k,v)=>setNested('social',k,v)))}{field('Video URL','videoUrl',site.videoUrl,setField)}</div><button disabled={busy} onClick={saveSite} className="mt-4 rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white">{busy?'Saving…':'Save social links'}</button></section>}
     {tab==='slides'&&editor('homepage_slides',slides)}
@@ -109,7 +127,7 @@ export default function WebsiteCMS() {
     {tab==='posts'&&editor('posts',posts)}
     {tab==='team'&&editor('team_members',leaders)}
     {editing&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">Edit {editing.table==='homepage_slides'?'homepage slide':editing.table==='site_ministries'?'ministry':editing.table==='site_facts'?'statistic':editing.table==='events'?'event':editing.table==='outreach_projects'?'outreach project':editing.table==='posts'?'post': 'church leader'}</h3><div className="grid gap-4 sm:grid-cols-2">
-      {Object.entries(editing.item).filter(([key])=>!['id','created_at','updated_at'].includes(key)).map(([key,value])=>key==='published'?<label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(value)} onChange={e=>setEditing(v=>({...v,item:{...v.item,published:e.target.checked}}))}/> Published on website</label>:['description','summary','body','excerpt'].includes(key)?<label key={key} className="block text-xs font-semibold text-gray-600 sm:col-span-2">{key.replaceAll('_',' ')}<textarea rows="4" className={input+' mt-1'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:e.target.value}}))}/></label>:<label key={key} className="block text-xs font-semibold text-gray-600">{key.replaceAll('_',' ')}<input className={input+' mt-1'} type={typeof value==='number'?'number':'text'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:typeof value==='number'?Number(e.target.value):e.target.value}}))}/></label>)}
+      {Object.entries(editing.item).filter(([key])=>!['id','created_at','updated_at'].includes(key)).map(([key,value])=>key==='published'?<label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(value)} onChange={e=>setEditing(v=>({...v,item:{...v.item,published:e.target.checked}}))}/> Published on website</label>:['description','summary','body','excerpt'].includes(key)?<label key={key} className="block text-xs font-semibold text-gray-600 sm:col-span-2">{key.replaceAll('_',' ')}<textarea rows="4" className={input+' mt-1'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:e.target.value}}))}/></label>:['image_url','photo_url'].includes(key)?<label key={key} className="block text-xs font-semibold text-gray-600">{key.replaceAll('_',' ')}<input className={input+' mt-1'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:e.target.value}}))}/><input type="file" accept="image/png,image/jpeg,image/webp" className="mt-2 block w-full text-xs" onChange={e=>uploadImage(e.target.files?.[0],'records',key)}/></label>:<label key={key} className="block text-xs font-semibold text-gray-600">{key.replaceAll('_',' ')}<input className={input+' mt-1'} type={typeof value==='number'?'number':'text'} value={value??''} onChange={e=>setEditing(v=>({...v,item:{...v.item,[key]:typeof value==='number'?Number(e.target.value):e.target.value}}))}/></label>)}
     </div><div className="mt-4 flex gap-2"><button disabled={busy} onClick={()=>saveItem(editing.table,editing.item)} className="rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white">Save record</button><button onClick={()=>setEditing(null)} className="rounded border px-5 py-2.5 text-sm">Cancel</button></div></section>}
     <div className="text-xs leading-5 text-gray-500">Publishing requires the Tidori administrator access policy. The public website reads only published content. Events, outreach projects, posts and leaders are managed here too; their existing page layouts remain unchanged. Keep personal records, donor details and internal notes out of these public content fields.</div>
   </div>;

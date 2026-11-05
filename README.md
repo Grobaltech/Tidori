@@ -1,5 +1,5 @@
 # Tidori Ministries Website
-React + Vite + Tailwind CSS front end, Supabase database, hosted on Cloudflare Pages.
+React + Vite + Tailwind CSS front end, Supabase database, hosted on Cloudflare Pages/Workers.
 Built from the HELPZ free charity template (design, colours, images and icon font kept).
 
 ## 1. Run locally
@@ -11,11 +11,11 @@ npm run dev
 The site works without Supabase (it shows sample content); forms need Supabase.
 
 ## 2. Set up Supabase
-1. Create a project at supabase.com.
-2. SQL Editor > run `supabase/schema.sql` (public content + visitor submissions).
+1. In Supabase, open the Tidori project.
+2. SQL Editor > run `supabase/schema.sql` for public content and visitor submissions.
 3. Optional: run `supabase/seed.sql` for starter content.
 4. Settings > API Keys: copy the **Project URL** and **Publishable key** into `.env`.
-   The legacy anon public key is also accepted. Never put a Supabase secret/service_role key in this frontend project.
+   The legacy anon public key is also accepted. Never put a Supabase secret/service_role key in frontend code.
 
 Visitors can read published content and insert form submissions
 (contact, volunteer, newsletter, giving pledges). View submissions and edit
@@ -35,12 +35,18 @@ Add these as **build-time variables** (not only Worker runtime secrets):
 
 | Variable | Value |
 |---|---|
-| `VITE_SUPABASE_URL` | Your Tidori Supabase Project URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Your Tidori Supabase Publishable key |
+| `VITE_SUPABASE_URL` | Tidori Supabase Project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Tidori Supabase Publishable key |
 
 Existing deployments using `VITE_SUPABASE_ANON_KEY` continue to work. After changing build variables, trigger a **new deployment** so Vite embeds them in the frontend bundle.
 
-For the Worker runtime, keep any Supabase secret/service_role key separate and server-side only. Never prefix it with `VITE_` or expose it in browser code.
+For the Worker runtime, keep the following server-side secrets/variables separate from the Vite build variables:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY` (secret; never expose in browser code)
+- `PESAPAL_CONSUMER_KEY` (secret)
+- `PESAPAL_CONSUMER_SECRET` (secret)
+- `PESAPAL_CURRENCY` (optional; defaults to USD)
 
 | Setting | Value |
 |---|---|
@@ -56,8 +62,8 @@ Add your custom domain under the project's Custom domains tab.
 - Images: replace files in `public/img/` (keep the names, or update the paths).
 - Content (events, blog, outreach, leaders): edit rows in Supabase.
 
-## Giving / payments
-The Give form records a giving intent and uses the configured payment provider. Set `VITE_GIVE_URL` only if using an external payment page.
+## Giving / Pesapal payments
+The Cloudflare Worker in `worker/index.js` handles Pesapal checkout, callback and IPN verification. Keep the existing Pesapal credentials and registered IPN configuration intact when changing deployment settings. Do not remove or rename the payment routes.
 
 ## Licence note
 The template's CC BY 4.0 licence requires keeping the "Designed by HTML Codex"

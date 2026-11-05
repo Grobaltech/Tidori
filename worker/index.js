@@ -244,7 +244,21 @@ async function adminUsers(request, env) {
           email,
           data: { full_name: fullName },
         });
-        return json({ success: true, message: "Invitation email sent.", user_id: invited.id || invited.user?.id || null });
+        const invitedUser = invited.user || invited;
+        if (invitedUser.id) {
+          await supabaseRequest(env, "profiles?on_conflict=id", {
+            method: "POST",
+            headers: { prefer: "resolution=merge-duplicates,return=minimal" },
+            body: JSON.stringify([{
+              id: invitedUser.id,
+              full_name: fullName,
+              email,
+              role: "member",
+              member_status: "visitor",
+            }]),
+          });
+        }
+        return json({ success: true, message: "Invitation email sent.", user_id: invitedUser.id || null });
       }
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "A valid user ID is required." }, 400);
       if (id === actorId && ["suspend", "delete"].includes(action)) return json({ error: "You cannot suspend or delete your own signed-in account." }, 400);

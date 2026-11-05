@@ -10,4 +10,4 @@ not_found_handling = "single-page-application"
 run_worker_first = true
 
 [vars]
-PESAPAL_CURRENCY = "USD"
+PESAPAL_CURRENCY = "UGX"

@@ -618,7 +618,10 @@ export default {
       if (url.pathname === "/api/notifications/database-event" && request.method === "POST") {
         return await databasePushEvent(request, env);
       }
-      if (url.pathname === "/api/admin/users" && ["GET", "POST", "PATCH"].includes(request.method)) {\n        return await adminUsers(request, env);\n      }\n      if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
+      if (url.pathname === "/api/admin/users" && ["GET", "POST", "PATCH"].includes(request.method)) {
+        return await adminUsers(request, env);
+      }
+      if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
         return await adminPesapalIpn(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {

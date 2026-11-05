@@ -55,32 +55,74 @@ async function pesapalCall(env, path, token, body) {
   return data;
 }
 
+async function getPesapalIpnList(token) {
+  const response = await fetch(`${PESAPAL_BASE}/api/URLSetup/GetIpnList`, {
+    headers: { accept: "application/json", authorization: `Bearer ${token}` },
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error?.message || "Could not check registered Pesapal IPNs.");
+  return Array.isArray(data) ? data : Array.isArray(data.ipn_list) ? data.ipn_list : Array.isArray(data.data) ? data.data : [];
+}
+
 async function ensurePesapalIpn(env, token, origin) {
   const ipnUrl = `${origin}/api/payments/pesapal/ipn`;
-  const headers = { accept: "application/json", authorization: `Bearer ${token}` };
-
   // Reuse an existing registration so retries/deployments never create duplicates.
-  const listResponse = await fetch(`${PESAPAL_BASE}/api/URLSetup/GetIpnList`, { headers });
-  const listData = await listResponse.json();
-  if (!listResponse.ok || listData.error) {
-    throw new Error(listData.error?.message || "Could not check registered Pesapal IPNs.");
-  }
-  const registered = Array.isArray(listData)
-    ? listData
-    : Array.isArray(listData.ipn_list) ? listData.ipn_list
-      : Array.isArray(listData.data) ? listData.data : [];
+  const registered = await getPesapalIpnList(token);
   const existing = registered.find((item) =>
     String(item.url || "").replace(/\/$/, "") === ipnUrl.replace(/\/$/, "")
     && String(item.ipn_status ?? 1) !== "0"
   );
-  if (existing?.ipn_id) return existing.ipn_id;
+  if (existing?.ipn_id) return existing;
 
   const created = await pesapalCall(env, "/api/URLSetup/RegisterIPN", token, {
     url: ipnUrl,
     ipn_notification_type: "GET",
   });
   if (!created.ipn_id) throw new Error("Pesapal did not return an IPN registration ID.");
-  return created.ipn_id;
+  return created;
+}
+
+async function requireSuperAdmin(request, env) {
+  const authorization = request.headers.get("authorization") || "";
+  const accessToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!accessToken) return { error: json({ error: "Sign in as the Tidori super administrator." }, 401) };
+
+  const authResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${accessToken}` },
+  });
+  if (!authResponse.ok) return { error: json({ error: "Your session is invalid or has expired. Please sign in again." }, 401) };
+  const authUser = await authResponse.json();
+  const profiles = await supabaseRequest(env, `profiles?select=role&id=eq.${encodeURIComponent(authUser.id)}&limit=1`);
+  if (profiles?.[0]?.role !== "super_admin") return { error: json({ error: "Only the Tidori super administrator can manage Pesapal IPN settings." }, 403) };
+  return { user: authUser };
+}
+
+async function adminPesapalIpn(request, env) {
+  const missing = requiredEnv(env);
+  if (missing.length) return json({ error: `Cloudflare is missing: ${missing.join(", ")}` }, 503);
+  const access = await requireSuperAdmin(request, env);
+  if (access.error) return access.error;
+
+  try {
+    const token = await pesapalToken(env);
+    const origin = new URL(request.url).origin;
+    const ipnUrl = `${origin}/api/payments/pesapal/ipn`;
+    if (request.method === "POST") {
+      const registration = await ensurePesapalIpn(env, token, origin);
+      return json({ configured: true, registered: true, url: ipnUrl, ipn: registration, message: "Pesapal IPN is registered and ready." });
+    }
+    const registered = await getPesapalIpnList(token);
+    const matching = registered.find(item => String(item.url || "").replace(/\/$/, "") === ipnUrl.replace(/\/$/, ""));
+    return json({
+      configured: true,
+      registered: Boolean(matching?.ipn_id && String(matching.ipn_status ?? 1) !== "0"),
+      url: ipnUrl,
+      ipn: matching || null,
+      message: matching?.ipn_id && String(matching.ipn_status ?? 1) !== "0" ? "An active IPN registration was found." : "No active registration was found for this website URL.",
+    });
+  } catch (error) {
+    return json({ error: error.message || "Could not communicate with Pesapal." }, 502);
+  }
 }
 
 async function verifyPayment(env, trackingId, merchantReference) {
@@ -165,7 +207,7 @@ async function createPayment(request, env) {
   try {
     const token = await pesapalToken(env);
     const origin = new URL(request.url).origin;
-    const notificationId = await ensurePesapalIpn(env, token, origin);
+    const ipnRegistration = await ensurePesapalIpn(env, token, origin);\n    const notificationId = ipnRegistration.ipn_id;
     const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
       id: merchantReference,
       currency,
@@ -244,7 +286,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
-      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
+      if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {\n        return await adminPesapalIpn(request, env);\n      }\n      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
         return await createPayment(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {

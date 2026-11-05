@@ -1,0 +1,52 @@
+name: Build Tidori Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'src/components/MobileAppBridge.jsx'
+      - 'src/App.jsx'
+      - 'package.json'
+      - '.github/workflows/android-apk.yml'
+    branches: [main]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: ''
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare Android project
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::error::Add the GOOGLE_SERVICES_JSON repository secret from your Firebase Android app (com.grobaltech.tidori)."
+            exit 1
+          fi
+          npx cap add android
+          mkdir -p android/app
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          npx cap sync android
+      - name: Build installable debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Tidori-Ministries-Android-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

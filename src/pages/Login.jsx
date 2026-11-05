@@ -38,9 +38,23 @@ export default function Login() {
         if (data.session) navigate('/profile');
         else setMessage('Your account has been created. Check your email for a confirmation link, then sign in.');
       } else {
-        const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) throw authError;
-        navigate('/profile');
+
+        // Route by the role stored on this user's existing Tidori profile.
+        // The member profile remains the destination for ordinary members.
+        const { data: accountProfile, error: roleError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+
+        if (roleError) {
+          throw new Error(`You are signed in, but we could not verify your account permissions: ${roleError.message}`);
+        }
+
+        const accountRole = String(accountProfile?.role || 'member').trim().toLowerCase();
+        navigate(['admin', 'super_admin'].includes(accountRole) ? '/admin' : '/profile', { replace: true });
       }
     } catch (err) {
       console.error('Tidori authentication failed:', err);

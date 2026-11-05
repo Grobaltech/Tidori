@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const presets = [10, 20, 50, 100];
+const presets = [10000, 20000, 50000, 100000];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function GiveForm({ projectId = null, dark = false }) {
@@ -51,7 +51,7 @@ export default function GiveForm({ projectId = null, dark = false }) {
           </button>
         ))}
       </div>
-      <input className={`${cls} mb-4`} type="number" min="1" step="0.01" placeholder="Other amount (USD)" value={custom} onChange={(e) => setCustom(e.target.value)} />
+      <input className={`${cls} mb-4`} type="number" min="1" step="0.01" placeholder="Other amount (UGX)" value={custom} onChange={(e) => setCustom(e.target.value)} />
       <input className="hidden" tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => setTrap(e.target.value)} aria-hidden="true" />
       <button className={`btn-custom ${dark ? 'btn-light' : ''}`} disabled={status === 'sending'}>
         {status === 'sending' ? 'Connecting to Pesapal...' : 'Continue to Secure Payment'}

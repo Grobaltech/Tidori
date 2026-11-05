@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const emptySite = {
-  name:'Tidori Ministries', shortName:'Tidori', tagline:'', address:'', phone:'', email:'',
+  name:'Tidori Ministries', shortName:'Tidori', logoUrl:'/img/grok_1793864104245.jpg', tagline:'', address:'', phone:'', email:'',
   serviceTimes:'', videoUrl:'',
   social:{ facebook:'', twitter:'', youtube:'', instagram:'', linkedin:'' },
   about:{ about:'', mission:'', vision:'' },
@@ -84,7 +84,7 @@ export default function WebsiteCMS() {
       {notice&&<p role="status" className="mt-4 rounded bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
     </section>
     {tab==='identity'&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">Organisation identity and contact information</h3><div className="grid gap-4 sm:grid-cols-2">
-      {['name','shortName','tagline','address','phone','email','serviceTimes','videoUrl'].map(key=>field(({name:'Ministry name',shortName:'Short name',tagline:'Tagline',address:'Physical address',phone:'Telephone',email:'Public email',serviceTimes:'Service times',videoUrl:'Video URL'})[key],key,site[key],setField,key==='email'?'email':'text'))}
+      {['name','shortName','logoUrl','tagline','address','phone','email','serviceTimes','videoUrl'].map(key=>field(({name:'Ministry name',shortName:'Short name',logoUrl:'Logo image URL',tagline:'Tagline',address:'Physical address',phone:'Telephone',email:'Public email',serviceTimes:'Service times',videoUrl:'Video URL'})[key],key,site[key],setField,key==='email'?'email':'text'))}
     </div><label className="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" checked={published} onChange={e=>setPublished(e.target.checked)}/> Publish organisation information on the website</label><button disabled={busy} onClick={saveSite} className="mt-4 rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy?'Saving…':'Save organisation details'}</button></section>}
     {tab==='about'&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">About, mission and vision</h3><div className="space-y-4">{[['about','Our story'],['mission','Mission statement'],['vision','Vision statement']].map(([key,label])=><label key={key} className="block text-xs font-semibold text-gray-600">{label}<textarea rows="5" className={input+' mt-1'} value={site.about?.[key]||''} onChange={e=>setNested('about',key,e.target.value)}/></label>)}</div><label className="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" checked={published} onChange={e=>setPublished(e.target.checked)}/> Publish About information</label><button disabled={busy} onClick={saveSite} className="mt-4 rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white">{busy?'Saving…':'Save About information'}</button></section>}
     {tab==='social'&&<section className="admin-card p-5"><h3 className="admin-section-title mb-4">Social media and homepage video</h3><div className="grid gap-4 sm:grid-cols-2">{Object.keys(site.social||{}).map(key=>field(key+' URL',key,site.social[key],(k,v)=>setNested('social',k,v)))}{field('Video URL','videoUrl',site.videoUrl,setField)}</div><button disabled={busy} onClick={saveSite} className="mt-4 rounded bg-[#009cff] px-5 py-2.5 text-sm font-semibold text-white">{busy?'Saving…':'Save social links'}</button></section>}

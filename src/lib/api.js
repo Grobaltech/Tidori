@@ -1,5 +1,6 @@
 import { supabase, supabaseReady } from './supabase';
 import { fallback } from '../data/fallback';
+import { site as defaultSite } from '../config/site';
 
 // ---------- Reads (fall back to local sample content if Supabase is not set up) ----------
 async function read(query, fallbackRows) {
@@ -47,3 +48,35 @@ export const sendContact = (v) => insert('contact_messages', v);
 export const sendVolunteer = (v) => insert('volunteers', v);
 export const subscribe = (email) => insert('newsletter_subscribers', { email });
 export const sendPledge = (v) => insert('donation_pledges', { ...v, status: 'pledged' });
+
+
+// ---------- Published website CMS content ----------
+export const getSiteContent = async () => {
+  if (!supabaseReady || !supabase) return defaultSite;
+  const { data, error } = await supabase.from('site_content').select('content,published').eq('id','main').maybeSingle();
+  if (error || !data?.published || !data.content) return defaultSite;
+  return {
+    ...defaultSite,
+    ...data.content,
+    social: { ...defaultSite.social, ...(data.content.social || {}) },
+    about: { ...defaultSite.about, ...(data.content.about || {}) },
+  };
+};
+
+const publicRows = async (table, fallbackRows) => {
+  if (!supabaseReady || !supabase) return fallbackRows;
+  const { data, error } = await supabase.from(table).select('*').eq('published', true).order('sort_order', { ascending: true });
+  if (error) {
+    console.warn('Published website content could not be loaded:', error.message);
+    return fallbackRows;
+  }
+  return data?.length ? data : fallbackRows;
+};
+
+export const getHomepageSlides = () => publicRows('homepage_slides', [
+  { id:'fallback-1', title:'Welcome to Tidori Ministries', description:'A community of faith, hope and service. Come as you are and grow with us.', image_url:'/img/carousel-1.jpg', button_label:'Learn More', button_url:'/about', sort_order:0 },
+  { id:'fallback-2', title:'Get involved with a helping hand', description:'Serve alongside our church family as we love our neighbours in practical ways.', image_url:'/img/carousel-2.jpg', button_label:'Serve With Us', button_url:'/volunteer', sort_order:1 },
+  { id:'fallback-3', title:'Bringing hope to our community', description:'Your giving and prayers help us reach families in need.', image_url:'/img/carousel-3.jpg', button_label:'Give Now', button_url:'/give', sort_order:2 },
+]);
+export const getMinistries = () => publicRows('site_ministries', defaultSite.ministries);
+export const getSiteFacts = () => publicRows('site_facts', defaultSite.facts);

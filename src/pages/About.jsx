@@ -28,7 +28,7 @@ export default function About() {
             {activeSite.about.objectives && <><h3 className="mb-2 text-xl">Our Aims & Objectives</h3><p className="mb-5 leading-7">{activeSite.about.objectives}</p></>}
             {activeSite.about.values && <><h3 className="mb-2 text-xl">Our Core Values</h3><p className="mb-5 leading-7">{activeSite.about.values}</p></>}
             {activeSite.motto && <p className="mb-5"><strong className="text-navy">Our motto:</strong> {activeSite.motto}</p>}
-            {activeSite.registrationNumber && <p className="mb-5"><strong className="text-navy">Registration:</strong> {activeSite.registrationNumber}</p>
+            {activeSite.registrationNumber && <p className="mb-5"><strong className="text-navy">Registration:</strong> {activeSite.registrationNumber}</p>}
             <p className="mb-5"><strong className="text-navy">Service times:</strong> {activeSite.serviceTimes}</p>
             <Link to="/contact" className="btn-custom">Plan a Visit</Link>
           </div>

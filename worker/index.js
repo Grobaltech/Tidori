@@ -286,6 +286,165 @@ async function adminUsers(request, env) {
   }
 }
 
+
+let fcmAccessTokenCache = null;
+
+function base64Url(value) {
+  const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : value;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');
+}
+
+function pemBytes(pem) {
+  const body = String(pem).replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, '');
+  const binary = atob(body);
+  return Uint8Array.from(binary, char => char.charCodeAt(0));
+}
+
+async function getFcmAccessToken(serviceAccount) {
+  if (fcmAccessTokenCache && fcmAccessTokenCache.expiresAt > Date.now() + 60000) return fcmAccessTokenCache.token;
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const claims = base64Url(JSON.stringify({
+    iss: serviceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  }));
+  const unsigned = `${header}.${claims}`;
+  const key = await crypto.subtle.importKey(
+    'pkcs8', pemBytes(serviceAccount.private_key),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']
+  );
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
+  const assertion = `${unsigned}.${base64Url(new Uint8Array(signature))}`;
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }),
+  });
+  const result = await response.json();
+  if (!response.ok || !result.access_token) throw new Error(result.error_description || 'Could not authenticate with Firebase Cloud Messaging.');
+  fcmAccessTokenCache = { token: result.access_token, expiresAt: Date.now() + Number(result.expires_in || 3600) * 1000 };
+  return result.access_token;
+}
+
+async function sendPushToAdmins(env, title, body, path = '/admin') {
+  if (!env.FCM_SERVICE_ACCOUNT_JSON) {
+    console.warn('FCM_SERVICE_ACCOUNT_JSON is not configured; push notification was not sent.');
+    return { sent: 0, configured: false };
+  }
+  try {
+    const serviceAccount = JSON.parse(env.FCM_SERVICE_ACCOUNT_JSON);
+    const profiles = await supabaseRequest(env, "profiles?select=id&role=in.(admin,super_admin)");
+    const ids = (profiles || []).map(row => row.id).filter(Boolean);
+    if (!ids.length) return { sent: 0, configured: true };
+    const filter = ids.map(id => `"${id}"`).join(',');
+    const devices = await supabaseRequest(env, `push_devices?select=id,token&active=eq.true&user_id=in.(${encodeURIComponent(filter)})`);
+    const accessToken = await getFcmAccessToken(serviceAccount);
+    let sent = 0;
+    for (const device of devices || []) {
+      const response = await fetch(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(serviceAccount.project_id)}/messages:send`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          message: {
+            token: device.token,
+            notification: { title, body },
+            data: { path, type: 'tidori_alert' },
+            android: { priority: 'HIGH', notification: { channel_id: 'tidori_alerts', sound: 'default' } },
+          },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok) sent += 1;
+      else if (result.error?.details?.some(item => item.errorCode === 'UNREGISTERED')) {
+        await supabaseRequest(env, `push_devices?id=eq.${encodeURIComponent(device.id)}`, {
+          method: 'PATCH', headers: { prefer: 'return=minimal' }, body: JSON.stringify({ active: false }),
+        }).catch(() => {});
+      } else {
+        console.error('FCM send failed:', result.error?.message || response.status);
+      }
+    }
+    return { sent, configured: true };
+  } catch (error) {
+    console.error('Tidori push delivery failed:', error);
+    return { sent: 0, configured: true, error: error.message };
+  }
+}
+
+async function authenticatePushUser(request, env) {
+  const authorization = request.headers.get('authorization') || '';
+  const accessToken = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
+  if (!accessToken) return { error: json({ error: 'Sign in to register this device for Tidori alerts.' }, 401) };
+  const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) return { error: json({ error: 'Your Tidori session has expired. Please sign in again.' }, 401) };
+  return { user: await response.json() };
+}
+
+async function pushDevice(request, env) {
+  const missing = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(key => !env[key]);
+  if (missing.length) return json({ error: `Worker configuration missing: ${missing.join(', ')}` }, 503);
+  const auth = await authenticatePushUser(request, env);
+  if (auth.error) return auth.error;
+  const input = await request.json().catch(() => ({}));
+  const token = clean(input.token, 4096);
+  if (request.method === 'POST') {
+    if (token.length < 40) return json({ error: 'A valid Firebase device token is required.' }, 400);
+    const platform = ['android', 'ios', 'web'].includes(input.platform) ? input.platform : 'android';
+    await supabaseRequest(env, 'push_devices?on_conflict=token', {
+      method: 'POST',
+      headers: { prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ user_id: auth.user.id, token, platform, active: true, updated_at: new Date().toISOString() }]),
+    });
+    return json({ success: true, message: 'This device is registered for Tidori notifications.' });
+  }
+  if (request.method === 'DELETE') {
+    if (!token) return json({ error: 'The device token is required.' }, 400);
+    await supabaseRequest(env, `push_devices?user_id=eq.${encodeURIComponent(auth.user.id)}&token=eq.${encodeURIComponent(token)}`, {
+      method: 'DELETE', headers: { prefer: 'return=minimal' },
+    });
+    return json({ success: true });
+  }
+  return json({ error: 'Method not allowed.' }, 405);
+}
+
+async function databasePushEvent(request, env) {
+  const expected = String(env.SUPABASE_WEBHOOK_SECRET || '');
+  const supplied = request.headers.get('x-tidori-webhook-secret') || '';
+  if (!expected || supplied !== expected) return json({ error: 'Unauthorised notification event.' }, 401);
+  const payload = await request.json().catch(() => null);
+  if (!payload) return json({ error: 'Invalid database event payload.' }, 400);
+  const table = clean(payload.table, 80);
+  const event = String(payload.type || payload.event || '').toUpperCase();
+  const record = payload.record || payload.new || {};
+  if (event !== 'INSERT' || !record.id || !['profiles', 'appointments'].includes(table)) {
+    return json({ ignored: true, message: 'This database event does not create a Tidori alert.' });
+  }
+  const eventKey = `${table}:INSERT:${record.id}`;
+  const receipts = await supabaseRequest(env, 'push_event_receipts?on_conflict=event_key', {
+    method: 'POST',
+    headers: { prefer: 'resolution=ignore-duplicates,return=representation' },
+    body: JSON.stringify([{ event_key: eventKey, event_type: table }]),
+  });
+  if (!receipts?.length) return json({ duplicate: true, sent: 0 });
+  let title;
+  let message;
+  if (table === 'profiles') {
+    title = 'New Tidori user registered';
+    message = 'A new user account has been registered.';
+  } else {
+    title = 'New appointment received';
+    message = `A new ${clean(record.appointment_type || 'church', 80)} appointment request has been received.`;
+  }
+  const result = await sendPushToAdmins(env, title, message, table === 'profiles' ? '/admin' : '/admin');
+  return json({ success: true, sent: result.sent, configured: result.configured });
+}
+
 async function verifyPayment(env, trackingId, merchantReference) {
   const token = await pesapalToken(env);
   const url = new URL(`${PESAPAL_BASE}/api/Transactions/GetTransactionStatus`);
@@ -315,11 +474,11 @@ async function verifyPayment(env, trackingId, merchantReference) {
         ? "reversed"
         : "pending";
 
-  await supabaseRequest(env,
-    `donation_pledges?merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}`,
+  const updated = await supabaseRequest(env,
+    `donation_pledges?merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}${paymentStatus === "paid" ? "&status=neq.paid" : ""}`,
     {
       method: "PATCH",
-      headers: { prefer: "return=minimal" },
+      headers: { prefer: "return=representation" },
       body: JSON.stringify({
         status: paymentStatus,
         payment_method: clean(data.payment_method, 80) || null,
@@ -328,6 +487,10 @@ async function verifyPayment(env, trackingId, merchantReference) {
       }),
     }
   );
+  // Notify only when the verified Pesapal status first transitions to paid.
+  if (paymentStatus === "paid" && updated?.length) {
+    await sendPushToAdmins(env, 'Successful Tidori payment', `${data.currency} ${Number(data.amount).toLocaleString()} donation received and verified.`, '/admin');
+  }
   return { paymentStatus, amount: data.amount, currency: data.currency, paymentMethod: data.payment_method };
 }
 
@@ -449,6 +612,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
+      if (url.pathname === "/api/push/register" && ["POST", "DELETE"].includes(request.method)) {
+        return await pushDevice(request, env);
+      }
+      if (url.pathname === "/api/notifications/database-event" && request.method === "POST") {
+        return await databasePushEvent(request, env);
+      }
       if (url.pathname === "/api/admin/users" && ["GET", "POST", "PATCH"].includes(request.method)) {\n        return await adminUsers(request, env);\n      }\n      if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
         return await adminPesapalIpn(request, env);
       }

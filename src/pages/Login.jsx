@@ -1,18 +1,25 @@
-import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase, supabaseReady } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 
 export default function Login() {
   const [params] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'login');
+  const [mode, setMode] = useState(location.pathname === '/register' || params.get('mode') === 'signup' ? 'signup' : 'login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setMode(location.pathname === '/register' || params.get('mode') === 'signup' ? 'signup' : 'login');
+    setError('');
+    setMessage('');
+  }, [location.pathname, params]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -22,7 +29,10 @@ export default function Login() {
       if (mode === 'signup') {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(), password,
-          options: { data: { full_name: name.trim() } },
+          options: {
+            data: { full_name: name.trim() },
+            emailRedirectTo: `${window.location.origin}/profile`,
+          },
         });
         if (authError) throw authError;
         if (data.session) navigate('/profile');
@@ -40,7 +50,7 @@ export default function Login() {
     if (!supabaseReady || !email.trim()) { setError('Enter your email address first.'); return; }
     setBusy(true); setError(''); setMessage('');
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin + '/profile' });
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/profile` });
       if (resetError) throw resetError;
       setMessage('Password reset instructions have been sent to your email, if an account exists.');
     } catch (err) { setError(err.message || 'Could not send reset email.'); }
@@ -64,7 +74,7 @@ export default function Login() {
         </form>
         {mode === 'login' && <button type="button" onClick={resetPassword} disabled={busy} className="mt-4 text-sm text-navy underline">Forgot your password?</button>}
         <div className="mt-6 border-t border-gray-300 pt-5 text-center text-sm">
-          {mode === 'login' ? <>Don't have an account? <button className="font-semibold text-navy underline" onClick={() => { setMode('signup'); setError(''); setMessage(''); }}>Register here</button></> : <>Already registered? <button className="font-semibold text-navy underline" onClick={() => { setMode('login'); setError(''); setMessage(''); }}>Sign in</button></>}
+          {mode === 'login' ? <>Don't have an account? <Link className="font-semibold text-navy underline" to="/register">Register here</Link></> : <>Already registered? <Link className="font-semibold text-navy underline" to="/login">Sign in</Link></>}
         </div>
       </div>
     </section>

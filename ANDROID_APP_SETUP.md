@@ -23,14 +23,14 @@ The Android build workflow is `.github/workflows/android-apk.yml`. Run it from G
 
 Apply `supabase/mobile_push.sql` in the active Tidori Supabase project after the existing core schema. It creates:
 - `push_devices`: private FCM device-token registry.
-- `appointments`: private appointment requests, with public insert-only access.
+- `appointments`: private appointment requests, with public insert-only access. The Contact page now includes a Request an Appointment form.
 - `push_event_receipts`: duplicate-event protection.
 
 ## Supabase database webhooks
 
 In Cloudflare Worker secrets, create `SUPABASE_WEBHOOK_SECRET` with a long random value.
 
-In the active Supabase project, create two Database Webhooks. Both use method POST, URL:
+Expose the new tables `push_devices`, `push_event_receipts`, and `appointments` in Supabase Project Settings → Data API (alongside the already exposed `profiles` table).\n\nIn the active Supabase project, create two Database Webhooks. Both use method POST, URL:
 
 `https://tidori-ministries.grobaltechtechnologies.workers.dev/api/notifications/database-event`
 

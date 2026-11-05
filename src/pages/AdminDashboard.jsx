@@ -8,10 +8,12 @@ import {
 import { supabase, supabaseReady } from '../lib/supabase';
 import '../admin/admin-theme.css';
 import WebsiteCMS from './WebsiteCMS';
+import UserAccessControl from './UserAccessControl';
 
 const sections = [
   { id: 'overview', label: 'Dashboard', icon: FaTachometerAlt },
   { id: 'users', label: 'Users', icon: FaUserShield },
+  { id: 'access', label: 'Access Control', icon: FaUserShield },
   { id: 'members', label: 'Members', icon: FaUsers },
   { id: 'ministries', label: 'Ministries', icon: FaPrayingHands },
   { id: 'events', label: 'Events', icon: FaCalendarAlt },
@@ -76,8 +78,14 @@ export default function AdminDashboard() {
         .from('profiles').select('full_name,role').eq('id', auth.user.id).maybeSingle();
       if (!alive) return;
       if (profileError) setError(profileError.message);
-      else if (!data || !['admin', 'super_admin'].includes(data.role)) setError('Your account does not have administrator access. Please contact the Tidori super administrator.');
-      else setProfile(data);
+      else if (!data) setError('Your Tidori profile could not be found.');
+      else if (['admin', 'super_admin'].includes(data.role)) setProfile({ ...data, permissions: [] });
+      else {
+        const { data: permissionRows, error: permissionError } = await supabase.from('user_permissions').select('permission').eq('user_id', auth.user.id);
+        if (permissionError) setError('Church access has not been configured yet. Please contact a Tidori administrator.');
+        else if (!permissionRows?.length) setError('Your account has not been granted access to this portal. Please contact a Tidori administrator.');
+        else setProfile({ ...data, permissions: permissionRows.map(row => row.permission) });
+      }
       setChecking(false);
     };
     verify();
@@ -102,7 +110,10 @@ export default function AdminDashboard() {
       ['newsletter', supabase.from('newsletter_subscribers').select('*').order('created_at',{ascending:false}).limit(100)],
       ['pledges', supabase.from('donation_pledges').select('*').order('created_at',{ascending:false}).limit(100)],
     ];
-    const settled = await Promise.all(requests.map(async ([key, query]) => {
+    const isAdministrator = ['admin','super_admin'].includes(profile.role);
+    const permissionFor = { users:'users.view', members:'members.view', events:'events.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
+    const allowedRequests = requests.filter(([key]) => isAdministrator || profile.permissions?.includes(permissionFor[key]));
+    const settled = await Promise.all(allowedRequests.map(async ([key, query]) => {
       const [result, countResult] = await Promise.all([
         query,
         supabase.from(tableConfig[key].table).select('*', { count: 'exact', head: true })
@@ -129,6 +140,19 @@ export default function AdminDashboard() {
   const initials = useMemo(() => (profile?.full_name || user?.email || 'A').slice(0, 1).toUpperCase(), [profile, user]);
   const signOut = async () => { await supabase.auth.signOut(); navigate('/login'); };
   const changeSection = (id) => { setActiveSection(id); setSearch(''); setSelectedRecord(null); setSidebarOpen(false); };
+  const isAdministrator = ['admin','super_admin'].includes(profile?.role);
+  const modulePermission = { users:'users.view', members:'members.view', ministries:'members.view', events:'events.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
+  const canOpen = (id) => isAdministrator || Boolean(profile?.permissions?.includes(modulePermission[id]));
+  const visibleSections = useMemo(() => sections.filter(item => {
+    if (item.id === 'access') return isAdministrator;
+    if (item.id === 'users') return profile?.role === 'super_admin';
+    if (item.id === 'overview') return isAdministrator || profile?.permissions?.includes('reports.view');
+    return canOpen(item.id);
+  }), [profile, isAdministrator]);
+  useEffect(() => {
+    if (profile && !isAdministrator && visibleSections.length && !visibleSections.some(item => item.id === activeSection)) setActiveSection(visibleSections[0].id);
+  }, [profile, isAdministrator, visibleSections, activeSection]);
+
   const filteredRecords = useMemo(() => {
     const key = activeSection === 'ministries' ? 'members' : activeSection;
     const rows = records[key] || [];
@@ -141,7 +165,7 @@ export default function AdminDashboard() {
   if (checking) return <div className="min-h-screen grid place-items-center text-sm text-gray-500">Checking administrator access…</div>;
   if (error) return <div className="min-h-screen grid place-items-center bg-[#f3f6f9] p-5"><div className="max-w-md rounded-lg bg-white p-8 text-center shadow-sm"><FaUserShield className="mx-auto mb-4 text-3xl text-[#009cff]" /><h1 className="mb-2 text-xl font-bold text-[#191c24]">Administrator access</h1><p className="mb-5 text-sm text-gray-500">{error}</p><div className="flex justify-center gap-3"><Link className="rounded bg-[#009cff] px-4 py-2 text-sm font-semibold text-white" to="/profile">My profile</Link><button onClick={signOut} className="rounded border px-4 py-2 text-sm">Sign out</button></div></div></div>;
 
-  const current = sections.find(s => s.id === activeSection) || sections[0];
+  const current = visibleSections.find(s => s.id === activeSection) || visibleSections[0] || sections[0];
   const Icon = current.icon;
   const renderTable = (key) => {
     const cfg = tableConfig[key];
@@ -161,7 +185,7 @@ export default function AdminDashboard() {
         </Link>
         <div className="admin-nav-label">Main menu</div>
         <nav className="admin-nav" aria-label="Administrator navigation">
-          {sections.map(item => { const ItemIcon = item.icon; return <button key={item.id} className={activeSection === item.id ? 'active' : ''} onClick={() => changeSection(item.id)}><span className="admin-nav-icon"><ItemIcon /></span>{item.label}</button>; })}
+          {visibleSections.map(item => { const ItemIcon = item.icon; return <button key={item.id} className={activeSection === item.id ? 'active' : ''} onClick={() => changeSection(item.id)}><span className="admin-nav-icon"><ItemIcon /></span>{item.label}</button>; })}
           <div className="admin-nav-label mt-5">Records</div>
           <button className={activeSection === 'volunteers' ? 'active' : ''} onClick={()=>changeSection('volunteers')}><span className="admin-nav-icon"><FaUserCheck /></span>Volunteers</button>
           <button className={activeSection === 'team' ? 'active' : ''} onClick={()=>changeSection('team')}><span className="admin-nav-icon"><FaChurch /></span>Church team</button>
@@ -205,7 +229,7 @@ export default function AdminDashboard() {
         <div className="admin-content">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#009cff]">Tidori Ministries</p><h1 className="admin-page-title">{current.label}</h1><p className="admin-muted mt-1">Live records from the Tidori Supabase project.</p></div><div className="flex items-center gap-2"><span className="admin-pill">Administrator</span><button onClick={loadOverview} disabled={loadingData} className="admin-icon-button" title="Refresh live records"><FaSyncAlt className={loadingData ? 'animate-spin' : ''} /></button></div></div>
           {dataError && <div role="alert" className="mb-5 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><strong>Some records could not be loaded.</strong> {dataError} <span className="block mt-1">Run the administrator access SQL file supplied with this update in the Tidori Supabase SQL Editor, then refresh.</span></div>}
-          {activeSection === 'content' ? <WebsiteCMS /> : activeSection === 'overview' ? <>
+          {activeSection === 'access' ? <UserAccessControl role={profile?.role} /> : activeSection === 'content' ? <WebsiteCMS /> : activeSection === 'overview' ? <>
             <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 ['Users',counts.users,FaUserShield,'users'],['Members',counts.members,FaUsers,'members'],['Ministries',new Set((records.members||[]).map(r=>r.ministry).filter(Boolean)).size,FaPrayingHands,'ministries'],['Upcoming events',(records.events||[]).filter(r=>r.published && new Date(r.starts_at)>=new Date()).length,FaCalendarAlt,'events'],['Outreach projects',counts.outreach,FaHandsHelping,'outreach'],

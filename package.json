@@ -4,19 +4,26 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Tidori Ministries website - React, Tailwind, Supabase, Cloudflare Pages",
-  "engines": { "node": ">=18.18" },
+  "engines": {
+    "node": ">=18.18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.3.0",
-    "react-router-dom": "^6.26.0"
+    "react-router-dom": "^6.26.0",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/push-notifications": "^6.0.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
@@ -24,6 +31,7 @@
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.10",
     "vite": "^5.4.2",
-    "wrangler": "^3.78.0"
+    "wrangler": "^3.78.0",
+    "@capacitor/cli": "^6.2.1"
   }
 }

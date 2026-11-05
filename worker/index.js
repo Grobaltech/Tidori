@@ -137,6 +137,140 @@ async function adminPesapalIpn(request, env) {
   }
 }
 
+
+async function authAdminRequest(env, path, method = "GET", body) {
+  const response = await fetch(`${env.SUPABASE_URL}/auth/v1${path}`, {
+    method,
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "content-type": "application/json",
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.msg || payload.message || payload.error_description || payload.error || `Supabase Auth returned HTTP ${response.status}.`);
+  }
+  return payload;
+}
+
+async function adminUsers(request, env) {
+  const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter((key) => !env[key]);
+  if (missing.length) return json({ error: `Worker configuration missing: ${missing.join(", ")}`, missing }, 503);
+  const access = await requireSuperAdmin(request, env);
+  if (access.error) return access.error;
+  const actorId = access.user.id;
+
+  try {
+    if (request.method === "GET") {
+      const authUsers = [];
+      for (let page = 1; page <= 10; page += 1) {
+        const result = await authAdminRequest(env, `/admin/users?page=${page}&per_page=100`);
+        const batch = Array.isArray(result.users) ? result.users : [];
+        authUsers.push(...batch);
+        if (batch.length < 100) break;
+      }
+      const profiles = await supabaseRequest(env, "profiles?select=id,full_name,email,phone,role,member_status,created_at");
+      const byId = new Map((profiles || []).map((p) => [p.id, p]));
+      const users = authUsers.map((authUser) => {
+        const p = byId.get(authUser.id) || {};
+        return {
+          id: authUser.id,
+          email: authUser.email || p.email || "",
+          full_name: p.full_name || authUser.user_metadata?.full_name || "",
+          phone: p.phone || authUser.phone || "",
+          role: p.role || "member",
+          member_status: p.member_status || "visitor",
+          created_at: p.created_at || authUser.created_at,
+          last_sign_in_at: authUser.last_sign_in_at || null,
+          email_confirmed_at: authUser.email_confirmed_at || null,
+          banned_until: authUser.banned_until || null,
+          is_banned: Boolean(authUser.banned_until && new Date(authUser.banned_until) > new Date()),
+          providers: (authUser.identities || []).map((identity) => identity.provider),
+        };
+      });
+      return json({ users, total: users.length });
+    }
+
+    const input = await request.json().catch(() => null);
+    if (!input || typeof input !== "object") return json({ error: "Invalid request body." }, 400);
+
+    if (request.method === "PATCH") {
+      const id = clean(input.user_id, 80);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "A valid user ID is required." }, 400);
+      if (id === actorId && input.role && input.role !== "super_admin") {
+        return json({ error: "You cannot remove your own super administrator access." }, 400);
+      }
+      const allowedRoles = ["member", "leader", "admin", "super_admin"];
+      const allowedStatuses = ["visitor", "member", "leader"];
+      if (input.role && !allowedRoles.includes(input.role)) return json({ error: "Invalid account role." }, 400);
+      if (input.member_status && !allowedStatuses.includes(input.member_status)) return json({ error: "Invalid membership status." }, 400);
+
+      const profilePatch = {};
+      for (const field of ["full_name", "email", "phone", "role", "member_status"]) {
+        if (Object.prototype.hasOwnProperty.call(input, field)) profilePatch[field] = field === "email" ? clean(input[field], 200).toLowerCase() : clean(input[field], field === "full_name" ? 120 : 80);
+      }
+      if (profilePatch.email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(profilePatch.email)) return json({ error: "Enter a valid email address." }, 400);
+      if (Object.keys(profilePatch).some((key) => ["email", "phone", "full_name"].includes(key))) {
+        const current = await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`);
+        await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`, "PUT", {
+          ...(profilePatch.email ? { email: profilePatch.email } : {}),
+          ...(profilePatch.phone !== undefined ? { phone: profilePatch.phone || null } : {}),
+          ...(profilePatch.full_name !== undefined ? { user_metadata: { ...(current.user_metadata || {}), full_name: profilePatch.full_name } } : {}),
+        });
+      }
+      if (Object.keys(profilePatch).length) {
+        const updated = await supabaseRequest(env, `profiles?id=eq.${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: { prefer: "return=representation" },
+          body: JSON.stringify(profilePatch),
+        });
+        if (!updated?.length) return json({ error: "The profile was not updated. Check that this user has a profiles row." }, 404);
+      }
+      return json({ success: true, message: "User account updated." });
+    }
+
+    if (request.method === "POST") {
+      const action = clean(input.action, 30);
+      const id = clean(input.user_id, 80);
+      if (action === "invite") {
+        const email = clean(input.email, 200).toLowerCase();
+        const fullName = clean(input.full_name, 120);
+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || fullName.length < 2) return json({ error: "Enter a valid email and full name." }, 400);
+        const origin = new URL(request.url).origin;
+        const invited = await authAdminRequest(env, "/invite", "POST", {
+          email,
+          data: { full_name: fullName },
+          redirect_to: `${origin}/profile`,
+        });
+        return json({ success: true, message: "Invitation email sent.", user_id: invited.id || invited.user?.id || null });
+      }
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "A valid user ID is required." }, 400);
+      if (id === actorId && ["suspend", "delete"].includes(action)) return json({ error: "You cannot suspend or delete your own signed-in account." }, 400);
+      if (action === "suspend" || action === "unsuspend") {
+        await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`, "PUT", { ban_duration: action === "suspend" ? "876000h" : "none" });
+        return json({ success: true, message: action === "suspend" ? "Account suspended." : "Account suspension lifted." });
+      }
+      if (action === "reset_password") {
+        const target = await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`);
+        if (!target.email) return json({ error: "This account has no email address for password recovery." }, 400);
+        const origin = new URL(request.url).origin;
+        await authAdminRequest(env, "/recover", "POST", { email: target.email, redirect_to: `${origin}/profile` });
+        return json({ success: true, message: `Password reset email sent to ${target.email}.` });
+      }
+      if (action === "delete") {
+        await authAdminRequest(env, `/admin/users/${encodeURIComponent(id)}`, "DELETE");
+        return json({ success: true, message: "User account permanently deleted." });
+      }
+      return json({ error: "Unsupported user-management action." }, 400);
+    }
+    return json({ error: "Method not allowed." }, 405);
+  } catch (error) {
+    return json({ error: error.message || "User management request failed." }, 502);
+  }
+}
+
 async function verifyPayment(env, trackingId, merchantReference) {
   const token = await pesapalToken(env);
   const url = new URL(`${PESAPAL_BASE}/api/Transactions/GetTransactionStatus`);
@@ -300,7 +434,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
-      if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
+      if (url.pathname === "/api/admin/users" && ["GET", "POST", "PATCH"].includes(request.method)) {\n        return await adminUsers(request, env);\n      }\n      if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
         return await adminPesapalIpn(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {

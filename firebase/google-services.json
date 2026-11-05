@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "664359732514",
+    "project_id": "tidoriapp-dbc1e630",
+    "storage_bucket": "tidoriapp-dbc1e630.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:664359732514:android:9ec34ee2b3af85d3b4117b",
+        "android_client_info": {
+          "package_name": "com.grobaltech.tidori"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwT3OKQ0I2hEqtY12KRb7GNZ4Q9DBl_dE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

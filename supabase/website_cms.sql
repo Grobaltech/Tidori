@@ -92,7 +92,7 @@ values ('main', jsonb_build_object(
 ), true)
 on conflict (id) do nothing;
 
--- Existing hardcoded homepage content is seeded as editable drafts. Review and publish each record.
+-- Existing homepage content is seeded as published so the public site keeps its current sections on migration.
 insert into public.homepage_slides (title, description, image_url, button_label, button_url, sort_order, published)
 select v.title, v.description, v.image_url, v.button_label, v.button_url, v.sort_order, true
 from (values
@@ -103,7 +103,7 @@ from (values
 where not exists (select 1 from public.homepage_slides);
 
 insert into public.site_ministries (title, description, icon, sort_order, published)
-select v.title, v.description, v.icon, v.sort_order, false
+select v.title, v.description, v.icon, v.sort_order, true
 from (values
  ('Food Pantry','Feeding families in need with weekly groceries and meals.','flaticon-diet',0),
  ('Clean Water','Helping communities gain access to safe drinking water.','flaticon-water',1),

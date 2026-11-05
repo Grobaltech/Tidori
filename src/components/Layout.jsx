@@ -5,7 +5,8 @@ import {
   FaInstagram, FaLinkedinIn, FaChevronUp, FaChevronDown, FaBars, FaTimes, FaAngleRight,
 } from 'react-icons/fa';
 import { site } from '../config/site';
-import { useScrollY } from '../hooks/hooks';
+import { useScrollY, useAsync } from '../hooks/hooks';
+import { getSiteContent } from '../lib/api';
 import NewsletterForm from './NewsletterForm';
 import { supabase, supabaseReady } from '../lib/supabase';
 
@@ -14,12 +15,12 @@ const socials = [
   ['instagram', FaInstagram], ['linkedin', FaLinkedinIn],
 ];
 
-function Socials({ button }) {
+function Socials({ button, siteData = site }) {
   return (
     <div className="flex gap-2">
       {socials.map(([key, Icon]) =>
-        site.social[key] ? (
-          <a key={key} href={site.social[key]} target="_blank" rel="noreferrer" aria-label={key}
+        siteData.social[key] ? (
+          <a key={key} href={siteData.social[key]} target="_blank" rel="noreferrer" aria-label={key}
              className={button ? 'btn-custom btn-light !px-3 !py-2 !text-sm' : 'text-white hover:text-gold px-2'}>
             <Icon />
           </a>
@@ -30,18 +31,20 @@ function Socials({ button }) {
 }
 
 function TopBar() {
+  const { data: cmsSite } = useAsync(getSiteContent);
+  const activeSite = cmsSite || site;
   return (
     <div className="hidden border-b border-white/30 bg-ink md:block">
       <div className="mx-auto flex h-11 max-w-wide items-center justify-between px-4 text-white">
         <div className="flex h-full items-center">
           <span className="flex h-full items-center border-l border-white/30 px-3 text-sm">
-            <FaPhoneAlt className="mr-2 text-gold" /> {site.phone}
+            <FaPhoneAlt className="mr-2 text-gold" /> {activeSite.phone}
           </span>
           <span className="flex h-full items-center border-x border-white/30 px-3 text-sm">
-            <FaEnvelope className="mr-2 text-gold" /> {site.email}
+            <FaEnvelope className="mr-2 text-gold" /> {activeSite.email}
           </span>
         </div>
-        <Socials />
+        <Socials siteData={activeSite} />
       </div>
     </div>
   );
@@ -49,6 +52,8 @@ function TopBar() {
 
 function Navbar() {
   const y = useScrollY();
+  const { data: cmsSite } = useAsync(getSiteContent);
+  const activeSite = cmsSite || site;
   const [open, setOpen] = useState(false);
   const [sub, setSub] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -68,14 +73,14 @@ function Navbar() {
     <header className={`sticky top-0 z-50 bg-ink transition-shadow ${y > 0 ? 'shadow-lg shadow-black/30' : ''}`}>
       <div className="mx-auto flex max-w-wide items-center justify-between px-4 py-3">
         <Link to="/" aria-label="Tidori Ministries home" className="flex items-center">
-          <img src="/img/grok_1793864104245.jpg" alt="Tidori Ministries" className="h-14 w-auto max-w-[190px] object-contain sm:h-16" />
+          <img src={activeSite.logoUrl || "/img/grok_1793864104245.jpg"} alt={activeSite.name || "Tidori Ministries"} className="h-14 w-auto max-w-[190px] object-contain sm:h-16" />
         </Link>
         <button className="p-2 text-2xl text-white lg:hidden" aria-label="Menu" onClick={() => setOpen(!open)}>
           {open ? <FaTimes /> : <FaBars />}
         </button>
         <nav className={`${open ? 'block' : 'hidden'} absolute left-0 top-full w-full bg-ink px-4 pb-4 lg:static lg:block lg:w-auto lg:p-0`}>
           <ul className="flex flex-col lg:flex-row lg:items-center">
-            {site.nav.map((item) =>
+            {activeSite.nav.map((item) =>
               item.children ? (
                 <li key={item.label} className="group relative">
                   <button className="flex w-full items-center px-4 py-2 text-white hover:text-gold" onClick={() => setSub(!sub)}>
@@ -100,6 +105,8 @@ function Navbar() {
 }
 
 function Footer() {
+  const { data: cmsSite } = useAsync(getSiteContent);
+  const activeSite = cmsSite || site;
   const links = (arr) => arr.map(([to, label]) => (
     <Link key={label} to={to} className="mb-2 flex items-center text-white hover:text-gold">
       <FaAngleRight className="mr-2" /> {label}
@@ -111,10 +118,10 @@ function Footer() {
         <div>
           <img src="/img/grok_1793864104245.jpg" alt="Tidori Ministries" className="mb-6 h-16 w-auto max-w-[190px] object-contain" />
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Our Church</h2>
-          <p className="mb-2 flex items-center"><FaMapMarkerAlt className="mr-3 text-gold" /> {site.address}</p>
-          <p className="mb-2 flex items-center"><FaPhoneAlt className="mr-3 text-gold" /> {site.phone}</p>
-          <p className="mb-4 flex items-center"><FaEnvelope className="mr-3 text-gold" /> {site.email}</p>
-          <Socials button />
+          <p className="mb-2 flex items-center"><FaMapMarkerAlt className="mr-3 text-gold" /> {activeSite.address}</p>
+          <p className="mb-2 flex items-center"><FaPhoneAlt className="mr-3 text-gold" /> {activeSite.phone}</p>
+          <p className="mb-4 flex items-center"><FaEnvelope className="mr-3 text-gold" /> {activeSite.email}</p>
+          <Socials button siteData={activeSite} />
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Quick Links</h2>
@@ -130,7 +137,7 @@ function Footer() {
         </div>
       </div>
       <div className="container-page mt-4 flex flex-col justify-between gap-2 border-t border-white/10 py-6 text-sm md:flex-row">
-        <p>&copy; {new Date().getFullYear()} <Link to="/" className="text-gold">{site.name}</Link>. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} <Link to="/" className="text-gold">{activeSite.name}</Link>. All rights reserved.</p>
         {/* Attribution required by the template's CC BY 4.0 license - do not remove */}
         <p>Designed by <a href="https://htmlcodex.com" target="_blank" rel="noreferrer" className="text-gold">HTML Codex</a></p>
       </div>

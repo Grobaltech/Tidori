@@ -227,6 +227,7 @@ async function createPayment(request, env) {
       amount: Number(amount.toFixed(2)),
       description: "Donation to Tidori Ministries",
       callback_url: `${origin}/api/payments/pesapal/callback`,
+      redirect_mode: "PARENT_WINDOW",
       cancellation_url: `${origin}/give?payment=cancelled&reference=${encodeURIComponent(merchantReference)}`,
       notification_id: notificationId,
       billing_address: {

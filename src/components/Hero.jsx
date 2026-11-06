@@ -14,12 +14,13 @@ const defaults = [
 export default function Hero() {
   const ref = useRef(null);
   const [video, setVideo] = useState(false);
-  const { data: remoteSlides } = useAsync(getHomepageSlides);
+  const { data: remoteSlides, loading: slidesLoading } = useAsync(getHomepageSlides);
   const { data: remoteSite } = useAsync(getSiteContent);
   const slides = remoteSlides?.length ? remoteSlides : defaults;
   const activeSite = remoteSite || site;
 
   useEffect(() => {
+    if (slidesLoading) return;
     const jq = window.jQuery;
     if (!jq || !jq.fn.owlCarousel || !ref.current) return;
     const carousel = jq(ref.current);
@@ -32,7 +33,7 @@ export default function Hero() {
     return () => {
       if (carousel.hasClass('owl-loaded')) carousel.trigger('destroy.owl.carousel');
     };
-  }, [slides]);
+  }, [slides, slidesLoading]);
 
   return (
     <>

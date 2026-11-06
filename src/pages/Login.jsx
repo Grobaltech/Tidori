@@ -11,6 +11,7 @@ export default function Login() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -93,7 +94,40 @@ export default function Login() {
         <form onSubmit={submit} className="space-y-4">
           {mode === 'signup' && <input className="field" required maxLength={120} autoComplete="name" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} />}
           <input className="field" type="email" required autoComplete="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} />
-          <input className="field" type="password" required minLength={6} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder="Password (at least 6 characters)" value={password} onChange={e => setPassword(e.target.value)} />
+          <div className="relative">
+            <input
+              className="field pr-12"
+              type={showPassword ? 'text' : 'password'}
+              required
+              minLength={6}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              placeholder="Password (at least 6 characters)"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(value => !value)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              title={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-2 text-gray-600 hover:text-navy focus:outline-none focus:ring-2 focus:ring-navy"
+            >
+              {showPassword ? (
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                  <path d="M3 3l18 18" />
+                  <path d="M10.6 10.6a2 2 0 002.8 2.8" />
+                  <path d="M9.9 5.2A10.8 10.8 0 0112 5c5 0 8.5 4.5 9.5 7-.4 1-1.2 2.2-2.4 3.3" />
+                  <path d="M6.2 6.2C3.9 7.6 2.7 9.7 2.5 12c.5 1.2 3.8 7 9.5 7 1.1 0 2.1-.2 3-.6" />
+                </svg>
+              ) : (
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                  <path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           {message && <p role="status" className="text-sm text-green-700">{message}</p>}
           <button type="submit" className="btn-custom w-full" disabled={busy || !supabaseReady}>{busy ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'signup' ? 'Create Account' : 'Sign In'}</button>

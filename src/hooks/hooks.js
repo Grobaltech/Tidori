@@ -7,7 +7,18 @@ export function useAsync(fn, deps = []) {
   useEffect(() => {
     let live = true;
     setLoading(true);
-    fn().then((d) => live && (setData(d), setLoading(false)));
+    Promise.resolve()
+      .then(() => fn())
+      .then((d) => {
+        if (live) setData(d);
+      })
+      .catch((error) => {
+        console.error('Page data could not be loaded:', error);
+        if (live) setData(null);
+      })
+      .finally(() => {
+        if (live) setLoading(false);
+      });
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

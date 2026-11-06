@@ -2,27 +2,28 @@ import { supabase, supabaseReady } from './supabase';
 import { fallback } from '../data/fallback';
 import { site as defaultSite } from '../config/site';
 
-// ---------- Reads (fall back to local sample content if Supabase is not set up) ----------
-async function read(query, fallbackRows) {
-  if (!supabaseReady) return fallbackRows;
+// The database is authoritative once configured. Local sample content is used
+// only before the Supabase connection has been configured.
+async function read(query, fallbackRows = []) {
+  if (!supabaseReady || !supabase) return fallbackRows;
   try {
     const { data, error } = await query;
     if (error) throw error;
-    return data?.length ? data : fallbackRows;
+    return data || [];
   } catch (err) {
-    console.warn('Supabase read failed, using fallback content:', err.message);
-    return fallbackRows;
+    console.error('Supabase content read failed:', err.message);
+    return [];
   }
 }
 
 export const getOutreach = () =>
-  read(supabase?.from('outreach_projects').select('*').order('sort_order'), fallback.outreach);
+  read(supabase?.from('outreach_projects').select('*').eq('published', true).order('sort_order'), fallback.outreach);
 
 export const getEvents = () =>
-  read(supabase?.from('events').select('*').order('starts_at'), fallback.events);
+  read(supabase?.from('events').select('*').eq('published', true).order('starts_at'), fallback.events);
 
 export const getPosts = () =>
-  read(supabase?.from('posts').select('*').order('published_at', { ascending: false }), fallback.posts);
+  read(supabase?.from('posts').select('*').eq('published', true).order('published_at', { ascending: false }), fallback.posts);
 
 export const getPost = async (slug) => {
   const posts = await getPosts();
@@ -30,16 +31,16 @@ export const getPost = async (slug) => {
 };
 
 export const getTeam = () =>
-  read(supabase?.from('team_members').select('*').order('sort_order'), fallback.team);
+  read(supabase?.from('team_members').select('*').eq('published', true).order('sort_order'), fallback.team);
 
 // ---------- Writes (insert-only; protected by RLS) ----------
 async function insert(table, row) {
-  if (!supabaseReady) {
+  if (!supabaseReady || !supabase) {
     throw new Error('The form is not connected yet. Please set your Supabase keys.');
   }
   const { error } = await supabase.from(table).insert(row);
   if (error) {
-    if (error.code === '23505') return; // duplicate (e.g. already subscribed) - treat as success
+    if (error.code === '23505') return;
     throw new Error('Sorry, something went wrong. Please try again.');
   }
 }
@@ -49,28 +50,37 @@ export const sendVolunteer = (v) => insert('volunteers', v);
 export const subscribe = (email) => insert('newsletter_subscribers', { email });
 export const sendPledge = (v) => insert('donation_pledges', { ...v, status: 'pledged' });
 
-
 // ---------- Published website CMS content ----------
 export const getSiteContent = async () => {
   if (!supabaseReady || !supabase) return defaultSite;
-  const { data, error } = await supabase.from('site_content').select('content,published').eq('id','main').maybeSingle();
-  if (error || !data?.published || !data.content) return defaultSite;
-  return {
-    ...defaultSite,
-    ...data.content,
-    social: { ...defaultSite.social, ...(data.content.social || {}) },
-    about: { ...defaultSite.about, ...(data.content.about || {}) },
-  };
+  try {
+    const { data, error } = await supabase.from('site_content')
+      .select('content,published').eq('id', 'main').maybeSingle();
+    if (error) throw error;
+    if (!data?.published || !data.content) return defaultSite;
+    return {
+      ...defaultSite,
+      ...data.content,
+      social: { ...defaultSite.social, ...(data.content.social || {}) },
+      about: { ...defaultSite.about, ...(data.content.about || {}) },
+    };
+  } catch (err) {
+    console.error('Published site information could not be loaded:', err.message);
+    return defaultSite;
+  }
 };
 
-const publicRows = async (table, fallbackRows) => {
+const publicRows = async (table, fallbackRows = []) => {
   if (!supabaseReady || !supabase) return fallbackRows;
-  const { data, error } = await supabase.from(table).select('*').eq('published', true).order('sort_order', { ascending: true });
-  if (error) {
-    console.warn('Published website content could not be loaded:', error.message);
-    return fallbackRows;
+  try {
+    const { data, error } = await supabase.from(table).select('*')
+      .eq('published', true).order('sort_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error(`Published ${table} could not be loaded:`, err.message);
+    return [];
   }
-  return data?.length ? data : fallbackRows;
 };
 
 export const getHomepageSlides = async () => {
@@ -80,7 +90,11 @@ export const getHomepageSlides = async () => {
     { id:'fallback-3', title:'Bringing hope to our community', description:'Your giving and prayers help us reach families in need.', image_url:'/img/carousel-3.jpg', button_label:'Give Now', button_url:'/give', sort_order:2 },
   ]);
   const now = Date.now();
-  return rows.filter(slide => (!slide.starts_at || new Date(slide.starts_at).getTime() <= now) && (!slide.ends_at || new Date(slide.ends_at).getTime() >= now));
+  return rows.filter(slide =>
+    (!slide.starts_at || new Date(slide.starts_at).getTime() <= now) &&
+    (!slide.ends_at || new Date(slide.ends_at).getTime() >= now)
+  );
 };
+
 export const getMinistries = () => publicRows('site_ministries', defaultSite.ministries);
 export const getSiteFacts = () => publicRows('site_facts', defaultSite.facts);

@@ -6,6 +6,17 @@ alter table public.video_call_rooms
   add column if not exists guest_token_hash text,
   add column if not exists ended_reason text;
 
+-- The live Worker now uses a Cloudflare Durable Object for WebSocket signalling.
+alter table public.video_call_rooms
+  drop constraint if exists video_call_rooms_signalling_provider_check;
+update public.video_call_rooms
+  set signalling_provider = 'cloudflare_durable_objects'
+  where signalling_provider <> 'cloudflare_durable_objects';
+alter table public.video_call_rooms
+  alter column signalling_provider set default 'cloudflare_durable_objects',
+  add constraint video_call_rooms_signalling_provider_check
+    check (signalling_provider = 'cloudflare_durable_objects');
+
 create table if not exists public.video_call_sessions (
   id uuid primary key default gen_random_uuid(),
   room_id uuid not null references public.video_call_rooms(id) on delete cascade,

@@ -59,7 +59,7 @@ export default function AppointmentsManager({ canManage = false }) {
 
   const filtered = rows.filter(row => {
     const matchesFilter = filter === 'all' || (filter === 'paid' ? row.payment_status === 'paid' : filter === 'unpaid' ? row.payment_status !== 'paid' : row.status === filter);
-    const text = [row.full_name, row.email, row.phone, row.appointment_type, row.status, row.payment_status].join(' ').toLowerCase();
+    const text = [row.full_name, row.email, row.phone, row.appointment_type, row.meeting_mode, row.status, row.payment_status].join(' ').toLowerCase();
     return matchesFilter && text.includes(search.toLowerCase());
   });
   const counts = {
@@ -87,10 +87,11 @@ export default function AppointmentsManager({ canManage = false }) {
       {error && <p role="alert" className="m-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {notice && <p role="status" className="m-5 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
       <div className="overflow-x-auto">
-        <table className="admin-table w-full min-w-[900px]"><thead><tr><th>Visitor</th><th>Appointment</th><th>Preferred date & time</th><th>Appointment status</th><th>Payment</th><th>Action</th></tr></thead>
+        <table className="admin-table w-full min-w-[980px]"><thead><tr><th>Visitor</th><th>Appointment</th><th>Meeting mode</th><th>Preferred date & time</th><th>Appointment status</th><th>Payment</th><th>Action</th></tr></thead>
           <tbody>{filtered.map(row => <tr key={row.id}>
             <td><strong className="block text-[#191c24]">{row.full_name}</strong><span className="text-xs text-gray-500">{row.phone}</span>{row.email && <span className="block text-xs text-gray-500">{row.email}</span>}</td>
             <td>{row.appointment_type || 'Pastoral appointment'}{row.notes && <span className="mt-1 block max-w-[220px] text-xs text-gray-500">{row.notes}</span>}</td>
+            <td><span className="rounded-full bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700">{label(row.meeting_mode || 'in_person')}</span></td>
             <td>{formatDate(row.requested_at)}</td>
             <td><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold capitalize text-blue-700">{label(row.status)}</span></td>
             <td><span className={row.payment_status === 'paid' ? 'rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700' : 'rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800'}>{label(row.payment_status || 'unpaid')}</span><span className="mt-1 block text-xs text-gray-500">{row.fee_amount ? `${row.currency || 'UGX'} ${Number(row.fee_amount).toLocaleString()}` : 'No fee recorded'}</span></td>
@@ -108,6 +109,7 @@ export default function AppointmentsManager({ canManage = false }) {
         <p className="text-sm"><FaPhone className="mr-2 inline text-gray-400" />{editing.phone || 'No phone provided'}</p>
         <p className="text-sm"><FaEnvelope className="mr-2 inline text-gray-400" />{editing.email || 'No email provided'}</p>
         <p className="text-sm sm:col-span-2"><strong>Request:</strong> {editing.appointment_type} · {formatDate(editing.requested_at)}</p>
+        <p className="text-sm sm:col-span-2"><strong>Meeting preference:</strong> {label(editing.meeting_mode || 'in_person')}</p>
         {editing.notes && <p className="text-sm sm:col-span-2"><strong>Details:</strong> {editing.notes}</p>}
       </div>
       <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">

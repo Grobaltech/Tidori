@@ -865,10 +865,12 @@ export default {
         const accessKey = url.searchParams.get("key") || "";
         if (!/^[0-9a-f]{64}$/i.test(accessKey)) return json({ error: "Invalid meeting invitation." }, 401);
         const rooms = await supabaseRequest(env,
-          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,appointment:appointments!inner(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
+          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,is_test,owner_user_id,appointment:appointments(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
         );
         const room = rooms?.[0];
-        if (!room || !["scheduled", "live"].includes(room.status) || room.appointment?.status !== "confirmed" || room.appointment?.meeting_mode !== "video") {
+        const approvedAppointment = room?.appointment?.status === "confirmed" && room?.appointment?.meeting_mode === "video";
+        const validTestRoom = room?.is_test === true && Boolean(room?.owner_user_id);
+        if (!room || !["scheduled", "live"].includes(room.status) || (!approvedAppointment && !validTestRoom)) {
           return json({ error: "This meeting link is invalid, expired or not yet approved." }, 404);
         }
         const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessKey));
@@ -890,11 +892,12 @@ export default {
         const accessKey = url.searchParams.get("key") || "";
         if (!/^[0-9a-f]{64}$/i.test(accessKey)) return json({ error: "Invalid meeting invitation." }, 401);
         const rooms = await supabaseRequest(env,
-          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,appointment:appointments!inner(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
+          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,is_test,owner_user_id,appointment:appointments(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
         );
         const room = rooms?.[0];
-        if (!room || !["scheduled", "live"].includes(room.status)
-          || room.appointment?.status !== "confirmed" || room.appointment?.meeting_mode !== "video") {
+        const approvedAppointment = room?.appointment?.status === "confirmed" && room?.appointment?.meeting_mode === "video";
+        const validTestRoom = room?.is_test === true && Boolean(room?.owner_user_id);
+        if (!room || !["scheduled", "live"].includes(room.status) || (!approvedAppointment && !validTestRoom)) {
           return json({ error: "This meeting link is invalid, expired or not yet approved." }, 404);
         }
         const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessKey));

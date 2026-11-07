@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 export default function PWAInstallPrompt() {
   const [installEvent, setInstallEvent] = useState(null);
@@ -6,6 +7,7 @@ export default function PWAInstallPrompt() {
   const [installed, setInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [checkingInstall, setCheckingInstall] = useState(true);
+  const nativeApp = Capacitor.isNativePlatform();
 
   useEffect(() => {
     let active = true;
@@ -80,7 +82,9 @@ export default function PWAInstallPrompt() {
     }
   };
 
-  if (checkingInstall || installed || dismissed) return null;
+  // Native Capacitor builds already have an Android launcher icon; never show
+  // the website's PWA installation banner inside the native application.
+  if (nativeApp || checkingInstall || installed || dismissed) return null;
 
   return (
     <>

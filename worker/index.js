@@ -608,10 +608,88 @@ async function paymentStatus(request, env) {
   return json(rows[0]);
 }
 
+
+/**
+ * Two-person WebRTC signalling relay. Media travels peer-to-peer; this Durable
+ * Object relays only SDP/ICE signalling and never records audio or video.
+ * The unguessable room code is a bearer invitation and is checked against the
+ * confirmed appointment before a socket is routed here.
+ */
+export class VideoRoom {
+  constructor(ctx, env) {
+    this.ctx = ctx;
+    this.env = env;
+  }
+
+  async fetch(request) {
+    if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+      return new Response("WebSocket upgrade required.", { status: 426 });
+    }
+    const peers = this.ctx.getWebSockets();
+    if (peers.length >= 2) {
+      return new Response("This meeting already has two connected participants.", { status: 409 });
+    }
+    const pair = new WebSocketPair();
+    const client = pair[0];
+    const server = pair[1];
+    this.ctx.acceptWebSocket(server);
+    server.serializeAttachment({ id: crypto.randomUUID() });
+    for (const peer of peers) {
+      try { peer.send(JSON.stringify({ type: "peer-joined" })); } catch {}
+    }
+    server.send(JSON.stringify({ type: "room-state", peerCount: peers.length + 1 }));
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  webSocketMessage(socket, message) {
+    if (typeof message !== "string" || message.length > 65536) return;
+    let packet;
+    try { packet = JSON.parse(message); } catch { return; }
+    if (!packet || !["offer", "answer", "ice", "hangup", "ready"].includes(packet.type)) return;
+    const safe = JSON.stringify({
+      type: packet.type,
+      ...(packet.type === "offer" || packet.type === "answer" ? { description: packet.description } : {}),
+      ...(packet.type === "ice" ? { candidate: packet.candidate } : {}),
+    });
+    for (const peer of this.ctx.getWebSockets()) {
+      if (peer === socket) continue;
+      try { peer.send(safe); } catch {}
+    }
+  }
+
+  webSocketClose(socket) {
+    for (const peer of this.ctx.getWebSockets()) {
+      if (peer === socket) continue;
+      try { peer.send(JSON.stringify({ type: "peer-left" })); } catch {}
+    }
+  }
+
+  webSocketError(socket) {
+    this.webSocketClose(socket);
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
+      const videoSignalMatch = url.pathname.match(/^\/api\/video\/rooms\/([0-9a-f-]{36})\/signal$/i);
+      if (videoSignalMatch && request.headers.get("Upgrade")?.toLowerCase() === "websocket") {
+        if (!env.VIDEO_ROOMS || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+          return json({ error: "Video calling is not configured on this Worker yet." }, 503);
+        }
+        const roomCode = videoSignalMatch[1];
+        const rooms = await supabaseRequest(env,
+          `video_call_rooms?select=id,status,appointment:appointments!inner(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
+        );
+        const room = rooms?.[0];
+        if (!room || !["scheduled", "live"].includes(room.status)
+          || room.appointment?.status !== "confirmed" || room.appointment?.meeting_mode !== "video") {
+          return json({ error: "This meeting link is invalid, expired or not yet approved." }, 404);
+        }
+        const id = env.VIDEO_ROOMS.idFromName(roomCode);
+        return env.VIDEO_ROOMS.get(id).fetch(request);
+      }
       if (url.pathname === "/api/push/register" && ["POST", "DELETE"].includes(request.method)) {
         return await pushDevice(request, env);
       }

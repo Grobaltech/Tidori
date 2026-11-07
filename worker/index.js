@@ -331,16 +331,15 @@ async function getFcmAccessToken(serviceAccount) {
   return result.access_token;
 }
 
-async function sendPushToAdmins(env, title, body, path = '/admin') {
+async function sendPushToUsers(env, userIds, title, body, path = '/notifications') {
   if (!env.FCM_SERVICE_ACCOUNT_JSON) {
     console.warn('FCM_SERVICE_ACCOUNT_JSON is not configured; push notification was not sent.');
     return { sent: 0, configured: false };
   }
   try {
-    const serviceAccount = JSON.parse(env.FCM_SERVICE_ACCOUNT_JSON);
-    const profiles = await supabaseRequest(env, "profiles?select=id&role=in.(admin,super_admin)");
-    const ids = (profiles || []).map(row => row.id).filter(Boolean);
+    const ids = [...new Set((userIds || []).filter(id => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)))];
     if (!ids.length) return { sent: 0, configured: true };
+    const serviceAccount = JSON.parse(env.FCM_SERVICE_ACCOUNT_JSON);
     const filter = ids.map(id => `"${id}"`).join(',');
     const devices = await supabaseRequest(env, `push_devices?select=id,token&active=eq.true&user_id=in.(${encodeURIComponent(filter)})`);
     const accessToken = await getFcmAccessToken(serviceAccount);
@@ -349,14 +348,12 @@ async function sendPushToAdmins(env, title, body, path = '/admin') {
       const response = await fetch(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(serviceAccount.project_id)}/messages:send`, {
         method: 'POST',
         headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          message: {
-            token: device.token,
-            notification: { title, body },
-            data: { path, type: 'tidori_alert' },
-            android: { priority: 'HIGH', notification: { channel_id: 'tidori_alerts', sound: 'default' } },
-          },
-        }),
+        body: JSON.stringify({ message: {
+          token: device.token,
+          notification: { title, body },
+          data: { path: typeof path === 'string' && path.startsWith('/') && !path.startsWith('//') ? path : '/notifications', type: 'tidori_alert' },
+          android: { priority: 'HIGH', notification: { channel_id: 'tidori_alerts', sound: 'default' } },
+        } }),
       });
       const result = await response.json().catch(() => ({}));
       if (response.ok) sent += 1;
@@ -364,14 +361,22 @@ async function sendPushToAdmins(env, title, body, path = '/admin') {
         await supabaseRequest(env, `push_devices?id=eq.${encodeURIComponent(device.id)}`, {
           method: 'PATCH', headers: { prefer: 'return=minimal' }, body: JSON.stringify({ active: false }),
         }).catch(() => {});
-      } else {
-        console.error('FCM send failed:', result.error?.message || response.status);
-      }
+      } else console.error('FCM send failed:', result.error?.message || response.status);
     }
     return { sent, configured: true };
   } catch (error) {
     console.error('Tidori push delivery failed:', error);
     return { sent: 0, configured: true, error: error.message };
+  }
+}
+
+async function sendPushToAdmins(env, title, body, path = '/admin') {
+  try {
+    const profiles = await supabaseRequest(env, "profiles?select=id&role=in.(admin,super_admin)");
+    return await sendPushToUsers(env, (profiles || []).map(row => row.id), title, body, path);
+  } catch (error) {
+    console.error('Tidori administrator push lookup failed:', error);
+    return { sent: 0, configured: Boolean(env.FCM_SERVICE_ACCOUNT_JSON), error: error.message };
   }
 }
 
@@ -422,7 +427,7 @@ async function databasePushEvent(request, env) {
   const table = clean(payload.table, 80);
   const event = String(payload.type || payload.event || '').toUpperCase();
   const record = payload.record || payload.new || {};
-  if (event !== 'INSERT' || !record.id || !['profiles', 'appointments'].includes(table)) {
+  if (event !== 'INSERT' || !record.id || !['profiles', 'appointments', 'notifications'].includes(table)) {
     return json({ ignored: true, message: 'This database event does not create a Tidori alert.' });
   }
   const eventKey = `${table}:INSERT:${record.id}`;
@@ -432,16 +437,17 @@ async function databasePushEvent(request, env) {
     body: JSON.stringify([{ event_key: eventKey, event_type: table }]),
   });
   if (!receipts?.length) return json({ duplicate: true, sent: 0 });
-  let title;
-  let message;
-  if (table === 'profiles') {
-    title = 'New Tidori user registered';
-    message = 'A new user account has been registered.';
-  } else {
-    title = 'New appointment received';
-    message = `A new ${clean(record.appointment_type || 'church', 80)} appointment request has been received.`;
+  if (table === 'notifications') {
+    const result = await sendPushToUsers(env, [record.user_id], clean(record.title || 'Tidori notification', 160),
+      clean(record.body || 'You have a new update.', 1000),
+      typeof record.action_path === 'string' ? record.action_path : '/notifications');
+    return json({ success: true, sent: result.sent, configured: result.configured });
   }
-  const result = await sendPushToAdmins(env, title, message, table === 'profiles' ? '/admin' : '/admin');
+  const title = table === 'profiles' ? 'New Tidori user registered' : 'New appointment received';
+  const message = table === 'profiles'
+    ? 'A new user account has been registered.'
+    : `A new ${clean(record.appointment_type || 'church', 80)} appointment request has been received.`;
+  const result = await sendPushToAdmins(env, title, message, '/admin');
   return json({ success: true, sent: result.sent, configured: result.configured });
 }
 

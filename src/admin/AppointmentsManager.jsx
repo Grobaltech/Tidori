@@ -219,7 +219,7 @@ export default function AppointmentsManager({ canManage = false }) {
                   <span className="block break-all font-mono">Room: {rooms[row.id].room_code}</span>
                   {roomInvites[row.id] ? (
                     <>
-                      <a href={`${window.location.origin}/meeting/${rooms[row.id].room_code}#key=${roomInvites[row.id].hostToken}`} target="_blank" rel="noopener noreferrer" className="block font-semibold text-violet-700 underline">Open pastor / host meeting</a>
+                      <a href={`${window.location.origin}/meeting/${rooms[row.id].room_code}#key=${roomInvites[row.id].hostToken}`} className="block font-semibold text-violet-700 underline">Open pastor / host meeting</a>
                       <button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code, roomInvites[row.id].guestToken)} className="block font-semibold text-[#009cff]">Copy visitor link</button>
                     </>
                   ) : (

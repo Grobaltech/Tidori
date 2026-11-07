@@ -1,4 +1,5 @@
 -- Tidori Connect: private member directory, one-to-one messaging and prayer requests.
+create schema if not exists private;
 -- Run this once in the ACTIVE Tidori Supabase project SQL Editor.
 -- Existing donation, appointment and video-call tables are not modified.
 
@@ -23,7 +24,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $function$
 begin
   if new.directory_opt_in is true then
     insert into public.member_directory(user_id, full_name, photo_url, ministry, small_group, updated_at)
@@ -40,7 +41,7 @@ begin
   end if;
   return new;
 end;
-$$;
+$function$;
 revoke all on function private.sync_tidori_member_directory() from public, anon, authenticated;
 
 drop trigger if exists sync_tidori_member_directory on public.profiles;
@@ -99,7 +100,8 @@ as $
       and m.user_id = (select auth.uid())
   );
 $;
-revoke all on function private.is_tidori_conversation_member(uuid) from public, anon;
+revoke all on function private.is_tidori_conversation_member(uuid) from public, anon, authenticated;
+grant usage on schema private to authenticated;
 grant execute on function private.is_tidori_conversation_member(uuid) to authenticated;
 
 drop policy if exists "Conversation members can view their conversations" on public.community_conversations;
@@ -132,7 +134,7 @@ returns uuid
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $function$
 declare
   caller_id uuid := (select auth.uid());
   existing_id uuid;
@@ -167,7 +169,7 @@ begin
   values (new_id,caller_id),(new_id,target_user_id);
   return new_id;
 end;
-$$;
+$function$;
 revoke all on function public.start_tidori_direct_conversation(uuid) from public, anon;
 grant execute on function public.start_tidori_direct_conversation(uuid) to authenticated;
 

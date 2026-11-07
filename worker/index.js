@@ -621,69 +621,175 @@ export class VideoRoom {
     this.env = env;
   }
 
+  async roomRecord(roomCode) {
+    const rows = await supabaseRequest(this.env, `video_call_rooms?select=id,room_code&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`);
+    return rows?.[0] || null;
+  }
+
+  async logEvent(roomCode, eventType, actorRole = "system", details = {}) {
+    try {
+      const room = await this.roomRecord(roomCode);
+      if (!room) return;
+      const sessionId = await this.ctx.storage.get("sessionId");
+      await supabaseRequest(this.env, "video_call_events", {
+        method: "POST",
+        headers: { prefer: "return=minimal" },
+        body: JSON.stringify([{ room_id: room.id, session_id: sessionId || null, event_type: eventType, actor_role: actorRole, details }]),
+      });
+    } catch (error) { console.error("Video meeting history event failed:", error); }
+  }
+
+  async startSession(roomCode) {
+    if (await this.ctx.storage.get("sessionId")) return;
+    const room = await this.roomRecord(roomCode);
+    if (!room) return;
+    const rows = await supabaseRequest(this.env, "video_call_sessions", {
+      method: "POST",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify([{ room_id: room.id }]),
+    });
+    const sessionId = rows?.[0]?.id;
+    if (sessionId) await this.ctx.storage.put("sessionId", sessionId);
+    await supabaseRequest(this.env, `video_call_rooms?id=eq.${room.id}`, {
+      method: "PATCH", headers: { prefer: "return=minimal" },
+      body: JSON.stringify({ status: "live", started_at: new Date().toISOString(), ended_at: null, ended_reason: null }),
+    });
+    await this.logEvent(roomCode, "call_started", "system");
+  }
+
+  async endSession(roomCode, reason = "host_ended") {
+    const room = await this.roomRecord(roomCode);
+    const sessionId = await this.ctx.storage.get("sessionId");
+    const now = new Date().toISOString();
+    if (sessionId) {
+      await supabaseRequest(this.env, `video_call_sessions?id=eq.${sessionId}`, {
+        method: "PATCH", headers: { prefer: "return=minimal" },
+        body: JSON.stringify({ ended_at: now, ended_reason: reason }),
+      }).catch(error => console.error("Could not close video session:", error));
+    }
+    if (room) {
+      await supabaseRequest(this.env, `video_call_rooms?id=eq.${room.id}`, {
+        method: "PATCH", headers: { prefer: "return=minimal" },
+        body: JSON.stringify({ status: "ended", ended_at: now, ended_reason: reason }),
+      }).catch(error => console.error("Could not close video room:", error));
+    }
+    await this.logEvent(roomCode, "call_ended", "system", { reason });
+    await this.ctx.storage.delete("sessionId");
+  }
+
   async fetch(request) {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       return new Response("WebSocket upgrade required.", { status: 426 });
     }
+    const url = new URL(request.url);
+    const role = url.searchParams.get("role");
+    const roomCode = url.pathname.match(/\/api\/video\/rooms\/([0-9a-f-]{36})\/signal/i)?.[1];
+    if (!["host", "guest"].includes(role) || !roomCode) return new Response("Invalid meeting role.", { status: 403 });
     const peers = this.ctx.getWebSockets();
-    if (peers.length >= 2) {
-      return new Response("This meeting already has two connected participants.", { status: 409 });
-    }
+    const sameRole = peers.some(peer => peer.deserializeAttachment()?.role === role);
+    if (peers.length >= 2 || sameRole) return new Response("This meeting role is already connected or the room is full.", { status: 409 });
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
     this.ctx.acceptWebSocket(server);
-    const roomCode = new URL(request.url).pathname.match(/\/api\/video\/rooms\/([0-9a-f-]{36})\/signal/i)?.[1];
-    server.serializeAttachment({ roomCode }); 
-    if (roomCode) {
-      await supabaseRequest(this.env, `video_call_rooms?room_code=eq.${encodeURIComponent(roomCode)}&status=eq.scheduled`, {
-        method: "PATCH",
-        headers: { prefer: "return=minimal" },
-        body: JSON.stringify({ status: "live", started_at: new Date().toISOString() }),
-      }).catch(error => console.error("Could not mark video room live:", error));
+    server.serializeAttachment({ role, roomCode, admitted: role === "host" });
+    server.send(JSON.stringify({ type: "room-state", role, admitted: role === "host", peerCount: peers.length + 1 }));
+    if (role === "host") {
+      await this.logEvent(roomCode, "host_joined", "host");
+      for (const peer of peers) {
+        if (peer.deserializeAttachment()?.role === "guest") {
+          try { peer.send(JSON.stringify({ type: "waiting-for-host" })); } catch {}
+          server.send(JSON.stringify({ type: "guest-waiting" }));
+        }
+      }
+    } else {
+      await this.logEvent(roomCode, "guest_waiting", "guest");
+      const host = peers.find(peer => peer.deserializeAttachment()?.role === "host");
+      if (host) {
+        try { host.send(JSON.stringify({ type: "guest-waiting" })); } catch {}
+      }
+      server.send(JSON.stringify({ type: "waiting-for-host" }));
     }
-    for (const peer of peers) {
-      try { peer.send(JSON.stringify({ type: "peer-joined" })); } catch {}
-    }
-    server.send(JSON.stringify({ type: "room-state", peerCount: peers.length + 1 }));
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  webSocketMessage(socket, message) {
+  async webSocketMessage(socket, message) {
     if (typeof message !== "string" || message.length > 65536) return;
     let packet;
     try { packet = JSON.parse(message); } catch { return; }
-    if (!packet || !["offer", "answer", "ice", "hangup", "ready"].includes(packet.type)) return;
+    const attachment = socket.deserializeAttachment() || {};
+    const { role, roomCode } = attachment;
+    if (packet?.type === "admit-guest" && role === "host") {
+      const guest = this.ctx.getWebSockets().find(peer => peer.deserializeAttachment()?.role === "guest");
+      if (!guest) return;
+      const guestAttachment = guest.deserializeAttachment() || {};
+      guestAttachment.admitted = true;
+      guest.serializeAttachment(guestAttachment);
+      await this.startSession(roomCode);
+      await this.logEvent(roomCode, "guest_admitted", "host");
+      try { guest.send(JSON.stringify({ type: "admitted" })); } catch {}
+      return;
+    }
+    if (packet?.type === "remove-guest" && role === "host") {
+      const guest = this.ctx.getWebSockets().find(peer => peer.deserializeAttachment()?.role === "guest");
+      if (guest) {
+        try { guest.send(JSON.stringify({ type: "guest-removed" })); guest.close(4001, "Removed by host"); } catch {}
+      }
+      await this.logEvent(roomCode, "guest_removed", "host");
+      return;
+    }
+    if (packet?.type === "end-room" && role === "host") {
+      for (const peer of this.ctx.getWebSockets()) {
+        try { peer.send(JSON.stringify({ type: "room-ended" })); peer.close(4002, "Meeting ended by host"); } catch {}
+      }
+      await this.endSession(roomCode, "host_ended");
+      return;
+    }
+    if (packet?.type === "hangup") {
+      try { socket.close(1000, "Participant left"); } catch {}
+      return;
+    }
+    if (packet?.type === "screen-share-started" || packet?.type === "screen-share-stopped") {
+      await this.logEvent(roomCode, packet.type === "screen-share-started" ? "screen_share_started" : "screen_share_stopped", role);
+      return;
+    }
+    if (!["offer", "answer", "ice"].includes(packet?.type)) return;
+    const peers = this.ctx.getWebSockets();
+    const other = peers.find(peer => peer !== socket);
+    if (!other) return;
+    const otherAttachment = other.deserializeAttachment() || {};
+    const permitted = role === "host"
+      ? otherAttachment.role === "guest" && otherAttachment.admitted
+      : role === "guest" && attachment.admitted && otherAttachment.role === "host";
+    if (!permitted) return;
     const safe = JSON.stringify({
       type: packet.type,
       ...(packet.type === "offer" || packet.type === "answer" ? { description: packet.description } : {}),
       ...(packet.type === "ice" ? { candidate: packet.candidate } : {}),
     });
-    for (const peer of this.ctx.getWebSockets()) {
-      if (peer === socket) continue;
-      try { peer.send(safe); } catch {}
-    }
+    try { other.send(safe); } catch {}
   }
 
   async webSocketClose(socket) {
+    const attachment = socket.deserializeAttachment() || {};
     const remaining = this.ctx.getWebSockets();
     for (const peer of remaining) {
-      try { peer.send(JSON.stringify({ type: "peer-left" })); } catch {}
+      try {
+        if (attachment.role === "guest") peer.send(JSON.stringify({ type: "peer-left" }));
+        else peer.send(JSON.stringify({ type: "room-ended" }));
+      } catch {}
     }
-    if (remaining.length === 0) {
-      const attachment = socket.deserializeAttachment();
-      if (attachment?.roomCode) {
-        await supabaseRequest(this.env, `video_call_rooms?room_code=eq.${encodeURIComponent(attachment.roomCode)}&status=eq.live`, {
-          method: "PATCH",
-          headers: { prefer: "return=minimal" },
-          body: JSON.stringify({ status: "ended", ended_at: new Date().toISOString() }),
-        }).catch(error => console.error("Could not mark video room ended:", error));
-      }
+    if (attachment.role === "guest") await this.logEvent(attachment.roomCode, "participant_left", "guest");
+    if (attachment.role === "host") {
+      for (const peer of remaining) { try { peer.close(4002, "Host disconnected"); } catch {} }
+      await this.endSession(attachment.roomCode, "host_disconnected");
+    } else if (remaining.length === 0) {
+      await this.endSession(attachment.roomCode, "participants_left");
     }
   }
 
-  webSocketError(socket) {
-    this.webSocketClose(socket);
+  async webSocketError(socket) {
+    await this.webSocketClose(socket);
   }
 }
 
@@ -697,16 +803,24 @@ export default {
           return json({ error: "Video calling is not configured on this Worker yet." }, 503);
         }
         const roomCode = videoSignalMatch[1];
+        const accessKey = url.searchParams.get("key") || "";
+        if (!/^[0-9a-f]{64}$/i.test(accessKey)) return json({ error: "Invalid meeting invitation." }, 401);
         const rooms = await supabaseRequest(env,
-          `video_call_rooms?select=id,status,appointment:appointments!inner(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
+          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,appointment:appointments!inner(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
         );
         const room = rooms?.[0];
         if (!room || !["scheduled", "live"].includes(room.status)
           || room.appointment?.status !== "confirmed" || room.appointment?.meeting_mode !== "video") {
           return json({ error: "This meeting link is invalid, expired or not yet approved." }, 404);
         }
+        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessKey));
+        const keyHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+        const role = keyHash === room.host_token_hash ? "host" : keyHash === room.guest_token_hash ? "guest" : null;
+        if (!role) return json({ error: "This invitation has expired or is not valid." }, 403);
+        url.searchParams.set("role", role);
+        url.searchParams.set("roomId", room.id);
         const id = env.VIDEO_ROOMS.idFromName(roomCode);
-        return env.VIDEO_ROOMS.get(id).fetch(request);
+        return env.VIDEO_ROOMS.get(id).fetch(new Request(url.toString(), request));
       }
       if (url.pathname === "/api/push/register" && ["POST", "DELETE"].includes(request.method)) {
         return await pushDevice(request, env);

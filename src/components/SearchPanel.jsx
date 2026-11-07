@@ -25,6 +25,7 @@ export default function SearchPanel({ open, onClose }) {
           ...outreach.map((item) => ({ title: item.title, description: item.summary || item.description, type: 'Outreach', to: '/outreach' })),
           ...team.map((item) => ({ title: item.name, description: item.role, type: 'Our Team', to: '/team' })),
           { title: 'About Tidori Ministries', description: 'Learn about our church, mission and vision.', type: 'Page', to: '/about' },
+          { title: 'Request an Appointment', description: 'Book a preferred time to meet with the pastor.', type: 'Page', to: '/appointments' },
           { title: 'Contact Us', description: 'Get in touch with Tidori Ministries.', type: 'Page', to: '/contact' },
           { title: 'Give', description: 'Support the work and outreach of the ministry.', type: 'Page', to: '/give' },
           { title: 'Volunteer', description: 'Find ways to serve with us.', type: 'Page', to: '/volunteer' },

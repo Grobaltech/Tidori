@@ -19,6 +19,7 @@ export default function Meeting() {
   const peerRef = useRef(null);
   const localStreamRef = useRef(null);
   const cameraTrackRef = useRef(null);
+  const displayStreamRef = useRef(null);
   const pendingIceRef = useRef([]);
   const [joining, setJoining] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -41,6 +42,8 @@ export default function Meeting() {
     try { peerRef.current?.close(); } catch {}
     peerRef.current = null;
     localStreamRef.current?.getTracks().forEach(track => track.stop());
+    displayStreamRef.current?.getTracks().forEach(track => track.stop());
+    displayStreamRef.current = null;
     localStreamRef.current = null;
     cameraTrackRef.current = null;
     pendingIceRef.current = [];
@@ -165,17 +168,21 @@ export default function Meeting() {
     try {
       if (!sharing) {
         const display = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        displayStreamRef.current = display;
         const displayTrack = display.getVideoTracks()[0];
         const sender = peerRef.current.getSenders().find(item => item.track?.kind === 'video');
         if (sender && displayTrack) await sender.replaceTrack(displayTrack);
         displayTrack.onended = async () => {
           if (sender && cameraTrackRef.current) await sender.replaceTrack(cameraTrackRef.current);
+          displayStreamRef.current = null;
           setSharing(false);
         };
         setSharing(true);
       } else {
         const sender = peerRef.current.getSenders().find(item => item.track?.kind === 'video');
         if (sender && cameraTrackRef.current) await sender.replaceTrack(cameraTrackRef.current);
+        displayStreamRef.current?.getTracks().forEach(track => track.stop());
+        displayStreamRef.current = null;
         setSharing(false);
       }
     } catch (shareError) {

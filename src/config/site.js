@@ -39,6 +39,7 @@ export const site = {
         { to: '/volunteer', label: 'Serve With Us' },
       ],
     },
+    { to: '/appointments', label: 'Appointments' },
     { to: '/contact', label: 'Contact' },
   ],
   ministries: [

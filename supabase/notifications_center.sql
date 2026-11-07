@@ -140,7 +140,10 @@ end;
 $function$;
 revoke all on function private.notify_tidori_appointment() from public, anon, authenticated;
 drop trigger if exists tidori_appointment_insert_notification on public.appointments;
-create trigger tidori_appointment_insert_notification after insert or update of status, payment_status on public.appointments
+create trigger tidori_appointment_insert_notification after insert on public.appointments
+for each row execute function private.notify_tidori_appointment();
+drop trigger if exists tidori_appointment_update_notification on public.appointments;
+create trigger tidori_appointment_update_notification after update of status, payment_status on public.appointments
 for each row execute function private.notify_tidori_appointment();
 
 do $block$

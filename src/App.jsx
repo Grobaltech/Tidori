@@ -17,6 +17,7 @@ import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
 import MobileAppBridge from './components/MobileAppBridge';
+import Meeting from './pages/Meeting';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/appointments" element={<Appointments />} />
+        <Route path="/meeting/:roomCode" element={<Meeting />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Login />} />
         <Route path="/profile" element={<Profile />} />

@@ -825,6 +825,35 @@ export class VideoRoom {
   }
 }
 
+async function cloudflareTurnIceServers(env) {
+  const keyId = String(env.CLOUDFLARE_TURN_KEY_ID || "").trim();
+  const keyToken = String(env.CLOUDFLARE_TURN_KEY_TOKEN || "").trim();
+  if (!keyId || !keyToken) return null;
+
+  if (!/^[a-f0-9]{32}$/i.test(keyId) || !/^[a-f0-9]{64}$/i.test(keyToken)) {
+    throw new Error("Cloudflare TURN key configuration is invalid. Check the TURN key ID and token secrets.");
+  }
+
+  const response = await fetch(
+    `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(keyId)}/credentials/generate-ice-servers`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${keyToken}`,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({ ttl: 86400 }),
+    }
+  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !Array.isArray(payload.iceServers) || payload.iceServers.length === 0) {
+    console.error("Cloudflare TURN credential generation failed:", response.status, payload.errors || payload);
+    throw new Error("Cloudflare could not generate temporary TURN credentials. Check the TURN key ID and secret in Worker settings.");
+  }
+  return payload.iceServers;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -845,12 +874,12 @@ export default {
         const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessKey));
         const keyHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
         if (keyHash !== room.host_token_hash && keyHash !== room.guest_token_hash) return json({ error: "This invitation has expired." }, 403);
-        const iceServers = [{ urls: ["stun:stun.l.google.com:19302"] }];
-        const turnUrls = String(env.TURN_URL || "").split(",").map(value => value.trim()).filter(Boolean);
-        if (turnUrls.length && env.TURN_USERNAME && env.TURN_CREDENTIAL) {
-          iceServers.push({ urls: turnUrls, username: env.TURN_USERNAME, credential: env.TURN_CREDENTIAL });
-        }
-        return json({ iceServers, turnConfigured: iceServers.length > 1 });
+        const cloudflareIceServers = await cloudflareTurnIceServers(env);
+        const iceServers = cloudflareIceServers || [{ urls: ["stun:stun.cloudflare.com:3478"] }];
+        const turnConfigured = Boolean(cloudflareIceServers?.some(server =>
+          (Array.isArray(server.urls) ? server.urls : [server.urls]).some(value => String(value).startsWith("turn"))
+        ));
+        return json({ iceServers, turnConfigured });
       }
       const videoSignalMatch = url.pathname.match(/^\/api\/video\/rooms\/([0-9a-f-]{36})\/signal$/i);
       if (videoSignalMatch && request.headers.get("Upgrade")?.toLowerCase() === "websocket") {

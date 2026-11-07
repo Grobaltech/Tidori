@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FaCalendarAlt, FaSyncAlt, FaSave, FaTimes, FaPhone, FaEnvelope } from 'react-icons/fa';
 import { supabase } from '../lib/supabase';
+import AppointmentFeeManager from './AppointmentFeeManager';
 
 const fieldClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#009cff]';
 const statuses = ['requested', 'confirmed', 'completed', 'cancelled'];
@@ -151,7 +152,7 @@ export default function AppointmentsManager({ canManage = false }) {
     unpaid: rows.filter(r => r.payment_status !== 'paid').length,
   };
 
-  return <div className="space-y-5">
+  return <div className="space-y-5">\n    {canManage && <AppointmentFeeManager />}
     <section className="admin-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
         <div><div className="flex items-center gap-2"><FaCalendarAlt className="text-lg text-[#009cff]" /><h2 className="admin-section-title">Appointments with the Pastor</h2></div><p className="admin-muted mt-1">Review appointment requests, confirm meeting times and record whether the appointment fee has been paid.</p></div>

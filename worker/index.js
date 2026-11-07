@@ -451,6 +451,97 @@ async function databasePushEvent(request, env) {
   return json({ success: true, sent: result.sent, configured: result.configured });
 }
 
+
+async function appointmentFees(request, env) {
+  const rows = await supabaseRequest(env, "appointment_fee_rules?select=id,appointment_type,meeting_mode,amount,currency&is_active=eq.true&order=appointment_type.asc");
+  return json({ rules: rows || [] });
+}
+
+async function createAppointmentRequest(request, env) {
+  const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter(key => !env[key]);
+  if (missing.length) return json({ error: "Appointment service is not configured.", missing }, 503);
+  const input = await request.json().catch(() => null);
+  if (!input) return json({ error: "Invalid appointment request." }, 400);
+  const fullName = clean(input.full_name, 120);
+  const email = clean(input.email, 200).toLowerCase();
+  const phone = clean(input.phone, 40);
+  const appointmentType = clean(input.appointment_type, 120);
+  const meetingMode = clean(input.meeting_mode, 20);
+  const requestedAt = new Date(input.requested_at);
+  if (fullName.length < 2 || phone.length < 6 || !appointmentType
+      || !["in_person", "phone", "audio", "video"].includes(meetingMode)
+      || !Number.isFinite(requestedAt.getTime()) || requestedAt.getTime() < Date.now() - 60000) {
+    return json({ error: "Complete your name, phone, appointment details and choose a future date and time." }, 400);
+  }
+
+  let userId = null;
+  const accessToken = (request.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
+  if (accessToken) {
+    const authResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${accessToken}` },
+    });
+    if (!authResponse.ok) return json({ error: "Your sign-in session has expired. Sign in again." }, 401);
+    const authUser = await authResponse.json();
+    userId = authUser.id;
+  }
+
+  const rules = await supabaseRequest(env,
+    `appointment_fee_rules?select=id,amount,currency&appointment_type=eq.${encodeURIComponent(appointmentType)}&meeting_mode=eq.${encodeURIComponent(meetingMode)}&is_active=eq.true&limit=1`
+  );
+  const rule = rules?.[0];
+  if (!rule) return json({ error: "This appointment type and meeting method is not currently configured. Please contact the church office." }, 409);
+  const amount = Number(rule.amount);
+  const currency = String(rule.currency || "UGX").toUpperCase();
+  if (amount > 0 && (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    return json({ error: "A valid email address is required for secure online payment." }, 400);
+  }
+
+  const merchantReference = amount > 0 ? `TIDORI-APPT-${crypto.randomUUID()}` : null;
+  const rows = await supabaseRequest(env, "appointments", {
+    method: "POST",
+    headers: { prefer: "return=representation" },
+    body: JSON.stringify([{
+      user_id: userId, full_name: fullName, email: email || null, phone,
+      appointment_type: appointmentType, meeting_mode: meetingMode,
+      requested_at: requestedAt.toISOString(), notes: clean(input.notes, 2000) || null,
+      status: "requested", payment_status: "unpaid", fee_amount: amount,
+      currency, fee_rule_id: rule.id, pesapal_merchant_reference: merchantReference,
+    }]),
+  });
+  const appointment = rows?.[0];
+  if (!appointment?.id) throw new Error("The appointment request could not be saved.");
+
+  if (amount === 0) return json({ success: true, appointment_id: appointment.id, fee_amount: 0, currency, free: true });
+
+  try {
+    const token = await pesapalToken(env);
+    const origin = new URL(request.url).origin;
+    const ipnRegistration = await ensurePesapalIpn(env, token, origin);
+    const [firstName, ...lastParts] = fullName.split(/\s+/);
+    const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
+      id: merchantReference, currency, amount: Number(amount.toFixed(2)),
+      description: `Tidori appointment: ${appointmentType}`,
+      callback_url: `${origin}/api/payments/pesapal/callback`,
+      redirect_mode: "PARENT_WINDOW",
+      cancellation_url: `${origin}/appointments?payment=cancelled&reference=${encodeURIComponent(merchantReference)}`,
+      notification_id: ipnRegistration.ipn_id,
+      billing_address: {
+        email_address: email, phone_number: phone || undefined, country_code: "UG",
+        first_name: firstName, last_name: lastParts.join(" "),
+      },
+    });
+    if (!order.redirect_url || !order.order_tracking_id) throw new Error("Pesapal did not return a checkout link.");
+    await supabaseRequest(env, `appointments?id=eq.${encodeURIComponent(appointment.id)}`, {
+      method: "PATCH", headers: { prefer: "return=minimal" },
+      body: JSON.stringify({ pesapal_order_tracking_id: order.order_tracking_id }),
+    });
+    return json({ success: true, appointment_id: appointment.id, redirect_url: order.redirect_url, reference: merchantReference, fee_amount: amount, currency });
+  } catch (error) {
+    console.error("Appointment checkout creation failed:", error);
+    return json({ error: "Your appointment request was saved, but payment checkout could not start. Please contact the church office with your name and phone number." }, 502);
+  }
+}
+
 async function verifyPayment(env, trackingId, merchantReference) {
   const token = await pesapalToken(env);
   const url = new URL(`${PESAPAL_BASE}/api/Transactions/GetTransactionStatus`);
@@ -459,6 +550,37 @@ async function verifyPayment(env, trackingId, merchantReference) {
   const data = await response.json();
   if (!response.ok || data.error || String(data.merchant_reference || "") !== merchantReference) {
     throw new Error(data.error?.message || "Could not verify the Pesapal transaction reference.");
+  }
+
+  const status = String(data.payment_status_description || "").toUpperCase();
+  const paymentStatus = status === "COMPLETED" || Number(data.status_code) === 1
+    ? "paid"
+    : status === "FAILED" || Number(data.status_code) === 2
+      ? "failed"
+      : status === "REVERSED" || Number(data.status_code) === 3
+        ? "reversed"
+        : "pending";
+
+  if (merchantReference.startsWith("TIDORI-APPT-")) {
+    const records = await supabaseRequest(env,
+      `appointments?select=id,fee_amount,currency,payment_status&pesapal_merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}&limit=1`
+    );
+    const appointment = records?.[0];
+    if (!appointment) throw new Error("No matching appointment payment record exists.");
+    if (String(data.currency || "").toUpperCase() !== String(appointment.currency || "UGX").toUpperCase()
+        || Math.abs(Number(data.amount) - Number(appointment.fee_amount)) > 0.01) {
+      throw new Error("The verified Pesapal amount or currency does not match this appointment.");
+    }
+    const updated = await supabaseRequest(env,
+      `appointments?id=eq.${encodeURIComponent(appointment.id)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}`,
+      { method: "PATCH", headers: { prefer: "return=representation" },
+        body: JSON.stringify({
+          ...(paymentStatus === "paid" ? { payment_status: "paid", paid_at: data.created_date || new Date().toISOString() } : {}),
+          ...(data.payment_method ? { payment_method: clean(data.payment_method, 80) } : {}),
+          ...(data.confirmation_code ? { payment_reference: clean(data.confirmation_code, 120) } : {}),
+        }) }
+    );
+    return { paymentStatus, amount: data.amount, currency: data.currency, paymentMethod: data.payment_method, appointment: true, updated: Boolean(updated?.length) };
   }
 
   const records = await supabaseRequest(env,
@@ -470,8 +592,6 @@ async function verifyPayment(env, trackingId, merchantReference) {
       || Math.abs(Number(data.amount) - Number(donation.amount)) > 0.01) {
     throw new Error("The verified Pesapal amount or currency does not match the donation.");
   }
-
-  const status = String(data.payment_status_description || "").toUpperCase();
   const paymentStatus = status === "COMPLETED" || Number(data.status_code) === 1
     ? "paid"
     : status === "FAILED" || Number(data.status_code) === 2
@@ -594,7 +714,7 @@ async function handleNotification(request, env, isCallback) {
   }
   if (isCallback) {
     const status = result?.paymentStatus || "processing";
-    return Response.redirect(`${url.origin}/give?payment=${encodeURIComponent(status)}&reference=${encodeURIComponent(merchantReference)}`, 302);
+    const destination = merchantReference.startsWith("TIDORI-APPT-") ? "/appointments" : "/give";\n    return Response.redirect(`${url.origin}${destination}?payment=${encodeURIComponent(status)}&reference=${encodeURIComponent(merchantReference)}`, 302);
   }
   return json({
     orderNotificationType: payload.OrderNotificationType || "IPNCHANGE",
@@ -605,7 +725,14 @@ async function handleNotification(request, env, isCallback) {
 }
 
 async function paymentStatus(request, env) {
-  const reference = clean(new URL(request.url).searchParams.get("reference"), 100);
+  const reference = clean(new URL(request.url).searchParams.get("reference"), 120);
+  if (reference.startsWith("TIDORI-APPT-")) {
+    const rows = await supabaseRequest(env,
+      `appointments?select=payment_status,currency,fee_amount,paid_at,status&pesapal_merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`
+    );
+    if (!rows?.length) return json({ error: "Appointment payment not found." }, 404);
+    return json({ status: rows[0].payment_status, ...rows[0] });
+  }
   if (!/^TIDORI-[0-9a-f-]{36}$/i.test(reference)) return json({ error: "Invalid reference." }, 400);
   const rows = await supabaseRequest(env,
     `donation_pledges?select=status,currency,amount,paid_at&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`
@@ -927,7 +1054,7 @@ export default {
       if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
         return await adminPesapalIpn(request, env);
       }
-      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
+      if (url.pathname === "/api/appointments/fees" && request.method === "GET") {\n        return await appointmentFees(request, env);\n      }\n      if (url.pathname === "/api/appointments/request" && request.method === "POST") {\n        return await createAppointmentRequest(request, env);\n      }\n      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
         return await createPayment(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {

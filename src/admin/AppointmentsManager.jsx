@@ -97,6 +97,16 @@ export default function AppointmentsManager({ canManage = false }) {
     } finally { setRoomBusyId(''); }
   };
 
+  const copyMeetingLink = async roomCode => {
+    const link = `${window.location.origin}/meeting/${roomCode}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setNotice('Private meeting invitation link copied. Share it only with the approved visitor.');
+    } catch {
+      setRoomError('Could not copy automatically. Open the meeting link shown below and copy it manually.');
+    }
+  };
+
   const filtered = rows.filter(row => {
     const matchesFilter = filter === 'all' || (filter === 'paid' ? row.payment_status === 'paid' : filter === 'unpaid' ? row.payment_status !== 'paid' : row.status === filter);
     const text = [row.full_name, row.email, row.phone, row.appointment_type, row.meeting_mode, row.status, row.payment_status].join(' ').toLowerCase();
@@ -136,7 +146,7 @@ export default function AppointmentsManager({ canManage = false }) {
             <td>{formatDate(row.requested_at)}</td>
             <td><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold capitalize text-blue-700">{label(row.status)}</span></td>
             <td><span className={row.payment_status === 'paid' ? 'rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700' : 'rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800'}>{label(row.payment_status || 'unpaid')}</span><span className="mt-1 block text-xs text-gray-500">{row.fee_amount ? `${row.currency || 'UGX'} ${Number(row.fee_amount).toLocaleString()}` : 'No fee recorded'}</span></td>
-            <td><div className="flex flex-wrap gap-1.5">{canManage ? <><button type="button" onClick={() => setEditing({ ...row, fee_amount: row.fee_amount ?? 0, currency: row.currency || 'UGX', payment_status: row.payment_status || 'unpaid' })} className="rounded border border-gray-200 px-3 py-1.5 text-xs font-semibold">Manage</button>{row.meeting_mode === 'video' && row.status === 'confirmed' && (rooms[row.id] ? <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Room created</span> : <button type="button" disabled={roomBusyId === row.id} onClick={() => createVideoRoom(row)} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{roomBusyId === row.id ? 'Creating…' : 'Create room'}</button>)}</> : <span className="text-xs text-gray-400">View only</span>}</div>{rooms[row.id] && <div className="mt-2 max-w-[220px] text-xs text-gray-500">Room: <span className="break-all font-mono">{rooms[row.id].room_code}</span> <button type="button" onClick={() => navigator.clipboard?.writeText(rooms[row.id].room_code)} className="ml-1 font-semibold text-[#009cff]">Copy</button></div>}</td>
+            <td><div className="flex flex-wrap gap-1.5">{canManage ? <><button type="button" onClick={() => setEditing({ ...row, fee_amount: row.fee_amount ?? 0, currency: row.currency || 'UGX', payment_status: row.payment_status || 'unpaid' })} className="rounded border border-gray-200 px-3 py-1.5 text-xs font-semibold">Manage</button>{row.meeting_mode === 'video' && row.status === 'confirmed' && (rooms[row.id] ? <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Room created</span> : <button type="button" disabled={roomBusyId === row.id} onClick={() => createVideoRoom(row)} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{roomBusyId === row.id ? 'Creating…' : 'Create room'}</button>)}</> : <span className="text-xs text-gray-400">View only</span>}</div>{rooms[row.id] && <div className="mt-2 max-w-[240px] text-xs text-gray-500"><span className="block break-all font-mono">Room: {rooms[row.id].room_code}</span><a className="mt-1 inline-block font-semibold text-[#009cff]" href={`/meeting/${rooms[row.id].room_code}`} target="_blank" rel="noreferrer">Open meeting</a><button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code)} className="ml-3 font-semibold text-[#009cff]">Copy guest invitation</button></div>}</td>
           </tr>)}</tbody>
         </table>
         {!loading && !filtered.length && <div className="admin-empty">No appointment requests match this view.</div>}

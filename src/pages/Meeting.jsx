@@ -39,6 +39,7 @@ export default function Meeting() {
   const [guestWaiting, setGuestWaiting] = useState(false);
   const [admitted, setAdmitted] = useState(false);
   const [turnConfigured, setTurnConfigured] = useState(false);
+  const [audioOnly, setAudioOnly] = useState(new URLSearchParams(window.location.search).get('mode') === 'audio');
 
   const send = packet => {
     const socket = socketRef.current;
@@ -65,14 +66,19 @@ export default function Meeting() {
       setError('This meeting link is not valid.');
       return;
     }
-    setJoining(true); setError(''); setStatus('Requesting camera and microphone access…');
+    setJoining(true); setError(''); setStatus(audioOnly ? 'Requesting microphone access…' : 'Requesting camera and microphone access…');
     try {
       const iceResponse = await fetch(`${VIDEO_API_ORIGIN}/api/video/rooms/${roomCode}/ice?key=${encodeURIComponent(accessKey)}`);
       const iceConfig = await iceResponse.json().catch(() => ({}));
       if (!iceResponse.ok) throw new Error(iceConfig.error || 'This meeting invitation is invalid or has expired.');
       setTurnConfigured(Boolean(iceConfig.turnConfigured));
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error('This device browser does not support camera and microphone calling. Update Android System WebView or use the latest Chrome browser.');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
+      const isAudioOnly = iceConfig.meetingMode === 'audio';
+      setAudioOnly(isAudioOnly);
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('This device browser does not support microphone calling. Update Android System WebView or use the latest Chrome browser.');
+      const mediaConstraints = isAudioOnly
+        ? { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }
+        : { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } };
+      const stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
       localStreamRef.current = stream;
       cameraTrackRef.current = stream.getVideoTracks()[0] || null;
       if (localVideo.current) localVideo.current.srcObject = stream;
@@ -240,12 +246,12 @@ export default function Meeting() {
   return <main className="min-h-[75vh] bg-[#101722] px-4 py-8 text-white sm:px-6">
     <div className="mx-auto max-w-6xl">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div><p className="text-xs font-semibold uppercase tracking-[.2em] text-[#fdbe33]">Tidori Ministries</p><h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">Video meeting</h1><p className="mt-1 text-sm text-slate-300">{status}</p></div>
+        <div><p className="text-xs font-semibold uppercase tracking-[.2em] text-[#fdbe33]">Tidori Ministries</p><h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">{audioOnly ? 'Audio call' : 'Video meeting'}</h1><p className="mt-1 text-sm text-slate-300">{status}</p></div>
         <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-300">Private room</span>
       </div>
       {error && <p role="alert" className="mb-4 rounded-lg border border-red-400/30 bg-red-950/60 p-3 text-sm text-red-200">{error}</p>}
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-        <div className="grid min-h-[320px] gap-3 sm:grid-cols-2">
+        {audioOnly ? <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl bg-[#202b3a] p-8 text-center"><FaMicrophone className="mb-4 text-5xl text-[#fdbe33]" /><h2 className="text-xl font-semibold">Tidori audio call</h2><p className="mt-2 max-w-md text-sm text-slate-300">This call uses your microphone and speaker only. Your camera is not requested or activated.</p><video ref={remoteVideo} autoPlay playsInline muted={speakerOff} className="hidden" /><video ref={localVideo} autoPlay playsInline muted className="hidden" /></div> : <div className="grid min-h-[320px] gap-3 sm:grid-cols-2">
           <div className="relative overflow-hidden rounded-2xl bg-[#202b3a]">
             <video ref={remoteVideo} autoPlay playsInline muted={speakerOff} className="h-full min-h-[260px] w-full object-cover" />
             {!peerPresent && <div className="absolute inset-0 flex items-center justify-center text-center text-sm text-slate-300">Waiting for the pastor or visitor to join…</div>}
@@ -259,17 +265,17 @@ export default function Meeting() {
         </div>
         <aside className="rounded-2xl border border-white/10 bg-[#182230] p-5">
           <h2 className="text-base font-bold text-white">Meeting controls</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">Allow camera and microphone access when prompted. Visitors wait until the pastor admits them. Tidori relays connection signals; media is peer-to-peer where the network permits. {nativeApp ? 'You are using the Tidori mobile app; camera and microphone controls are available here.' : 'Screen sharing is available on supported desktop browsers.'}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{audioOnly ? 'Allow microphone access when prompted. This audio-only call never requests your camera. Visitors wait until the pastor admits them.' : 'Allow camera and microphone access when prompted. Visitors wait until the pastor admits them.'} Tidori relays connection signals; media is peer-to-peer where the network permits. {nativeApp ? 'You are using the Tidori mobile app.' : 'Screen sharing is available on supported desktop browsers.'}</p>
           {!joined ? <button type="button" onClick={joinMeeting} disabled={joining} className="mt-5 w-full rounded-lg bg-[#fdbe33] px-4 py-3 text-sm font-bold text-[#191c24] disabled:opacity-60">{joining ? 'Joining…' : 'Join meeting'}</button> : <div className="mt-5 grid grid-cols-2 gap-2">
             <button type="button" onClick={toggleMic} className="rounded-lg bg-white/10 p-3 text-sm">{muted ? <FaMicrophoneSlash className="mx-auto mb-1" /> : <FaMicrophone className="mx-auto mb-1" />}{muted ? 'Unmute' : 'Mute'}</button>
-            <button type="button" onClick={toggleCamera} className="rounded-lg bg-white/10 p-3 text-sm">{cameraOff ? <FaVideoSlash className="mx-auto mb-1" /> : <FaVideo className="mx-auto mb-1" />}{cameraOff ? 'Camera on' : 'Camera off'}</button>
+            {!audioOnly && <button type="button" onClick={toggleCamera} className="rounded-lg bg-white/10 p-3 text-sm">{cameraOff ? <FaVideoSlash className="mx-auto mb-1" /> : <FaVideo className="mx-auto mb-1" />}{cameraOff ? 'Camera on' : 'Camera off'}</button>
             <button type="button" onClick={toggleSpeaker} className="rounded-lg bg-white/10 p-3 text-sm">{speakerOff ? <FaVolumeMute className="mx-auto mb-1" /> : <FaVolumeUp className="mx-auto mb-1" />}{speakerOff ? 'Sound on' : 'Mute sound'}</button>
-            {!nativeApp && <button type="button" onClick={toggleScreenShare} className="rounded-lg bg-white/10 p-3 text-sm"><FaDesktop className="mx-auto mb-1" />{sharing ? 'Stop sharing' : 'Share screen'}</button>}
+            {!nativeApp && !audioOnly && <button type="button" onClick={toggleScreenShare} className="rounded-lg bg-white/10 p-3 text-sm"><FaDesktop className="mx-auto mb-1" />{sharing ? 'Stop sharing' : 'Share screen'}</button>}
             <button type="button" onClick={leaveMeeting} className="col-span-2 rounded-lg bg-red-600 p-3 text-sm font-bold"><FaPhoneSlash className="mr-2 inline" />Leave meeting</button>
           </div>}
           {joined && participantRole === 'host' && guestWaiting && <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-950/40 p-3"><p className="text-sm font-semibold text-amber-100">A visitor is waiting to join.</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={admitGuest} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold">Admit visitor</button><button type="button" onClick={removeGuest} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold">Decline</button></div></div>}
           {joined && participantRole === 'host' && admitted && <button type="button" onClick={endCallForEveryone} className="mt-3 w-full rounded-lg bg-red-800 px-3 py-2 text-sm font-semibold">End meeting for everyone</button>}
-          <div className="mt-5 border-t border-white/10 pt-4 text-xs leading-5 text-slate-400">Your role: <strong>{participantRole === 'host' ? 'Pastor / host' : 'Visitor'}</strong><br />Room ID: <span className="break-all font-mono">{roomCode}</span><br />For a successful two-way call, both participants should use a modern browser and allow camera/microphone access. {turnConfigured ? 'Relay connectivity is configured.' : 'TURN relay is not configured yet; some networks may not connect.'}</div>
+          <div className="mt-5 border-t border-white/10 pt-4 text-xs leading-5 text-slate-400">Your role: <strong>{participantRole === 'host' ? 'Pastor / host' : 'Visitor'}</strong><br />Room ID: <span className="break-all font-mono">{roomCode}</span><br />For a successful two-way call, both participants should use a modern browser and allow {audioOnly ? 'microphone' : 'camera and microphone'} access. {turnConfigured ? 'Relay connectivity is configured.' : 'TURN relay is not configured yet; some networks may not connect.'}</div>
         </aside>
       </div>
     </div>

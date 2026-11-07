@@ -6,6 +6,16 @@ import { Capacitor } from '@capacitor/core';
 
 const VIDEO_API_ORIGIN = 'https://tidori-ministries.grobaltechtechnologies.workers.dev';
 
+const VIDEO_FILTERS = [
+  { id: 'none', label: 'Original', css: 'none' },
+  { id: 'natural', label: 'Natural', css: 'saturate(1.12) contrast(1.03)' },
+  { id: 'warm', label: 'Warm', css: 'sepia(.18) saturate(1.22) contrast(1.04)' },
+  { id: 'cool', label: 'Cool', css: 'saturate(.92) hue-rotate(9deg) contrast(1.05)' },
+  { id: 'vivid', label: 'Vivid', css: 'saturate(1.55) contrast(1.1)' },
+  { id: 'vintage', label: 'Vintage', css: 'sepia(.38) saturate(.82) contrast(.92)' },
+  { id: 'mono', label: 'Black & white', css: 'grayscale(1) contrast(1.08)' }
+];
+
 const labelForError = (error, stage) => {
   const detail = error?.name ? ` [${error.name} during ${stage}]` : '';
   if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError' || error?.name === 'SecurityError') {
@@ -28,6 +38,11 @@ export default function Meeting() {
   const peerRef = useRef(null);
   const localStreamRef = useRef(null);
   const cameraTrackRef = useRef(null);
+  const rawCameraTrackRef = useRef(null);
+  const canvasStreamRef = useRef(null);
+  const filterFrameRef = useRef(null);
+  const filterRef = useRef('none');
+  const [selectedFilter, setSelectedFilter] = useState('none');
   const displayStreamRef = useRef(null);
   const pendingIceRef = useRef([]);
   const [joining, setJoining] = useState(false);
@@ -55,11 +70,16 @@ export default function Meeting() {
     socketRef.current = null;
     try { peerRef.current?.close(); } catch {}
     peerRef.current = null;
+    if (filterFrameRef.current) cancelAnimationFrame(filterFrameRef.current);
+    filterFrameRef.current = null;
+    canvasStreamRef.current?.getTracks().forEach(track => track.stop());
+    canvasStreamRef.current = null;
     localStreamRef.current?.getTracks().forEach(track => track.stop());
     displayStreamRef.current?.getTracks().forEach(track => track.stop());
     displayStreamRef.current = null;
     localStreamRef.current = null;
     cameraTrackRef.current = null;
+    rawCameraTrackRef.current = null;
     pendingIceRef.current = [];
     if (localVideo.current) localVideo.current.srcObject = null;
     if (remoteVideo.current) remoteVideo.current.srcObject = null;
@@ -107,12 +127,43 @@ export default function Meeting() {
       }
 
       localStreamRef.current = stream;
-      cameraTrackRef.current = stream.getVideoTracks()[0] || null;
-      if (localVideo.current) localVideo.current.srcObject = stream;
+      rawCameraTrackRef.current = stream.getVideoTracks()[0] || null;
+      if (localVideo.current) {
+        localVideo.current.srcObject = stream;
+        await localVideo.current.play().catch(() => {});
+      }
+
+      // Canvas processing applies the effect to the outgoing stream as well
+      // as the local preview, so the other participant sees the selected filter.
+      let outgoingVideoTrack = rawCameraTrackRef.current;
+      if (!isAudioOnly && localVideo.current && rawCameraTrackRef.current &&
+          typeof HTMLCanvasElement !== 'undefined' &&
+          HTMLCanvasElement.prototype.captureStream) {
+        const canvas = document.createElement('canvas');
+        const video = localVideo.current;
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        const context = canvas.getContext('2d');
+        if (context) {
+          const canvasStream = canvas.captureStream(24);
+          canvasStreamRef.current = canvasStream;
+          outgoingVideoTrack = canvasStream.getVideoTracks()[0] || rawCameraTrackRef.current;
+          const drawFilteredFrame = () => {
+            if (rawCameraTrackRef.current?.readyState !== 'live') return;
+            const activeFilter = VIDEO_FILTERS.find(item => item.id === filterRef.current) || VIDEO_FILTERS[0];
+            context.filter = activeFilter.css === 'none' ? 'none' : activeFilter.css;
+            try { context.drawImage(video, 0, 0, canvas.width, canvas.height); } catch {}
+            filterFrameRef.current = requestAnimationFrame(drawFilteredFrame);
+          };
+          drawFilteredFrame();
+        }
+      }
+      cameraTrackRef.current = outgoingVideoTrack;
 
       const peer = new RTCPeerConnection({ iceServers: iceConfig.iceServers || [{ urls: 'stun:stun.l.google.com:19302' }] });
       peerRef.current = peer;
-      stream.getTracks().forEach(track => peer.addTrack(track, stream));
+      stream.getAudioTracks().forEach(track => peer.addTrack(track, stream));
+      if (outgoingVideoTrack) peer.addTrack(outgoingVideoTrack, new MediaStream([outgoingVideoTrack]));
       peer.ontrack = event => {
         const incoming = event.streams?.[0];
         if (incoming && remoteVideo.current) {
@@ -230,7 +281,13 @@ export default function Meeting() {
   const toggleCamera = () => {
     const next = !cameraOff;
     cameraTrackRef.current && (cameraTrackRef.current.enabled = !next);
+    rawCameraTrackRef.current && (rawCameraTrackRef.current.enabled = !next);
     setCameraOff(next);
+  };
+
+  const chooseFilter = filterId => {
+    filterRef.current = filterId;
+    setSelectedFilter(filterId);
   };
 
   const toggleSpeaker = () => {
@@ -286,7 +343,7 @@ export default function Meeting() {
             <span className="absolute bottom-3 left-3 rounded bg-black/50 px-2 py-1 text-xs">Other participant</span>
           </div>
           <div className="relative overflow-hidden rounded-2xl bg-[#202b3a]">
-            <video ref={localVideo} autoPlay playsInline muted className="h-full min-h-[260px] w-full scale-x-[-1] object-cover" />
+            <video ref={localVideo} autoPlay playsInline muted style={{ filter: VIDEO_FILTERS.find(item => item.id === selectedFilter)?.css || 'none' }} className="h-full min-h-[260px] w-full scale-x-[-1] object-cover" />
             {!joined && <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-300">Your camera preview will appear here</div>}
             <span className="absolute bottom-3 left-3 rounded bg-black/50 px-2 py-1 text-xs">You</span>
           </div>
@@ -300,6 +357,19 @@ export default function Meeting() {
             <button type="button" onClick={toggleSpeaker} className="rounded-lg bg-white/10 p-3 text-sm">{speakerOff ? <FaVolumeMute className="mx-auto mb-1" /> : <FaVolumeUp className="mx-auto mb-1" />}{speakerOff ? 'Sound on' : 'Mute sound'}</button>
             {!nativeApp && !audioOnly && <button type="button" onClick={toggleScreenShare} className="rounded-lg bg-white/10 p-3 text-sm"><FaDesktop className="mx-auto mb-1" />{sharing ? 'Stop sharing' : 'Share screen'}</button>}
             <button type="button" onClick={leaveMeeting} className="col-span-2 rounded-lg bg-red-600 p-3 text-sm font-bold"><FaPhoneSlash className="mr-2 inline" />Leave meeting</button>
+          </div>}
+          {joined && !audioOnly && <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-white">Video filters</h3>
+              <button type="button" onClick={() => chooseFilter('none')} className="text-xs font-semibold text-[#fdbe33]">Reset</button>
+            </div>
+            <p className="mb-3 text-xs text-slate-400">Choose an effect. The other participant will see it too.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {VIDEO_FILTERS.map(filter => <button key={filter.id} type="button" onClick={() => chooseFilter(filter.id)} aria-pressed={selectedFilter === filter.id} className={'rounded-lg border px-3 py-2 text-left text-xs transition ' + (selectedFilter === filter.id ? 'border-[#fdbe33] bg-[#fdbe33]/15 text-[#ffcf68]' : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10')}>
+                <span className="mb-1 block h-7 rounded bg-gradient-to-r from-amber-200 via-rose-300 to-sky-300" style={{ filter: filter.css }} />
+                {filter.label}{selectedFilter === filter.id ? ' ✓' : ''}
+              </button>)}
+            </div>
           </div>}
           {joined && participantRole === 'host' && guestWaiting && <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-950/40 p-3"><p className="text-sm font-semibold text-amber-100">A visitor is waiting to join.</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={admitGuest} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold">Admit visitor</button><button type="button" onClick={removeGuest} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold">Decline</button></div></div>}
           {joined && participantRole === 'host' && admitted && <button type="button" onClick={endCallForEveryone} className="mt-3 w-full rounded-lg bg-red-800 px-3 py-2 text-sm font-semibold">End meeting for everyone</button>}

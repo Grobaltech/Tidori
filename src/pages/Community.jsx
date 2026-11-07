@@ -176,15 +176,14 @@ export default function Community() {
 
   const updatePrayerStatus = async (prayer, status) => {
     setWorking(true); setError('');
-    const { error: e } = await supabase.from('prayer_requests').update({
-      status, updated_at: new Date().toISOString(), answered_at: status === 'answered' ? new Date().toISOString() : null,
-    }).eq('id', prayer.id);
+    const { error: e } = await supabase.rpc('update_tidori_prayer_status', {
+      target_request_id: prayer.id, new_status: status,
+    });
     if (e) setError(e.message); else await loadPrayer();
     setWorking(false);
   };
 
-  const isPrayerLeader = ['leader', 'admin', 'super_admin'].includes(user?.app_metadata?.role);
-  // Profile role is fetched from the trusted database below; never use user-editable metadata for permissions.
+  // Profile role is fetched from the trusted database; user-editable metadata is not used for permissions.
   const [trustedRole, setTrustedRole] = useState('member');
   useEffect(() => {
     if (!user) return;

@@ -4,6 +4,8 @@ import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaPhoneSlash, F
 import { useDocTitle } from '../hooks/hooks';
 import { Capacitor } from '@capacitor/core';
 
+const VIDEO_API_ORIGIN = 'https://tidori.grobaltechtechnologies.workers.dev';
+
 const labelForError = error => {
   if (error?.name === 'NotAllowedError') return 'Camera or microphone permission was denied. Allow access in your browser settings and try again.';
   if (error?.name === 'NotFoundError') return 'No camera or microphone was found on this device.';
@@ -66,7 +68,7 @@ export default function Meeting() {
     }
     setJoining(true); setError(''); setStatus('Requesting camera and microphone access…');
     try {
-      const iceResponse = await fetch(`/api/video/rooms/${roomCode}/ice?key=${encodeURIComponent(accessKey)}`);
+      const iceResponse = await fetch(`${VIDEO_API_ORIGIN}/api/video/rooms/${roomCode}/ice?key=${encodeURIComponent(accessKey)}`);
       const iceConfig = await iceResponse.json().catch(() => ({}));
       if (!iceResponse.ok) throw new Error(iceConfig.error || 'This meeting invitation is invalid or has expired.');
       setTurnConfigured(Boolean(iceConfig.turnConfigured));
@@ -96,8 +98,7 @@ export default function Meeting() {
         if (peer.connectionState === 'failed') setStatus('Connection failed. Check your internet connection and try again.');
       };
 
-      const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const socket = new WebSocket(`${scheme}//${window.location.host}/api/video/rooms/${roomCode}/signal?key=${encodeURIComponent(accessKey)}`);
+      const socket = new WebSocket(`wss://${new URL(VIDEO_API_ORIGIN).host}/api/video/rooms/${roomCode}/signal?key=${encodeURIComponent(accessKey)}`);
       socketRef.current = socket;
       socket.onopen = () => { setJoined(true); setStatus('Connected to the secure meeting room…'); };
       socket.onerror = () => setError('The meeting connection could not be established. The room may not be deployed yet or the link may have expired.');

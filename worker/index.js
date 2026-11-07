@@ -626,6 +626,21 @@ export class VideoRoom {
     return rows?.[0] || null;
   }
 
+  async updateParticipant(roomCode, role, status) {
+    try {
+      const room = await this.roomRecord(roomCode);
+      if (!room) return;
+      const now = new Date().toISOString();
+      await supabaseRequest(this.env, `video_call_participants?room_id=eq.${room.id}&participant_role=eq.${role}`, {
+        method: "PATCH", headers: { prefer: "return=minimal" },
+        body: JSON.stringify({
+          status,
+          ...(status === "joined" ? { joined_at: now, left_at: null } : { left_at: now }),
+        }),
+      });
+    } catch (error) { console.error("Could not update video participant status:", error); }
+  }
+
   async logEvent(roomCode, eventType, actorRole = "system", details = {}) {
     try {
       const room = await this.roomRecord(roomCode);
@@ -650,6 +665,10 @@ export class VideoRoom {
     });
     const sessionId = rows?.[0]?.id;
     if (sessionId) await this.ctx.storage.put("sessionId", sessionId);
+    await supabaseRequest(this.env, `video_call_participants?room_id=eq.${room.id}`, {
+      method: "PATCH", headers: { prefer: "return=minimal" },
+      body: JSON.stringify({ status: "joined", joined_at: new Date().toISOString(), left_at: null }),
+    }).catch(error => console.error("Could not mark video participants joined:", error));
     await supabaseRequest(this.env, `video_call_rooms?id=eq.${room.id}`, {
       method: "PATCH", headers: { prefer: "return=minimal" },
       body: JSON.stringify({ status: "live", started_at: new Date().toISOString(), ended_at: null, ended_reason: null }),
@@ -743,6 +762,7 @@ export class VideoRoom {
           body: JSON.stringify({ guest_token_hash: null }),
         }).catch(error => console.error("Could not revoke removed visitor link:", error));
       }
+      await this.updateParticipant(roomCode, "guest", "removed");
       await this.logEvent(roomCode, "guest_removed", "host");
       return;
     }
@@ -787,7 +807,11 @@ export class VideoRoom {
         else peer.send(JSON.stringify({ type: "room-ended" }));
       } catch {}
     }
-    if (attachment.role === "guest") await this.logEvent(attachment.roomCode, "participant_left", "guest");
+    if (attachment.role === "guest") {
+      await this.updateParticipant(attachment.roomCode, "guest", "left");
+      await this.logEvent(attachment.roomCode, "participant_left", "guest");
+    }
+    if (attachment.role === "host") await this.updateParticipant(attachment.roomCode, "host", "left");
     if (attachment.role === "host") {
       for (const peer of remaining) { try { peer.close(4002, "Host disconnected"); } catch {} }
       await this.endSession(attachment.roomCode, "host_disconnected");

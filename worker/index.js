@@ -427,7 +427,7 @@ async function databasePushEvent(request, env) {
   const table = clean(payload.table, 80);
   const event = String(payload.type || payload.event || '').toUpperCase();
   const record = payload.record || payload.new || {};
-  if (event !== 'INSERT' || !record.id || !['profiles', 'appointments', 'notifications'].includes(table)) {
+  if (event !== 'INSERT' || !record.id || !['profiles', 'notifications'].includes(table)) {
     return json({ ignored: true, message: 'This database event does not create a Tidori alert.' });
   }
   const eventKey = `${table}:INSERT:${record.id}`;

@@ -99,22 +99,31 @@ drop trigger if exists tidori_prayer_update_notification on public.prayer_reques
 create trigger tidori_prayer_update_notification after update of status on public.prayer_requests
 for each row execute function private.notify_tidori_prayer();
 
--- Notify administrators when appointment requests are created. If a future
--- appointment schema includes user_id, also notify the requesting member.
+-- Link authenticated appointment requests to their member account so status changes can be delivered privately.
+alter table public.appointments add column if not exists user_id uuid references auth.users(id) on delete set null;
+
+-- Notify administrators on new requests and the member when their appointment changes.
 create or replace function private.notify_tidori_appointment()
 returns trigger language plpgsql security definer set search_path = ''
 as $function$
 declare admin_row record; requester uuid;
 begin
-  for admin_row in select id from public.profiles where role in ('admin','super_admin') loop
-    perform private.create_tidori_notification(admin_row.id,'New appointment request',
-      coalesce(new.appointment_type,'Church appointment') || ' requested by ' || coalesce(new.full_name,'a visitor') || '.',
-      'appointment','/admin');
-  end loop;
   requester := nullif(to_jsonb(new)->>'user_id','')::uuid;
-  if requester is not null then
-    perform private.create_tidori_notification(requester,'Appointment request received',
-      'Your appointment request has been received and is awaiting confirmation.',
+  if tg_op = 'INSERT' then
+    for admin_row in select id from public.profiles where role in ('admin','super_admin') loop
+      perform private.create_tidori_notification(admin_row.id,'New appointment request',
+        coalesce(new.appointment_type,'Church appointment') || ' requested by ' || coalesce(new.full_name,'a visitor') || '.',
+        'appointment','/admin');
+    end loop;
+    if requester is not null then
+      perform private.create_tidori_notification(requester,'Appointment request received',
+        'Your appointment request has been received and is awaiting confirmation.',
+        'appointment','/appointments');
+    end if;
+  elsif requester is not null and (new.status is distinct from old.status or new.payment_status is distinct from old.payment_status) then
+    perform private.create_tidori_notification(requester,'Appointment updated',
+      'Your appointment is now ' || coalesce(new.status,'requested') ||
+      CASE WHEN new.payment_status is distinct from old.payment_status THEN ' · Payment: ' || coalesce(new.payment_status,'unpaid') ELSE '' END || '.',
       'appointment','/appointments');
   end if;
   return new;
@@ -122,7 +131,7 @@ end;
 $function$;
 revoke all on function private.notify_tidori_appointment() from public, anon, authenticated;
 drop trigger if exists tidori_appointment_insert_notification on public.appointments;
-create trigger tidori_appointment_insert_notification after insert on public.appointments
+create trigger tidori_appointment_insert_notification after insert or update of status, payment_status on public.appointments
 for each row execute function private.notify_tidori_appointment();
 
 do $block$

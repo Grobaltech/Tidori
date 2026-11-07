@@ -81,7 +81,7 @@ export default function AppointmentsManager({ canManage = false }) {
   };
 
   const createVideoRoom = async appointment => {
-    if (!canManage || appointment.meeting_mode !== 'video' || appointment.status !== 'confirmed') return;
+    if (!canManage || !['video', 'audio'].includes(appointment.meeting_mode) || appointment.status !== 'confirmed') return;
     setRoomBusyId(appointment.id); setRoomError(''); setNotice('');
     try {
       const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -128,8 +128,8 @@ export default function AppointmentsManager({ canManage = false }) {
     } finally { setRoomBusyId(''); }
   };
 
-  const copyMeetingLink = async (roomCode, token) => {
-    const link = `${window.location.origin}/meeting/${roomCode}#key=${token}`;
+  const copyMeetingLink = async (roomCode, token, mode = 'video') => {
+    const link = `${window.location.origin}/meeting/${roomCode}?mode=${mode}#key=${token}`;
     try {
       await navigator.clipboard.writeText(link);
       setNotice('Private invitation link copied. Do not share the host link with the visitor.');
@@ -192,7 +192,7 @@ export default function AppointmentsManager({ canManage = false }) {
                         Manage
                       </button>
                     )}
-                    {row.meeting_mode === 'video' && row.status === 'confirmed' && (
+                    {['video', 'audio'].includes(row.meeting_mode) && row.status === 'confirmed' && (
                       <>
                         {rooms[row.id] && (
                           <span className={`rounded px-2 py-1 text-xs font-semibold ${rooms[row.id].status === 'live' ? 'bg-emerald-50 text-emerald-700' : rooms[row.id].status === 'ended' ? 'bg-gray-100 text-gray-600' : 'bg-violet-50 text-violet-700'}`}>
@@ -205,7 +205,7 @@ export default function AppointmentsManager({ canManage = false }) {
                           onClick={() => createVideoRoom(row)}
                           className="rounded bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                         >
-                          {roomBusyId === row.id ? 'Preparing…' : rooms[row.id] ? 'Generate secure links' : 'Create room'}
+                          {roomBusyId === row.id ? 'Preparing…' : rooms[row.id] ? 'Generate secure links' : row.meeting_mode === 'audio' ? 'Create audio room' : 'Create video room'}
                         </button>
                       </>
                     )}
@@ -219,8 +219,8 @@ export default function AppointmentsManager({ canManage = false }) {
                   <span className="block break-all font-mono">Room: {rooms[row.id].room_code}</span>
                   {roomInvites[row.id] ? (
                     <>
-                      <a href={`${window.location.origin}/meeting/${rooms[row.id].room_code}#key=${roomInvites[row.id].hostToken}`} className="block font-semibold text-violet-700 underline">Open pastor / host meeting</a>
-                      <button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code, roomInvites[row.id].guestToken)} className="block font-semibold text-[#009cff]">Copy visitor link</button>
+                      <a href={`${window.location.origin}/meeting/${rooms[row.id].room_code}?mode=${row.meeting_mode || 'video'}#key=${roomInvites[row.id].hostToken}`} className="block font-semibold text-violet-700 underline">Open pastor / host meeting</a>
+                      <button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code, roomInvites[row.id].guestToken, row.meeting_mode || 'video')} className="block font-semibold text-[#009cff]">Copy visitor link</button>
                     </>
                   ) : (
                     <span className="block text-amber-700">Private links are hidden after refresh. Generate new links to rotate access.</span>

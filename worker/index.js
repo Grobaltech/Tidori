@@ -868,7 +868,7 @@ export default {
           `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,is_test,owner_user_id,appointment:appointments(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
         );
         const room = rooms?.[0];
-        const approvedAppointment = room?.appointment?.status === "confirmed" && room?.appointment?.meeting_mode === "video";
+        const approvedAppointment = room?.appointment?.status === "confirmed" && ["video", "audio"].includes(room?.appointment?.meeting_mode);
         const validTestRoom = room?.is_test === true && Boolean(room?.owner_user_id);
         if (!room || !["scheduled", "live"].includes(room.status) || (!approvedAppointment && !validTestRoom)) {
           return json({ error: "This meeting link is invalid, expired or not yet approved." }, 404);
@@ -881,7 +881,7 @@ export default {
         const turnConfigured = Boolean(cloudflareIceServers?.some(server =>
           (Array.isArray(server.urls) ? server.urls : [server.urls]).some(value => String(value).startsWith("turn"))
         ));
-        return json({ iceServers, turnConfigured });
+        return json({ iceServers, turnConfigured, meetingMode: room?.appointment?.meeting_mode || "video" });
       }
       const videoSignalMatch = url.pathname.match(/^\/api\/video\/rooms\/([0-9a-f-]{36})\/signal$/i);
       if (videoSignalMatch && request.headers.get("Upgrade")?.toLowerCase() === "websocket") {
@@ -895,7 +895,7 @@ export default {
           `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,is_test,owner_user_id,appointment:appointments(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
         );
         const room = rooms?.[0];
-        const approvedAppointment = room?.appointment?.status === "confirmed" && room?.appointment?.meeting_mode === "video";
+        const approvedAppointment = room?.appointment?.status === "confirmed" && ["video", "audio"].includes(room?.appointment?.meeting_mode);
         const validTestRoom = room?.is_test === true && Boolean(room?.owner_user_id);
         if (!room || !["scheduled", "live"].includes(room.status) || (!approvedAppointment && !validTestRoom)) {
           return json({ error: "This meeting link is invalid, expired or not yet approved." }, 404);

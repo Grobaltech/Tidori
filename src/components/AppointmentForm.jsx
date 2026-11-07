@@ -14,7 +14,9 @@ export default function AppointmentForm() {
       if (!supabase) throw new Error('The appointment service is not available right now.');
       const requestedAt = new Date(`${form.date}T${form.time}`);
       if (!Number.isFinite(requestedAt.getTime()) || requestedAt.getTime() < Date.now() - 60000) throw new Error('Please choose a future appointment date and time.');
+      const { data: authData } = await supabase.auth.getUser();
       const { error:insertError } = await supabase.from('appointments').insert({
+        user_id: authData?.user?.id || null,
         full_name:form.full_name.trim(), email:form.email.trim()||null, phone:form.phone.trim()||null,
         appointment_type:form.appointment_type, meeting_mode:form.meeting_mode, requested_at:requestedAt.toISOString(),
         notes:form.notes.trim()||null, status:'requested',

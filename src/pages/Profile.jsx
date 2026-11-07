@@ -213,6 +213,12 @@ export default function Profile() {
 
   return <>
     <PageHeader title="My Profile" />
+    <div className="container-page max-w-3xl pt-8">
+      <Link to="/community" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/50 bg-ink px-5 py-4 text-white shadow-sm hover:bg-navy">
+        <span><strong className="block text-lg text-gold">Open Tidori Connect</strong><span className="text-sm text-white/80">Find church members, send private messages and share prayer requests.</span></span>
+        <span className="font-semibold text-gold">Open community →</span>
+      </Link>
+    </div>
     <section className="container-page max-w-3xl py-12">
       <div className="bg-mist p-6 sm:p-10">
         {recovering ? <div className="mx-auto max-w-lg">

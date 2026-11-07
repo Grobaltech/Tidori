@@ -23,6 +23,7 @@ export default function AppointmentsManager({ canManage = false }) {
   const [notice, setNotice] = useState('');
   const [rooms, setRooms] = useState({});
   const [roomInvites, setRoomInvites] = useState({});
+  const [sessionHistory, setSessionHistory] = useState([]);
   const [roomBusyId, setRoomBusyId] = useState('');
   const [roomError, setRoomError] = useState('');
 
@@ -35,6 +36,10 @@ export default function AppointmentsManager({ canManage = false }) {
       setRows(data || []);
       const { data: roomData, error: roomQueryError } = await supabase.from('video_call_rooms').select('id,appointment_id,room_code,status,scheduled_start,scheduled_end').order('created_at', { ascending: false });
       if (!roomQueryError) setRooms(Object.fromEntries((roomData || []).map(room => [room.appointment_id, room])));
+      const { data: historyData } = await supabase.from('video_call_sessions')
+        .select('id,room_id,started_at,ended_at,ended_reason')
+        .order('started_at', { ascending: false }).limit(30);
+      setSessionHistory(historyData || []);
     }
     setLoading(false);
   }, []);
@@ -180,6 +185,17 @@ export default function AppointmentsManager({ canManage = false }) {
       </div>
     </section>
 
+    {sessionHistory.length > 0 && <section className="admin-card overflow-hidden">
+      <div className="border-b border-gray-100 px-5 py-4"><h2 className="admin-section-title">Video call history</h2><p className="admin-muted mt-1">Recent completed and active sessions. Meeting links and access tokens are not shown here.</p></div>
+      <div className="overflow-x-auto"><table className="admin-table w-full min-w-[720px]"><thead><tr><th>Visitor</th><th>Room</th><th>Started</th><th>Ended</th><th>Duration</th><th>End reason</th></tr></thead><tbody>
+        {sessionHistory.map(session => {
+          const room = Object.values(rooms).find(item => item.id === session.room_id);
+          const appointment = rows.find(item => item.id === room?.appointment_id);
+          const duration = session.ended_at ? Math.max(0, Math.round((new Date(session.ended_at) - new Date(session.started_at)) / 60000)) + ' min' : 'In progress';
+          return <tr key={session.id}><td>{appointment?.full_name || 'Appointment guest'}</td><td className="font-mono text-xs">{room?.room_code || '—'}</td><td>{formatDate(session.started_at)}</td><td>{formatDate(session.ended_at)}</td><td>{duration}</td><td>{label(session.ended_reason || (session.ended_at ? 'ended' : 'live'))}</td></tr>;
+        })}
+      </tbody></table></div>
+    </section>}
     {editing && <section className="admin-card p-5">
       <div className="mb-4 flex items-center justify-between"><div><h2 className="admin-section-title">Manage appointment</h2><p className="admin-muted mt-1">{editing.full_name} · Requested {formatDate(editing.created_at)}</p></div><button type="button" onClick={() => setEditing(null)} className="text-sm font-semibold text-[#009cff]"><FaTimes className="mr-1 inline" />Close</button></div>
       <div className="mb-4 grid gap-3 rounded-lg bg-gray-50 p-4 sm:grid-cols-2">

@@ -91,7 +91,7 @@ export default function AppointmentsManager({ canManage = false }) {
         throw participantError;
       }
       setRooms(current => ({ ...current, [appointment.id]: room }));
-      setNotice('Private meeting room created. The guest invitation and live-call link will be enabled in a later phase.');
+      setNotice('Private meeting room created. Use the guest invitation link in this row to share access with the visitor; both participants open the same link.');
     } catch (err) {
       setRoomError(err.message || 'Could not create the video-call room. Confirm that the Phase 1 SQL has finished successfully.');
     } finally { setRoomBusyId(''); }

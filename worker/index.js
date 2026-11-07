@@ -633,7 +633,15 @@ export class VideoRoom {
     const client = pair[0];
     const server = pair[1];
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ id: crypto.randomUUID() });
+    const roomCode = new URL(request.url).pathname.match(/\/api\/video\/rooms\/([0-9a-f-]{36})\/signal/i)?.[1];
+    server.serializeAttachment({ roomCode }); 
+    if (roomCode) {
+      await supabaseRequest(this.env, `video_call_rooms?room_code=eq.${encodeURIComponent(roomCode)}&status=eq.scheduled`, {
+        method: "PATCH",
+        headers: { prefer: "return=minimal" },
+        body: JSON.stringify({ status: "live", started_at: new Date().toISOString() }),
+      }).catch(error => console.error("Could not mark video room live:", error));
+    }
     for (const peer of peers) {
       try { peer.send(JSON.stringify({ type: "peer-joined" })); } catch {}
     }
@@ -657,10 +665,20 @@ export class VideoRoom {
     }
   }
 
-  webSocketClose(socket) {
-    for (const peer of this.ctx.getWebSockets()) {
-      if (peer === socket) continue;
+  async webSocketClose(socket) {
+    const remaining = this.ctx.getWebSockets();
+    for (const peer of remaining) {
       try { peer.send(JSON.stringify({ type: "peer-left" })); } catch {}
+    }
+    if (remaining.length === 0) {
+      const attachment = socket.deserializeAttachment();
+      if (attachment?.roomCode) {
+        await supabaseRequest(this.env, `video_call_rooms?room_code=eq.${encodeURIComponent(attachment.roomCode)}&status=eq.live`, {
+          method: "PATCH",
+          headers: { prefer: "return=minimal" },
+          body: JSON.stringify({ status: "ended", ended_at: new Date().toISOString() }),
+        }).catch(error => console.error("Could not mark video room ended:", error));
+      }
     }
   }
 

@@ -93,13 +93,13 @@ create or replace function private.is_tidori_conversation_member(target_conversa
 returns boolean
 language sql stable security definer
 set search_path = ''
-as $
+as $function$
   select exists (
     select 1 from public.community_conversation_members m
     where m.conversation_id = target_conversation_id
       and m.user_id = (select auth.uid())
   );
-$;
+$function$;
 revoke all on function private.is_tidori_conversation_member(uuid) from public, anon, authenticated;
 grant usage on schema private to authenticated;
 grant execute on function private.is_tidori_conversation_member(uuid) to authenticated;
@@ -227,7 +227,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $function$
 begin
   if not exists (select 1 from public.profiles p
     where p.id = (select auth.uid()) and p.role in ('leader','admin','super_admin')) then
@@ -242,18 +242,18 @@ begin
   where id = target_request_id;
   if not found then raise exception 'Prayer request not found'; end if;
 end;
-$;
+$function$;
 revoke all on function public.update_tidori_prayer_status(uuid,text) from public, anon;
 grant execute on function public.update_tidori_prayer_status(uuid,text) to authenticated;
 
-do $
+do $block$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
      and not exists (select 1 from pg_publication_tables
        where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'community_messages') then
     alter publication supabase_realtime add table public.community_messages;
   end if;
-end $;
+end $block$;
 
 comment on table public.member_directory is 'Privacy-opt-in directory projection; excludes email, phone and address.';
 comment on table public.community_messages is 'Private one-to-one Tidori member messages; visible only to conversation participants.';

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaPhoneSlash, FaDesktop, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
 import { useDocTitle } from '../hooks/hooks';
 import { Capacitor } from '@capacitor/core';
@@ -16,8 +16,7 @@ const labelForError = error => {
 export default function Meeting() {
   const nativeApp = Capacitor.isNativePlatform();
   const { roomCode = '' } = useParams();
-  const [searchParams] = useSearchParams();
-  const accessKey = searchParams.get('key') || '';
+  const accessKey = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('key') || '';
   useDocTitle('Tidori Video Meeting');
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);

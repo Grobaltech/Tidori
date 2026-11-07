@@ -6,11 +6,15 @@ import { Capacitor } from '@capacitor/core';
 
 const VIDEO_API_ORIGIN = 'https://tidori-ministries.grobaltechtechnologies.workers.dev';
 
-const labelForError = error => {
-  if (error?.name === 'NotAllowedError') return 'Camera or microphone permission was denied. Allow access in your browser settings and try again.';
-  if (error?.name === 'NotFoundError') return 'No camera or microphone was found on this device.';
-  if (error?.name === 'NotReadableError') return 'Your camera or microphone is already being used by another application.';
-  return error?.message || 'Could not start the meeting. Please try again.';
+const labelForError = (error, stage) => {
+  const detail = error?.name ? ` [${error.name} during ${stage}]` : '';
+  if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError' || error?.name === 'SecurityError') {
+    const device = stage === 'microphone' ? 'Microphone' : stage === 'camera' ? 'Camera' : 'Media';
+    return `${device} access was blocked by Android or the browser.${detail} Check Android Settings → Apps → Tidori Ministries → Permissions, and also allow this site to use the device in the browser/WebView. Origin: ${window.location.origin}`;
+  }
+  if (error?.name === 'NotFoundError') return `No ${stage === 'microphone' ? 'microphone' : stage === 'camera' ? 'camera' : 'camera or microphone'} was found.${detail}`;
+  if (error?.name === 'NotReadableError') return `The ${stage} is busy or could not be opened by Android.${detail} Close other apps using it and try again.`;
+  return `${error?.message || 'Could not start the meeting.'}${detail}`;
 };
 
 export default function Meeting() {
@@ -66,7 +70,9 @@ export default function Meeting() {
       setError('This meeting link is not valid.');
       return;
     }
-    setJoining(true); setError(''); setStatus(audioOnly ? 'Requesting microphone access…' : 'Requesting camera and microphone access…');
+    setJoining(true); setError(''); setStatus(audioOnly ? 'Requesting microphone access…' : 'Checking microphone and camera access…');
+    let mediaStage = 'meeting setup';
+    const capturedStreams = [];
     try {
       const iceResponse = await fetch(`${VIDEO_API_ORIGIN}/api/video/rooms/${roomCode}/ice?key=${encodeURIComponent(accessKey)}`);
       const iceConfig = await iceResponse.json().catch(() => ({}));
@@ -75,10 +81,31 @@ export default function Meeting() {
       const isAudioOnly = iceConfig.meetingMode === 'audio';
       setAudioOnly(isAudioOnly);
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('This device browser does not support microphone calling. Update Android System WebView or use the latest Chrome browser.');
-      const mediaConstraints = isAudioOnly
-        ? { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }
-        : { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } };
-      const stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      // Request devices separately so Android/WebView failures identify the
+      // exact permission that failed instead of reporting a misleading combined error.
+      mediaStage = 'microphone';
+      setStatus('Requesting microphone access…');
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: false
+      });
+      capturedStreams.push(audioStream);
+      let stream = audioStream;
+
+      if (!isAudioOnly) {
+        mediaStage = 'camera';
+        setStatus('Requesting camera access…');
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        capturedStreams.push(videoStream);
+        stream = new MediaStream([
+          ...audioStream.getAudioTracks(),
+          ...videoStream.getVideoTracks()
+        ]);
+      }
+
       localStreamRef.current = stream;
       cameraTrackRef.current = stream.getVideoTracks()[0] || null;
       if (localVideo.current) localVideo.current.srcObject = stream;
@@ -154,8 +181,9 @@ export default function Meeting() {
         }
       };
     } catch (joinError) {
+      capturedStreams.forEach(media => media.getTracks().forEach(track => track.stop()));
       stopMedia();
-      setError(labelForError(joinError));
+      setError(labelForError(joinError, mediaStage));
       setStatus('Unable to join');
     } finally {
       setJoining(false);

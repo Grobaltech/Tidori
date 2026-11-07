@@ -736,6 +736,13 @@ export class VideoRoom {
       if (guest) {
         try { guest.send(JSON.stringify({ type: "guest-removed" })); guest.close(4001, "Removed by host"); } catch {}
       }
+      const room = await this.roomRecord(roomCode);
+      if (room) {
+        await supabaseRequest(this.env, `video_call_rooms?id=eq.${room.id}`, {
+          method: "PATCH", headers: { prefer: "return=minimal" },
+          body: JSON.stringify({ guest_token_hash: null }),
+        }).catch(error => console.error("Could not revoke removed visitor link:", error));
+      }
       await this.logEvent(roomCode, "guest_removed", "host");
       return;
     }

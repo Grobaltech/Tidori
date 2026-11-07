@@ -71,6 +71,12 @@ function Navbar() {
   const link = ({ isActive }) =>
     `block px-4 py-2 text-white hover:text-gold ${isActive ? 'text-gold' : ''}`;
 
+  const navItems = activeSite.nav.some(item => item.to === '/appointments')
+    ? activeSite.nav
+    : activeSite.nav.flatMap(item => item.to === '/contact'
+      ? [{ to: '/appointments', label: 'Appointments' }, item]
+      : [item]);
+
   return (
     <header className={`sticky top-0 z-50 bg-ink transition-shadow ${y > 0 ? 'shadow-lg shadow-black/30' : ''}`}>
       <div className="mx-auto flex max-w-wide items-center justify-between px-4 py-3">
@@ -79,7 +85,7 @@ function Navbar() {
         </Link>
         <nav className={`${open ? 'block' : 'hidden'} absolute left-0 top-full w-full bg-ink px-4 pb-4 lg:static lg:block lg:w-auto lg:p-0`}>
           <ul className="flex flex-col lg:flex-row lg:items-center">
-            {activeSite.nav.map((item) =>
+            {navItems.map((item) =>
               item.children ? (
                 <li key={item.label} className="group relative">
                   <button className="flex w-full items-center px-4 py-2 text-white hover:text-gold" onClick={() => setSub(!sub)}>

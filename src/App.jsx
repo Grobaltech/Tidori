@@ -18,6 +18,7 @@ import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
 import MobileAppBridge from './components/MobileAppBridge';
 import Meeting from './pages/Meeting';
+import Community from './pages/Community';
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/community" element={<Community />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

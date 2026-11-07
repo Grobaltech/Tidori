@@ -11,6 +11,7 @@ import WebsiteCMS from './WebsiteCMS';
 import UserAccessControl from './UserAccessControl';
 import AppointmentsManager from '../admin/AppointmentsManager';
 import TeamManager from '../admin/TeamManager';
+import FinancialManager from '../admin/FinancialManager';
 
 const sections = [
   { id: 'overview', label: 'Dashboard', icon: FaTachometerAlt },
@@ -20,6 +21,7 @@ const sections = [
   { id: 'ministries', label: 'Ministries', icon: FaPrayingHands },
   { id: 'events', label: 'Events', icon: FaCalendarAlt },
   { id: 'appointments', label: 'Pastor appointments', icon: FaCalendarAlt },
+  { id: 'finance', label: 'Financial management', icon: FaChartLine },
   { id: 'outreach', label: 'Outreach', icon: FaHandsHelping },
   { id: 'content', label: 'Website CMS', icon: FaNewspaper },
   { id: 'messages', label: 'Messages', icon: FaEnvelope },
@@ -34,6 +36,7 @@ const tableConfig = {
   users: { table: 'profiles', title: 'User accounts', columns: [['full_name','Full name'],['email','Email'],['phone','Phone'],['role','Account role'],['member_status','Membership status'],['created_at','Registered']], search: ['full_name','email','phone','role','member_status'] },
   members: { table: 'profiles', title: 'Member records', columns: [['full_name','Full name'],['email','Email'],['phone','Phone'],['role','Account role'],['member_status','Church status'],['created_at','Joined']], search: ['full_name','email','phone','role','member_status'] },
   events: { table: 'events', title: 'Events', columns: [['title','Title'],['location','Location'],['starts_at','Starts'],['published','Published']], search: ['title','location','description'] },
+  finance: { table: 'finance_expenses', title: 'Financial management', columns: [['expense_date','Date'],['category','Category'],['description','Description'],['amount','Amount'],['currency','Currency']], search: ['category','description','reference'] },
   appointments: { table: 'appointments', title: 'Pastor appointments', columns: [['full_name','Name'],['phone','Phone'],['appointment_type','Appointment'],['requested_at','Requested date'],['status','Status'],['payment_status','Payment']], search: ['full_name','phone','email','appointment_type','status','payment_status'] },
   outreach: { table: 'outreach_projects', title: 'Outreach projects', columns: [['title','Project'],['goal_amount','Goal'],['raised_amount','Raised'],['published','Published']], search: ['title','summary'] },
   content: { table: 'posts', title: 'Website posts', columns: [['title','Title'],['slug','Slug'],['author','Author'],['published','Published'],['published_at','Published date']], search: ['title','slug','author','excerpt'] },
@@ -120,7 +123,7 @@ export default function AdminDashboard() {
       ['pledges', supabase.from('donation_pledges').select('*').order('created_at',{ascending:false}).limit(100)],
     ];
     const isAdministrator = ['admin','super_admin'].includes(profile.role);
-    const permissionFor = { users:'users.view', members:'members.view', events:'events.view', appointments:'appointments.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
+    const permissionFor = { users:'users.view', members:'members.view', events:'events.view', appointments:'appointments.view', finance:'giving.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
     const allowedRequests = requests.filter(([key]) => key === 'appointments' ? isAdministrator : isAdministrator || profile.permissions?.includes(permissionFor[key]) || (key === 'members' && profile.permissions?.includes('ministries.view')));
     const settled = await Promise.all(allowedRequests.map(async ([key, query]) => {
       const [result, countResult] = await Promise.all([
@@ -150,7 +153,7 @@ export default function AdminDashboard() {
   const signOut = async () => { await supabase.auth.signOut(); navigate('/login'); };
   const changeSection = (id) => { setActiveSection(id); setSearch(''); setSelectedRecord(null); setSidebarOpen(false); };
   const isAdministrator = ['admin','super_admin'].includes(profile?.role);
-  const modulePermission = { users:'users.view', members:'members.view', ministries:'ministries.view', events:'events.view', appointments:'appointments.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
+  const modulePermission = { users:'users.view', members:'members.view', ministries:'ministries.view', events:'events.view', appointments:'appointments.view', finance:'giving.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
   const canOpen = (id) => isAdministrator || Boolean(profile?.permissions?.includes(modulePermission[id]));
   const visibleSections = useMemo(() => sections.filter(item => {
     if (item.id === 'appointments') return isAdministrator;
@@ -235,10 +238,10 @@ export default function AdminDashboard() {
         <div className="admin-content">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#009cff]">Tidori Ministries</p><h1 className="admin-page-title">{current.label}</h1><p className="admin-muted mt-1">Live records from the Tidori Supabase project.</p></div><div className="flex items-center gap-2"><span className="admin-pill">Administrator</span><button onClick={loadOverview} disabled={loadingData} className="admin-icon-button" title="Refresh live records"><FaSyncAlt className={loadingData ? 'animate-spin' : ''} /></button></div></div>
           {dataError && <div role="alert" className="mb-5 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><strong>Some records could not be loaded.</strong> {dataError} <span className="block mt-1">Run the administrator access SQL file supplied with this update in the Tidori Supabase SQL Editor, then refresh.</span></div>}
-          {activeSection === 'access' ? <UserAccessControl role={profile?.role} /> : activeSection === 'appointments' ? <AppointmentsManager canManage={isAdministrator} /> : activeSection === 'team' ? <TeamManager canManage={isAdministrator} /> : activeSection === 'content' ? <WebsiteCMS /> : activeSection === 'overview' ? <>
+          {activeSection === 'access' ? <UserAccessControl role={profile?.role} /> : activeSection === 'appointments' ? <AppointmentsManager canManage={isAdministrator} /> : activeSection === 'finance' ? <FinancialManager /> : activeSection === 'team' ? <TeamManager canManage={isAdministrator} /> : activeSection === 'content' ? <WebsiteCMS /> : activeSection === 'overview' ? <>
             <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
-                ['Users',counts.users,FaUserShield,'users'],['Members',counts.members,FaUsers,'members'],['Ministries',new Set((records.members||[]).map(r=>r.ministry).filter(Boolean)).size,FaPrayingHands,'ministries'],['Upcoming events',(records.events||[]).filter(r=>r.published && new Date(r.starts_at)>=new Date()).length,FaCalendarAlt,'events'],['Pastor appointments',counts.appointments,FaCalendarAlt,'appointments'],['Outreach projects',counts.outreach,FaHandsHelping,'outreach'],
+                ['Users',counts.users,FaUserShield,'users'],['Members',counts.members,FaUsers,'members'],['Ministries',new Set((records.members||[]).map(r=>r.ministry).filter(Boolean)).size,FaPrayingHands,'ministries'],['Upcoming events',(records.events||[]).filter(r=>r.published && new Date(r.starts_at)>=new Date()).length,FaCalendarAlt,'events'],['Pastor appointments',counts.appointments,FaCalendarAlt,'appointments'],['Financial management','Open',FaChartLine,'finance'],['Outreach projects',counts.outreach,FaHandsHelping,'outreach'],
               ].map(([label,value,StatIcon,target]) => <button type="button" onClick={()=>changeSection(target)} className="admin-card admin-stat text-left" key={label}><div><p className="admin-stat-label">{label}</p><p className="admin-stat-value">{value ?? (loadingData?'…':'0')}</p><p className="admin-muted">Live database count · open records</p></div><span className="admin-stat-icon"><StatIcon /></span></button>)}
             </div>
             <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">

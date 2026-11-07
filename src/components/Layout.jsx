@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaTwitter, FaFacebookF, FaYoutube,
-  FaInstagram, FaLinkedinIn, FaChevronUp, FaChevronDown, FaBars, FaTimes, FaAngleRight,
+  FaInstagram, FaLinkedinIn, FaChevronUp, FaChevronDown, FaBars, FaTimes, FaAngleRight, FaSearch, FaUserCircle,
 } from 'react-icons/fa';
 import { site } from '../config/site';
 import { useScrollY, useAsync } from '../hooks/hooks';
 import { getSiteContent } from '../lib/api';
 import NewsletterForm from './NewsletterForm';
+import SearchPanel from './SearchPanel';
 import { supabase, supabaseReady } from '../lib/supabase';
 
 const socials = [
@@ -57,8 +58,9 @@ function Navbar() {
   const [open, setOpen] = useState(false);
   const [sub, setSub] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { pathname } = useLocation();
-  useEffect(() => { setOpen(false); setSub(false); }, [pathname]);
+  useEffect(() => { setOpen(false); setSub(false); setSearchOpen(false); }, [pathname]);
   useEffect(() => {
     if (!supabaseReady) return;
     supabase.auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session)));
@@ -75,9 +77,17 @@ function Navbar() {
         <Link to="/" aria-label="Tidori Ministries home" className="flex items-center">
           <img src={activeSite.logoUrl || "/img/grok_1793864104245.jpg"} alt={activeSite.name || "Tidori Ministries"} className="h-14 w-auto max-w-[190px] object-contain sm:h-16" />
         </Link>
-        <button className="p-2 text-2xl text-white lg:hidden" aria-label="Menu" onClick={() => setOpen(!open)}>
-          {open ? <FaTimes /> : <FaBars />}
-        </button>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => setSearchOpen((value) => !value)} aria-label={searchOpen ? "Close search" : "Open search"} aria-expanded={searchOpen} className={`p-2 text-xl transition-colors hover:text-gold ${searchOpen ? "text-gold" : "text-white"}`}>
+            {searchOpen ? <FaTimes /> : <FaSearch />}
+          </button>
+          <Link to={signedIn ? "/profile" : "/login"} aria-label={signedIn ? "My account" : "Login or register"} title={signedIn ? "My account" : "Login / Register"} className="p-2 text-xl text-white transition-colors hover:text-gold">
+            <FaUserCircle />
+          </Link>
+          <button className="p-2 text-2xl text-white lg:hidden" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {open ? <FaTimes /> : <FaBars />}
+          </button>
+        </div>
         <nav className={`${open ? 'block' : 'hidden'} absolute left-0 top-full w-full bg-ink px-4 pb-4 lg:static lg:block lg:w-auto lg:p-0`}>
           <ul className="flex flex-col lg:flex-row lg:items-center">
             {activeSite.nav.map((item) =>
@@ -96,10 +106,10 @@ function Navbar() {
                 <li key={item.to}><NavLink to={item.to} end={item.to === '/'} className={link}>{item.label}</NavLink></li>
               )
             )}
-            <li><NavLink to={signedIn ? '/profile' : '/login'} className={link}>{signedIn ? 'My Profile' : 'Login / Register'}</NavLink></li>
           </ul>
         </nav>
       </div>
+      <SearchPanel open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 }

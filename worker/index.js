@@ -797,6 +797,29 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
+      const videoIceMatch = url.pathname.match(/^\/api\/video\/rooms\/([0-9a-f-]{36})\/ice$/i);
+      if (videoIceMatch && request.method === "GET") {
+        if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return json({ error: "Video calling is not configured." }, 503);
+        const roomCode = videoIceMatch[1];
+        const accessKey = url.searchParams.get("key") || "";
+        if (!/^[0-9a-f]{64}$/i.test(accessKey)) return json({ error: "Invalid meeting invitation." }, 401);
+        const rooms = await supabaseRequest(env,
+          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,appointment:appointments!inner(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
+        );
+        const room = rooms?.[0];
+        if (!room || !["scheduled", "live"].includes(room.status) || room.appointment?.status !== "confirmed" || room.appointment?.meeting_mode !== "video") {
+          return json({ error: "This meeting link is invalid, expired or not yet approved." }, 404);
+        }
+        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessKey));
+        const keyHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+        if (keyHash !== room.host_token_hash && keyHash !== room.guest_token_hash) return json({ error: "This invitation has expired." }, 403);
+        const iceServers = [{ urls: ["stun:stun.l.google.com:19302"] }];
+        const turnUrls = String(env.TURN_URL || "").split(",").map(value => value.trim()).filter(Boolean);
+        if (turnUrls.length && env.TURN_USERNAME && env.TURN_CREDENTIAL) {
+          iceServers.push({ urls: turnUrls, username: env.TURN_USERNAME, credential: env.TURN_CREDENTIAL });
+        }
+        return json({ iceServers, turnConfigured: iceServers.length > 1 });
+      }
       const videoSignalMatch = url.pathname.match(/^\/api\/video\/rooms\/([0-9a-f-]{36})\/signal$/i);
       if (videoSignalMatch && request.headers.get("Upgrade")?.toLowerCase() === "websocket") {
         if (!env.VIDEO_ROOMS || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {

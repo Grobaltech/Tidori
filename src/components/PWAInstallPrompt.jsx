@@ -5,16 +5,10 @@ export default function PWAInstallPrompt() {
   const [showHelp, setShowHelp] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [checkingInstall, setCheckingInstall] = useState(true);
 
   useEffect(() => {
-    const isStandalone =
-      window.matchMedia?.('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true;
-
-    if (isStandalone) {
-      setInstalled(true);
-      return undefined;
-    }
+    let active = true;
 
     const onBeforeInstall = (event) => {
       event.preventDefault();
@@ -29,7 +23,38 @@ export default function PWAInstallPrompt() {
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
     window.addEventListener('appinstalled', onInstalled);
 
+    const detectInstalledApp = async () => {
+      const isStandalone =
+        window.matchMedia?.('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+
+      if (isStandalone) {
+        if (active) setInstalled(true);
+        if (active) setCheckingInstall(false);
+        return;
+      }
+
+      // Chromium can report an installed web app even when this page is
+      // currently open in a normal browser tab.
+      if (typeof navigator.getInstalledRelatedApps === 'function') {
+        try {
+          const relatedApps = await navigator.getInstalledRelatedApps();
+          const tidoriInstalled = relatedApps.some(
+            (app) => app.platform === 'webapp'
+          );
+          if (active && tidoriInstalled) setInstalled(true);
+        } catch (error) {
+          console.info('Tidori installed-app status could not be checked:', error);
+        }
+      }
+
+      if (active) setCheckingInstall(false);
+    };
+
+    detectInstalledApp();
+
     return () => {
+      active = false;
       window.removeEventListener('beforeinstallprompt', onBeforeInstall);
       window.removeEventListener('appinstalled', onInstalled);
     };
@@ -43,7 +68,10 @@ export default function PWAInstallPrompt() {
 
     try {
       await installEvent.prompt();
-      await installEvent.userChoice;
+      const choice = await installEvent.userChoice;
+      if (choice?.outcome === 'accepted') {
+        setInstalled(true);
+      }
     } catch (error) {
       console.warn('Tidori installation prompt was not available:', error);
       setShowHelp(true);
@@ -52,7 +80,7 @@ export default function PWAInstallPrompt() {
     }
   };
 
-  if (installed || dismissed) return null;
+  if (checkingInstall || installed || dismissed) return null;
 
   return (
     <>
@@ -133,13 +161,8 @@ export default function PWAInstallPrompt() {
               <h2 id="tidori-install-title" style={{ margin: 0, fontSize: 21 }}>Install Tidori Ministries</h2>
             </div>
             <p style={{ margin: '0 0 12px' }}>
-              Your browser has not made its automatic install prompt available yet. You can still add Tidori to your device:
+              Chrome has not offered Tidori its direct installation prompt on this visit. This can happen when Chrome has not yet recognised the site as installable. On Android Chrome, use the browser menu and choose “Add to Home screen” if available.
             </p>
-            <ul style={{ paddingLeft: 22, margin: '0 0 18px' }}>
-              <li><strong>Android – Chrome:</strong> Open the three-dot menu and choose “Install app” or “Add to Home screen”.</li>
-              <li><strong>iPhone/iPad – Safari:</strong> Tap Share, then “Add to Home Screen”.</li>
-              <li><strong>Desktop – Chrome or Edge:</strong> Use the install icon in the address bar, or choose “Install Tidori” from the browser menu.</li>
-            </ul>
             <button
               type="button"
               onClick={() => setShowHelp(false)}

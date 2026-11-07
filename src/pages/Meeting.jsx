@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaPhoneSlash, FaDesktop, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
 import { useDocTitle } from '../hooks/hooks';
+import { Capacitor } from '@capacitor/core';
 
 const labelForError = error => {
   if (error?.name === 'NotAllowedError') return 'Camera or microphone permission was denied. Allow access in your browser settings and try again.';
@@ -11,6 +12,7 @@ const labelForError = error => {
 };
 
 export default function Meeting() {
+  const nativeApp = Capacitor.isNativePlatform();
   const { roomCode = '' } = useParams();
   const [searchParams] = useSearchParams();
   const accessKey = searchParams.get('key') || '';
@@ -68,7 +70,8 @@ export default function Meeting() {
       const iceConfig = await iceResponse.json().catch(() => ({}));
       if (!iceResponse.ok) throw new Error(iceConfig.error || 'This meeting invitation is invalid or has expired.');
       setTurnConfigured(Boolean(iceConfig.turnConfigured));
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('This device browser does not support camera and microphone calling. Update Android System WebView or use the latest Chrome browser.');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
       localStreamRef.current = stream;
       cameraTrackRef.current = stream.getVideoTracks()[0] || null;
       if (localVideo.current) localVideo.current.srcObject = stream;
@@ -256,12 +259,12 @@ export default function Meeting() {
         </div>
         <aside className="rounded-2xl border border-white/10 bg-[#182230] p-5">
           <h2 className="text-base font-bold text-white">Meeting controls</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">Allow camera and microphone access when prompted. Visitors wait until the pastor admits them. Tidori relays connection signals; media is peer-to-peer where the network permits.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">Allow camera and microphone access when prompted. Visitors wait until the pastor admits them. Tidori relays connection signals; media is peer-to-peer where the network permits. {nativeApp ? 'You are using the Tidori mobile app; camera and microphone controls are available here.' : 'Screen sharing is available on supported desktop browsers.'}</p>
           {!joined ? <button type="button" onClick={joinMeeting} disabled={joining} className="mt-5 w-full rounded-lg bg-[#fdbe33] px-4 py-3 text-sm font-bold text-[#191c24] disabled:opacity-60">{joining ? 'Joining…' : 'Join meeting'}</button> : <div className="mt-5 grid grid-cols-2 gap-2">
             <button type="button" onClick={toggleMic} className="rounded-lg bg-white/10 p-3 text-sm">{muted ? <FaMicrophoneSlash className="mx-auto mb-1" /> : <FaMicrophone className="mx-auto mb-1" />}{muted ? 'Unmute' : 'Mute'}</button>
             <button type="button" onClick={toggleCamera} className="rounded-lg bg-white/10 p-3 text-sm">{cameraOff ? <FaVideoSlash className="mx-auto mb-1" /> : <FaVideo className="mx-auto mb-1" />}{cameraOff ? 'Camera on' : 'Camera off'}</button>
             <button type="button" onClick={toggleSpeaker} className="rounded-lg bg-white/10 p-3 text-sm">{speakerOff ? <FaVolumeMute className="mx-auto mb-1" /> : <FaVolumeUp className="mx-auto mb-1" />}{speakerOff ? 'Sound on' : 'Mute sound'}</button>
-            <button type="button" onClick={toggleScreenShare} className="rounded-lg bg-white/10 p-3 text-sm"><FaDesktop className="mx-auto mb-1" />{sharing ? 'Stop sharing' : 'Share screen'}</button>
+            {!nativeApp && <button type="button" onClick={toggleScreenShare} className="rounded-lg bg-white/10 p-3 text-sm"><FaDesktop className="mx-auto mb-1" />{sharing ? 'Stop sharing' : 'Share screen'}</button>}
             <button type="button" onClick={leaveMeeting} className="col-span-2 rounded-lg bg-red-600 p-3 text-sm font-bold"><FaPhoneSlash className="mr-2 inline" />Leave meeting</button>
           </div>}
           {joined && participantRole === 'host' && guestWaiting && <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-950/40 p-3"><p className="text-sm font-semibold text-amber-100">A visitor is waiting to join.</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={admitGuest} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold">Admit visitor</button><button type="button" onClick={removeGuest} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold">Decline</button></div></div>}

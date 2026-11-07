@@ -102,6 +102,7 @@ export default function AppointmentsManager({ canManage = false }) {
       } else {
         const { data, error: roomInsertError } = await supabase.from('video_call_rooms').insert({
           appointment_id: appointment.id,
+          call_mode: appointment.meeting_mode || 'video',
           room_code: crypto.randomUUID(),
           status: 'scheduled',
           scheduled_start: appointment.requested_at || null,

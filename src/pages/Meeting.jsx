@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaPhoneSlash, FaDesktop, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
 import { useDocTitle } from '../hooks/hooks';
 
@@ -12,6 +12,8 @@ const labelForError = error => {
 
 export default function Meeting() {
   const { roomCode = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const accessKey = searchParams.get('key') || '';
   useDocTitle('Tidori Video Meeting');
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);
@@ -30,6 +32,9 @@ export default function Meeting() {
   const [speakerOff, setSpeakerOff] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [peerPresent, setPeerPresent] = useState(false);
+  const [participantRole, setParticipantRole] = useState('guest');
+  const [guestWaiting, setGuestWaiting] = useState(false);
+  const [admitted, setAdmitted] = useState(false);
 
   const send = packet => {
     const socket = socketRef.current;
@@ -52,7 +57,7 @@ export default function Meeting() {
   };
 
   const joinMeeting = async () => {
-    if (!/^[0-9a-f-]{36}$/i.test(roomCode)) {
+    if (!/^[0-9a-f-]{36}$/i.test(roomCode) || !/^[0-9a-f]{64}$/i.test(accessKey)) {
       setError('This meeting link is not valid.');
       return;
     }
@@ -86,9 +91,9 @@ export default function Meeting() {
       };
 
       const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const socket = new WebSocket(`${scheme}//${window.location.host}/api/video/rooms/${roomCode}/signal`);
+      const socket = new WebSocket(`${scheme}//${window.location.host}/api/video/rooms/${roomCode}/signal?key=${encodeURIComponent(accessKey)}`);
       socketRef.current = socket;
-      socket.onopen = () => { setJoined(true); setStatus('Waiting for the other participant…'); };
+      socket.onopen = () => { setJoined(true); setStatus('Connected to the secure meeting room…'); };
       socket.onerror = () => setError('The meeting connection could not be established. The room may not be deployed yet or the link may have expired.');
       socket.onclose = event => {
         if (event.code === 1008 || event.code === 1006) setStatus('Meeting connection closed.');
@@ -98,13 +103,21 @@ export default function Meeting() {
         try { packet = JSON.parse(event.data); } catch { return; }
         try {
           if (packet.type === 'room-state') {
-            setPeerPresent(packet.peerCount > 1);
+            setParticipantRole(packet.role || 'guest');
+            setAdmitted(packet.admitted === true);
+            setStatus(packet.role === 'host' ? 'You are the pastor / meeting host.' : 'You are in the visitor waiting room.');
+          } else if (packet.type === 'guest-waiting') {
+            setGuestWaiting(true); setStatus('A visitor is waiting for your admission.');
+          } else if (packet.type === 'waiting-for-host') {
+            setStatus('Please wait. The pastor will admit you shortly.');
+          } else if (packet.type === 'admitted') {
+            setAdmitted(true); setPeerPresent(true); setStatus('You have been admitted. Connecting…');
+          } else if (packet.type === 'guest-removed') {
+            setError('The host has removed you from this meeting.'); stopMedia(); setJoined(false); setAdmitted(false);
+          } else if (packet.type === 'room-ended') {
+            setStatus('The host has ended this meeting.'); stopMedia(); setJoined(false); setAdmitted(false);
           } else if (packet.type === 'peer-joined') {
             setPeerPresent(true);
-            setStatus('Connecting to the other participant…');
-            const offer = await peer.createOffer();
-            await peer.setLocalDescription(offer);
-            send({ type: 'offer', description: peer.localDescription });
           } else if (packet.type === 'offer') {
             await peer.setRemoteDescription(packet.description);
             for (const candidate of pendingIceRef.current) await peer.addIceCandidate(candidate);
@@ -138,11 +151,34 @@ export default function Meeting() {
   };
 
   const leaveMeeting = () => {
-    send({ type: 'hangup' });
+    send({ type: participantRole === 'host' ? 'end-room' : 'hangup' });
     stopMedia();
     setJoined(false); setPeerPresent(false); setSharing(false);
     setMuted(false); setCameraOff(false);
     setStatus('You have left the meeting');
+  };
+
+  const admitGuest = async () => {
+    if (participantRole !== 'host' || !guestWaiting || !peerRef.current) return;
+    send({ type: 'admit-guest' }); setGuestWaiting(false); setAdmitted(true); setPeerPresent(true);
+    setStatus('Visitor admitted. Establishing the call…');
+    try {
+      const offer = await peerRef.current.createOffer();
+      await peerRef.current.setLocalDescription(offer);
+      send({ type: 'offer', description: peerRef.current.localDescription });
+    } catch (err) { setError(err.message || 'Could not start the video connection.'); }
+  };
+
+  const removeGuest = () => {
+    if (participantRole !== 'host') return;
+    send({ type: 'remove-guest' }); setGuestWaiting(false); setPeerPresent(false);
+    setStatus('Visitor removed from the meeting.');
+  };
+
+  const endCallForEveryone = () => {
+    if (participantRole !== 'host') return;
+    send({ type: 'end-room' }); stopMedia(); setJoined(false); setAdmitted(false); setGuestWaiting(false);
+    setStatus('Meeting ended for everyone.');
   };
 
   const toggleMic = () => {
@@ -214,7 +250,7 @@ export default function Meeting() {
         </div>
         <aside className="rounded-2xl border border-white/10 bg-[#182230] p-5">
           <h2 className="text-base font-bold text-white">Meeting controls</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">Allow camera and microphone access when prompted. Tidori relays connection signals; audio and video are sent directly between participants when the network allows.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">Allow camera and microphone access when prompted. Visitors wait until the pastor admits them. Tidori relays connection signals; media is peer-to-peer where the network permits.</p>
           {!joined ? <button type="button" onClick={joinMeeting} disabled={joining} className="mt-5 w-full rounded-lg bg-[#fdbe33] px-4 py-3 text-sm font-bold text-[#191c24] disabled:opacity-60">{joining ? 'Joining…' : 'Join meeting'}</button> : <div className="mt-5 grid grid-cols-2 gap-2">
             <button type="button" onClick={toggleMic} className="rounded-lg bg-white/10 p-3 text-sm">{muted ? <FaMicrophoneSlash className="mx-auto mb-1" /> : <FaMicrophone className="mx-auto mb-1" />}{muted ? 'Unmute' : 'Mute'}</button>
             <button type="button" onClick={toggleCamera} className="rounded-lg bg-white/10 p-3 text-sm">{cameraOff ? <FaVideoSlash className="mx-auto mb-1" /> : <FaVideo className="mx-auto mb-1" />}{cameraOff ? 'Camera on' : 'Camera off'}</button>
@@ -222,7 +258,9 @@ export default function Meeting() {
             <button type="button" onClick={toggleScreenShare} className="rounded-lg bg-white/10 p-3 text-sm"><FaDesktop className="mx-auto mb-1" />{sharing ? 'Stop sharing' : 'Share screen'}</button>
             <button type="button" onClick={leaveMeeting} className="col-span-2 rounded-lg bg-red-600 p-3 text-sm font-bold"><FaPhoneSlash className="mr-2 inline" />Leave meeting</button>
           </div>}
-          <div className="mt-5 border-t border-white/10 pt-4 text-xs leading-5 text-slate-400">Room ID: <span className="break-all font-mono">{roomCode}</span><br />For a successful two-way call, both participants should use a modern browser and allow camera/microphone access.</div>
+          {joined && participantRole === 'host' && guestWaiting && <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-950/40 p-3"><p className="text-sm font-semibold text-amber-100">A visitor is waiting to join.</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={admitGuest} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold">Admit visitor</button><button type="button" onClick={removeGuest} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold">Decline</button></div></div>}
+          {joined && participantRole === 'host' && admitted && <button type="button" onClick={endCallForEveryone} className="mt-3 w-full rounded-lg bg-red-800 px-3 py-2 text-sm font-semibold">End meeting for everyone</button>}
+          <div className="mt-5 border-t border-white/10 pt-4 text-xs leading-5 text-slate-400">Your role: <strong>{participantRole === 'host' ? 'Pastor / host' : 'Visitor'}</strong><br />Room ID: <span className="break-all font-mono">{roomCode}</span><br />For a successful two-way call, both participants should use a modern browser and allow camera/microphone access.</div>
         </aside>
       </div>
     </div>

@@ -156,7 +156,7 @@ export default function AdminDashboard() {
   const modulePermission = { users:'users.view', members:'members.view', ministries:'ministries.view', events:'events.view', appointments:'appointments.view', finance:'giving.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
   const canOpen = (id) => isAdministrator || Boolean(profile?.permissions?.includes(modulePermission[id]));
   const visibleSections = useMemo(() => sections.filter(item => {
-    if (item.id === 'appointments') return isAdministrator;
+    if (item.id === 'appointments' || item.id === 'finance') return isAdministrator;
     if (item.id === 'access') return isAdministrator;
     if (item.id === 'users') return profile?.role === 'super_admin';
     if (item.id === 'overview') return isAdministrator || profile?.permissions?.includes('reports.view');

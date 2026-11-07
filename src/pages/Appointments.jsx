@@ -1,9 +1,14 @@
 import PageHeader from '../components/PageHeader';
 import AppointmentForm from '../components/AppointmentForm';
 import { useDocTitle } from '../hooks/hooks';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 export default function Appointments() {
   useDocTitle('Request an Appointment');
+  const [params] = useSearchParams();
+  const [paymentNotice, setPaymentNotice] = useState('');
+  useEffect(() => {\n    const reference = params.get('reference');\n    const status = params.get('payment');\n    if (!reference || !status) return;\n    let active = true;\n    fetch('/api/payments/status?reference=' + encodeURIComponent(reference), { cache: 'no-store' })\n      .then(response => response.json())\n      .then(data => { if (!active) return; const value = data.payment_status || data.status || status; setPaymentNotice(value === 'paid' ? 'Payment verified successfully. Your appointment request has been received and is awaiting confirmation by the church team.' : value === 'cancelled' ? 'Checkout was cancelled. Your appointment request remains unpaid; contact the church office if you still wish to proceed.' : 'Your payment is being verified. Please wait a moment; the appointment will update automatically when Pesapal confirms it.'); })\n      .catch(() => { if (active) setPaymentNotice('Your appointment request has been received. Payment verification may still be processing.'); });\n    return () => { active = false; };\n  }, [params]);
   return (
     <>
       <PageHeader title="Request an Appointment" />

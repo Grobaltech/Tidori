@@ -88,26 +88,34 @@ revoke all on public.community_conversations, public.community_conversation_memb
 grant select on public.community_conversations, public.community_conversation_members, public.community_messages to authenticated;
 grant insert on public.community_messages to authenticated;
 
+create or replace function private.is_tidori_conversation_member(target_conversation_id uuid)
+returns boolean
+language sql stable security definer
+set search_path = ''
+as $
+  select exists (
+    select 1 from public.community_conversation_members m
+    where m.conversation_id = target_conversation_id
+      and m.user_id = (select auth.uid())
+  );
+$;
+revoke all on function private.is_tidori_conversation_member(uuid) from public, anon;
+grant execute on function private.is_tidori_conversation_member(uuid) to authenticated;
+
 drop policy if exists "Conversation members can view their conversations" on public.community_conversations;
 create policy "Conversation members can view their conversations"
   on public.community_conversations for select to authenticated
-  using (exists (select 1 from public.community_conversation_members m
-    where m.conversation_id = id and m.user_id = (select auth.uid())));
+  using ((select private.is_tidori_conversation_member(id)));
 
 drop policy if exists "Members can view their conversation memberships" on public.community_conversation_members;
 create policy "Members can view their conversation memberships"
   on public.community_conversation_members for select to authenticated
-  using (user_id = (select auth.uid()) or exists (
-    select 1 from public.community_conversation_members mine
-    where mine.conversation_id = conversation_id and mine.user_id = (select auth.uid())
-  ));
+  using ((select private.is_tidori_conversation_member(conversation_id)));
 
 drop policy if exists "Conversation members can read messages" on public.community_messages;
 create policy "Conversation members can read messages"
   on public.community_messages for select to authenticated
-  using (exists (select 1 from public.community_conversation_members m
-    where m.conversation_id = community_messages.conversation_id
-      and m.user_id = (select auth.uid())));
+  using ((select private.is_tidori_conversation_member(community_messages.conversation_id)));
 
 drop policy if exists "Conversation members can send messages as themselves" on public.community_messages;
 create policy "Conversation members can send messages as themselves"
@@ -211,12 +219,39 @@ create policy "Members delete their own prayer requests"
   using (user_id = (select auth.uid()));
 
 drop policy if exists "Church leaders update prayer status" on public.prayer_requests;
-create policy "Church leaders update prayer status"
-  on public.prayer_requests for update to authenticated
-  using (exists (select 1 from public.profiles p
-    where p.id = (select auth.uid()) and p.role in ('leader','admin','super_admin')))
-  with check (exists (select 1 from public.profiles p
-    where p.id = (select auth.uid()) and p.role in ('leader','admin','super_admin')));
+
+create or replace function public.update_tidori_prayer_status(target_request_id uuid, new_status text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $
+begin
+  if not exists (select 1 from public.profiles p
+    where p.id = (select auth.uid()) and p.role in ('leader','admin','super_admin')) then
+    raise exception 'Only church leaders can update prayer status' using errcode='42501';
+  end if;
+  if new_status not in ('open','praying','answered') then
+    raise exception 'Invalid prayer status' using errcode='22023';
+  end if;
+  update public.prayer_requests
+  set status = new_status, updated_at = now(),
+      answered_at = case when new_status = 'answered' then now() else null end
+  where id = target_request_id;
+  if not found then raise exception 'Prayer request not found'; end if;
+end;
+$;
+revoke all on function public.update_tidori_prayer_status(uuid,text) from public, anon;
+grant execute on function public.update_tidori_prayer_status(uuid,text) to authenticated;
+
+do $
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'community_messages') then
+    alter publication supabase_realtime add table public.community_messages;
+  end if;
+end $;
 
 comment on table public.member_directory is 'Privacy-opt-in directory projection; excludes email, phone and address.';
 comment on table public.community_messages is 'Private one-to-one Tidori member messages; visible only to conversation participants.';

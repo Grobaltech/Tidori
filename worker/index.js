@@ -592,14 +592,6 @@ async function verifyPayment(env, trackingId, merchantReference) {
       || Math.abs(Number(data.amount) - Number(donation.amount)) > 0.01) {
     throw new Error("The verified Pesapal amount or currency does not match the donation.");
   }
-  const paymentStatus = status === "COMPLETED" || Number(data.status_code) === 1
-    ? "paid"
-    : status === "FAILED" || Number(data.status_code) === 2
-      ? "failed"
-      : status === "REVERSED" || Number(data.status_code) === 3
-        ? "reversed"
-        : "pending";
-
   const updated = await supabaseRequest(env,
     `donation_pledges?merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}${paymentStatus === "paid" ? "&status=neq.paid" : ""}`,
     {

@@ -262,13 +262,13 @@ export default function Meeting() {
             {!joined && <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-300">Your camera preview will appear here</div>}
             <span className="absolute bottom-3 left-3 rounded bg-black/50 px-2 py-1 text-xs">You</span>
           </div>
-        </div>
+        </div>}
         <aside className="rounded-2xl border border-white/10 bg-[#182230] p-5">
           <h2 className="text-base font-bold text-white">Meeting controls</h2>
           <p className="mt-2 text-sm leading-6 text-slate-300">{audioOnly ? 'Allow microphone access when prompted. This audio-only call never requests your camera. Visitors wait until the pastor admits them.' : 'Allow camera and microphone access when prompted. Visitors wait until the pastor admits them.'} Tidori relays connection signals; media is peer-to-peer where the network permits. {nativeApp ? 'You are using the Tidori mobile app.' : 'Screen sharing is available on supported desktop browsers.'}</p>
           {!joined ? <button type="button" onClick={joinMeeting} disabled={joining} className="mt-5 w-full rounded-lg bg-[#fdbe33] px-4 py-3 text-sm font-bold text-[#191c24] disabled:opacity-60">{joining ? 'Joining…' : 'Join meeting'}</button> : <div className="mt-5 grid grid-cols-2 gap-2">
             <button type="button" onClick={toggleMic} className="rounded-lg bg-white/10 p-3 text-sm">{muted ? <FaMicrophoneSlash className="mx-auto mb-1" /> : <FaMicrophone className="mx-auto mb-1" />}{muted ? 'Unmute' : 'Mute'}</button>
-            {!audioOnly && <button type="button" onClick={toggleCamera} className="rounded-lg bg-white/10 p-3 text-sm">{cameraOff ? <FaVideoSlash className="mx-auto mb-1" /> : <FaVideo className="mx-auto mb-1" />}{cameraOff ? 'Camera on' : 'Camera off'}</button>
+            {!audioOnly && <button type="button" onClick={toggleCamera} className="rounded-lg bg-white/10 p-3 text-sm">{cameraOff ? <FaVideoSlash className="mx-auto mb-1" /> : <FaVideo className="mx-auto mb-1" />}{cameraOff ? 'Camera on' : 'Camera off'}</button>}
             <button type="button" onClick={toggleSpeaker} className="rounded-lg bg-white/10 p-3 text-sm">{speakerOff ? <FaVolumeMute className="mx-auto mb-1" /> : <FaVolumeUp className="mx-auto mb-1" />}{speakerOff ? 'Sound on' : 'Mute sound'}</button>
             {!nativeApp && !audioOnly && <button type="button" onClick={toggleScreenShare} className="rounded-lg bg-white/10 p-3 text-sm"><FaDesktop className="mx-auto mb-1" />{sharing ? 'Stop sharing' : 'Share screen'}</button>}
             <button type="button" onClick={leaveMeeting} className="col-span-2 rounded-lg bg-red-600 p-3 text-sm font-bold"><FaPhoneSlash className="mr-2 inline" />Leave meeting</button>

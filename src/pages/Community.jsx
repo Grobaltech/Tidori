@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase, supabaseReady } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 
@@ -12,7 +12,7 @@ const tabs = [
 export default function Community() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [tab, setTab] = useState('directory');
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'messages' ? 'messages' : 'directory');
   const [directory, setDirectory] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
@@ -27,6 +27,11 @@ export default function Community() {
   const [prayerTitle, setPrayerTitle] = useState('');
   const [prayerText, setPrayerText] = useState('');
   const [prayerVisibility, setPrayerVisibility] = useState('leaders');
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(location.search).get('tab');
+    if (requestedTab === 'messages') setTab('messages');
+  }, [location.search]);
 
   const loadDirectory = useCallback(async () => {
     const { data, error: e } = await supabase.from('member_directory')

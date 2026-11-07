@@ -706,7 +706,8 @@ async function handleNotification(request, env, isCallback) {
   }
   if (isCallback) {
     const status = result?.paymentStatus || "processing";
-    const destination = merchantReference.startsWith("TIDORI-APPT-") ? "/appointments" : "/give";\n    return Response.redirect(`${url.origin}${destination}?payment=${encodeURIComponent(status)}&reference=${encodeURIComponent(merchantReference)}`, 302);
+    const destination = merchantReference.startsWith("TIDORI-APPT-") ? "/appointments" : "/give";
+    return Response.redirect(`${url.origin}${destination}?payment=${encodeURIComponent(status)}&reference=${encodeURIComponent(merchantReference)}`, 302);
   }
   return json({
     orderNotificationType: payload.OrderNotificationType || "IPNCHANGE",
@@ -1046,7 +1047,13 @@ export default {
       if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
         return await adminPesapalIpn(request, env);
       }
-      if (url.pathname === "/api/appointments/fees" && request.method === "GET") {\n        return await appointmentFees(request, env);\n      }\n      if (url.pathname === "/api/appointments/request" && request.method === "POST") {\n        return await createAppointmentRequest(request, env);\n      }\n      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
+      if (url.pathname === "/api/appointments/fees" && request.method === "GET") {
+        return await appointmentFees(request, env);
+      }
+      if (url.pathname === "/api/appointments/request" && request.method === "POST") {
+        return await createAppointmentRequest(request, env);
+      }
+      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
         return await createPayment(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {

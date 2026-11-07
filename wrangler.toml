@@ -11,3 +11,11 @@ run_worker_first = true
 
 [vars]
 PESAPAL_CURRENCY = "UGX"
+
+[[durable_objects.bindings]]
+name = "VIDEO_ROOMS"
+class_name = "VideoRoom"
+
+[[migrations]]
+tag = "v1-video-rooms"
+new_sqlite_classes = ["VideoRoom"]

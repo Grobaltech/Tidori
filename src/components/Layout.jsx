@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaTwitter, FaFacebookF, FaYoutube,
-  FaInstagram, FaLinkedinIn, FaChevronUp, FaChevronDown, FaBars, FaTimes, FaAngleRight, FaSearch, FaUserCircle,
+  FaInstagram, FaLinkedinIn, FaChevronUp, FaChevronDown, FaBars, FaTimes, FaAngleRight, FaSearch, FaUserCircle, FaComments,
 } from 'react-icons/fa';
 import { site } from '../config/site';
 import { useScrollY, useAsync } from '../hooks/hooks';
@@ -108,6 +108,7 @@ function Navbar() {
           <button type="button" onClick={() => setSearchOpen((value) => !value)} aria-label={searchOpen ? "Close search" : "Open search"} aria-expanded={searchOpen} className={`p-2 text-xl transition-colors hover:text-gold ${searchOpen ? "text-gold" : "text-white"}`}>
             {searchOpen ? <FaTimes /> : <FaSearch />}
           </button>
+          {signedIn && <Link to="/community?tab=messages" aria-label="Messages" title="Messages" className="p-2 text-xl text-white transition-colors hover:text-gold"><FaComments /></Link>}
           {signedIn && <NotificationBell />}
           <Link to={signedIn ? "/profile" : "/login"} aria-label={signedIn ? "My account" : "Login or register"} title={signedIn ? "My account" : "Login / Register"} className="p-2 text-xl text-white transition-colors hover:text-gold">
             <FaUserCircle />

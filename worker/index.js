@@ -865,7 +865,7 @@ export default {
         const accessKey = url.searchParams.get("key") || "";
         if (!/^[0-9a-f]{64}$/i.test(accessKey)) return json({ error: "Invalid meeting invitation." }, 401);
         const rooms = await supabaseRequest(env,
-          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,is_test,owner_user_id,appointment:appointments(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
+          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,is_test,owner_user_id,call_mode,appointment:appointments(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
         );
         const room = rooms?.[0];
         const approvedAppointment = room?.appointment?.status === "confirmed" && ["video", "audio"].includes(room?.appointment?.meeting_mode);
@@ -881,7 +881,7 @@ export default {
         const turnConfigured = Boolean(cloudflareIceServers?.some(server =>
           (Array.isArray(server.urls) ? server.urls : [server.urls]).some(value => String(value).startsWith("turn"))
         ));
-        return json({ iceServers, turnConfigured, meetingMode: room?.appointment?.meeting_mode || "video" });
+        return json({ iceServers, turnConfigured, meetingMode: room?.call_mode || room?.appointment?.meeting_mode || "video" });
       }
       const videoSignalMatch = url.pathname.match(/^\/api\/video\/rooms\/([0-9a-f-]{36})\/signal$/i);
       if (videoSignalMatch && request.headers.get("Upgrade")?.toLowerCase() === "websocket") {
@@ -892,7 +892,7 @@ export default {
         const accessKey = url.searchParams.get("key") || "";
         if (!/^[0-9a-f]{64}$/i.test(accessKey)) return json({ error: "Invalid meeting invitation." }, 401);
         const rooms = await supabaseRequest(env,
-          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,is_test,owner_user_id,appointment:appointments(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
+          `video_call_rooms?select=id,status,host_token_hash,guest_token_hash,is_test,owner_user_id,call_mode,appointment:appointments(status,meeting_mode)&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`
         );
         const room = rooms?.[0];
         const approvedAppointment = room?.appointment?.status === "confirmed" && ["video", "audio"].includes(room?.appointment?.meeting_mode);

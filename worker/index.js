@@ -622,7 +622,7 @@ export class VideoRoom {
   }
 
   async roomRecord(roomCode) {
-    const rows = await supabaseRequest(this.env, `video_call_rooms?select=id,room_code&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`);
+    const rows = await supabaseRequest(this.env, `video_call_rooms?select=id,room_code,status&room_code=eq.${encodeURIComponent(roomCode)}&limit=1`);
     return rows?.[0] || null;
   }
 

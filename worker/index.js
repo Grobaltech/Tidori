@@ -660,6 +660,7 @@ export class VideoRoom {
   async endSession(roomCode, reason = "host_ended") {
     const room = await this.roomRecord(roomCode);
     const sessionId = await this.ctx.storage.get("sessionId");
+    if (!sessionId && room?.status === "ended") return;
     const now = new Date().toISOString();
     if (sessionId) {
       await supabaseRequest(this.env, `video_call_sessions?id=eq.${sessionId}`, {

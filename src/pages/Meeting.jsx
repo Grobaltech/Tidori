@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaPhoneSlash, FaDesktop, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
+import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaPhoneSlash, FaDesktop, FaVolumeUp, FaVolumeMute, FaSignal } from 'react-icons/fa';
 import { useDocTitle } from '../hooks/hooks';
 import { Capacitor } from '@capacitor/core';
 
@@ -59,6 +59,56 @@ export default function Meeting() {
   const [admitted, setAdmitted] = useState(false);
   const [turnConfigured, setTurnConfigured] = useState(false);
   const [audioOnly, setAudioOnly] = useState(new URLSearchParams(window.location.search).get('mode') === 'audio');
+  const [networkQuality, setNetworkQuality] = useState({ level: 'unknown', label: 'Checking network', detail: 'Network quality is not available yet.' });
+
+  // Estimate call quality from browser network hints and live WebRTC statistics.
+  // Browsers expose effectiveType (usually 4g/3g/2g), not the actual 5G radio type.
+  useEffect(() => {
+    if (!joined) {
+      setNetworkQuality({ level: 'unknown', label: 'Checking network', detail: 'Join the call to measure connection quality.' });
+      return undefined;
+    }
+    let active = true;
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const measure = async () => {
+      let downlink = Number(connection?.downlink) || 0;
+      let rtt = Number(connection?.rtt) || 0;
+      let effectiveType = connection?.effectiveType || '';
+      let lossRatio = 0;
+      try {
+        const peer = peerRef.current;
+        if (peer) {
+          const stats = await peer.getStats();
+          let received = 0;
+          let lost = 0;
+          stats.forEach(report => {
+            if (report.type === 'candidate-pair' && report.state === 'succeeded' && report.nominated) {
+              if (report.currentRoundTripTime != null) rtt = report.currentRoundTripTime * 1000;
+              if (report.availableOutgoingBitrate != null) downlink = Math.max(downlink, report.availableOutgoingBitrate / 1000000);
+            }
+            if (report.type === 'inbound-rtp' && report.kind === 'video') {
+              received += Number(report.packetsReceived) || 0;
+              lost += Number(report.packetsLost) || 0;
+            }
+          });
+          if (received + lost > 0) lossRatio = lost / (received + lost);
+        }
+      } catch { /* Network API hints remain a useful fallback. */ }
+      if (!active) return;
+      const weakType = ['2g', 'slow-2g'].includes(effectiveType);
+      const mediumType = ['3g', '4g'].includes(effectiveType);
+      const poor = weakType || (rtt > 500) || lossRatio > 0.10 || (downlink > 0 && downlink < 0.5);
+      const strong = !poor && ((downlink >= 10 && (!rtt || rtt <= 150)) || (effectiveType === '5g' && (!rtt || rtt <= 150))) && lossRatio < 0.03;
+      if (poor) setNetworkQuality({ level: 'poor', label: 'Poor connection', detail: 'Weak network, high delay or packet loss. Try moving closer to a stronger signal.' });
+      else if (strong) setNetworkQuality({ level: 'good', label: 'Good connection', detail: 'Strong connection (5G+ quality tier).' });
+      else if (mediumType || downlink > 0 || rtt > 0) setNetworkQuality({ level: 'medium', label: 'Medium connection', detail: 'Moderate connection (4G/3G quality tier).' });
+      else setNetworkQuality({ level: 'unknown', label: 'Quality unavailable', detail: 'This browser does not expose enough network information to rate the connection.' });
+    };
+    measure();
+    const timer = window.setInterval(measure, 4000);
+    connection?.addEventListener?.('change', measure);
+    return () => { active = false; window.clearInterval(timer); connection?.removeEventListener?.('change', measure); };
+  }, [joined]);
 
   const send = packet => {
     const socket = socketRef.current;
@@ -332,7 +382,13 @@ export default function Meeting() {
     <div className="mx-auto max-w-6xl">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div><p className="text-xs font-semibold uppercase tracking-[.2em] text-[#fdbe33]">Tidori Ministries</p><h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">{audioOnly ? 'Audio call' : 'Video meeting'}</h1><p className="mt-1 text-sm text-slate-300">{status}</p></div>
-        <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-300">Private room</span>
+        <div className="flex items-center gap-3">
+          {joined && <span title={networkQuality.detail} aria-label={networkQuality.label} className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs text-slate-200">
+            <FaSignal className={networkQuality.level === 'good' ? 'text-emerald-400' : networkQuality.level === 'medium' ? 'text-orange-400' : networkQuality.level === 'poor' ? 'text-red-500' : 'text-slate-400'} />
+            <span>{networkQuality.label}</span>
+          </span>}
+          <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-300">Private room</span>
+        </div>
       </div>
       {error && <p role="alert" className="mb-4 rounded-lg border border-red-400/30 bg-red-950/60 p-3 text-sm text-red-200">{error}</p>}
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">

@@ -4,6 +4,7 @@ export default function PWAInstallPrompt() {
   const [installEvent, setInstallEvent] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [installed, setInstalled] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     const isStandalone =
@@ -51,24 +52,65 @@ export default function PWAInstallPrompt() {
     }
   };
 
-  if (installed) return null;
+  if (installed || dismissed) return null;
 
   return (
     <>
-      <button
-        type="button"
-        onClick={install}
+      <aside
+        role="region"
         aria-label="Install Tidori Ministries"
         style={{
-          position: 'fixed', right: 16, bottom: 18, zIndex: 9998,
-          border: 0, borderRadius: 999, padding: '12px 18px',
-          background: '#20212b', color: '#fff', fontWeight: 700,
-          boxShadow: '0 5px 22px rgba(0,0,0,.24)', cursor: 'pointer'
+          position: 'fixed', top: 'max(10px, env(safe-area-inset-top))',
+          left: '50%', transform: 'translateX(-50%)',
+          width: 'calc(100% - 24px)', maxWidth: 760, zIndex: 9998,
+          display: 'flex', alignItems: 'center', gap: 13,
+          padding: '11px 13px', boxSizing: 'border-box',
+          background: '#20212b', color: '#fff', borderRadius: 14,
+          border: '1px solid rgba(255,255,255,.14)',
+          boxShadow: '0 8px 28px rgba(15,18,30,.25)',
+          fontFamily: 'inherit'
         }}
       >
-        <span aria-hidden="true" style={{ marginRight: 8 }}>⬇</span>
-        Install Tidori
-      </button>
+        <img
+          src="/favicon.svg"
+          alt=""
+          width="38"
+          height="38"
+          style={{ flex: '0 0 38px', borderRadius: 9, background: '#fff' }}
+        />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 750, lineHeight: 1.25 }}>
+            Get the Tidori app
+          </div>
+          <div style={{ fontSize: 12, opacity: .82, lineHeight: 1.35, marginTop: 3 }}>
+            Install for quicker, easier access to Tidori Ministries.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={install}
+          style={{
+            flex: '0 0 auto', border: 0, borderRadius: 9,
+            padding: '10px 14px', background: '#d9b66f',
+            color: '#20212b', fontSize: 13, fontWeight: 800,
+            cursor: 'pointer', whiteSpace: 'nowrap'
+          }}
+        >
+          Install
+        </button>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Dismiss install notification"
+          style={{
+            flex: '0 0 28px', width: 28, height: 28, padding: 0,
+            border: 0, borderRadius: 7, background: 'transparent',
+            color: '#fff', fontSize: 21, lineHeight: 1, cursor: 'pointer'
+          }}
+        >
+          ×
+        </button>
+      </aside>
 
       {showHelp && (
         <div

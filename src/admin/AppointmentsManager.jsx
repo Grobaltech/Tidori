@@ -129,7 +129,7 @@ export default function AppointmentsManager({ canManage = false }) {
   };
 
   const copyMeetingLink = async (roomCode, token) => {
-    const link = `https://tidori.grobaltechtechnologies.workers.dev/meeting/${roomCode}#key=${token}`;
+    const link = `https://tidori-ministries.grobaltechtechnologies.workers.dev/meeting/${roomCode}#key=${token}`;
     try {
       await navigator.clipboard.writeText(link);
       setNotice('Private invitation link copied. Do not share the host link with the visitor.');

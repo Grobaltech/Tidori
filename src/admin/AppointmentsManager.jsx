@@ -22,6 +22,7 @@ export default function AppointmentsManager({ canManage = false }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [rooms, setRooms] = useState({});
+  const [roomInvites, setRoomInvites] = useState({});
   const [roomBusyId, setRoomBusyId] = useState('');
   const [roomError, setRoomError] = useState('');
 
@@ -64,6 +65,16 @@ export default function AppointmentsManager({ canManage = false }) {
     setBusy(false);
   };
 
+  const makeToken = () => {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  };
+
+  const hashToken = async token => {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  };
+
   const createVideoRoom = async appointment => {
     if (!canManage || appointment.meeting_mode !== 'video' || appointment.status !== 'confirmed') return;
     setRoomBusyId(appointment.id); setRoomError(''); setNotice('');
@@ -71,39 +82,54 @@ export default function AppointmentsManager({ canManage = false }) {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
       if (!authData?.user) throw new Error('Your administrator session has expired. Please sign in again.');
-      const existing = rooms[appointment.id];
-      if (existing) throw new Error('A meeting room already exists for this appointment.');
-      const roomCode = crypto.randomUUID();
-      const { data: room, error: roomInsertError } = await supabase.from('video_call_rooms').insert({
-        appointment_id: appointment.id,
-        room_code: roomCode,
-        status: 'scheduled',
-        scheduled_start: appointment.requested_at || null,
-        created_by: authData.user.id,
-      }).select('id,appointment_id,room_code,status,scheduled_start,scheduled_end').single();
-      if (roomInsertError) throw roomInsertError;
-      const { error: participantError } = await supabase.from('video_call_participants').insert([
-        { room_id: room.id, user_id: authData.user.id, display_name: 'Tidori host', participant_role: 'host', status: 'invited' },
-        { room_id: room.id, user_id: null, display_name: appointment.full_name || 'Appointment guest', participant_role: 'guest', status: 'invited' },
-      ]);
-      if (participantError) {
-        await supabase.from('video_call_rooms').delete().eq('id', room.id);
-        throw participantError;
+      const hostToken = makeToken();
+      const guestToken = makeToken();
+      const [hostTokenHash, guestTokenHash] = await Promise.all([hashToken(hostToken), hashToken(guestToken)]);
+      let room = rooms[appointment.id];
+      if (room) {
+        const { data, error: rotateError } = await supabase.from('video_call_rooms')
+          .update({ host_token_hash: hostTokenHash, guest_token_hash: guestTokenHash, status: 'scheduled', started_at: null, ended_at: null, ended_reason: null })
+          .eq('id', room.id)
+          .select('id,appointment_id,room_code,status,scheduled_start,scheduled_end')
+          .single();
+        if (rotateError) throw rotateError;
+        room = data;
+      } else {
+        const { data, error: roomInsertError } = await supabase.from('video_call_rooms').insert({
+          appointment_id: appointment.id,
+          room_code: crypto.randomUUID(),
+          status: 'scheduled',
+          scheduled_start: appointment.requested_at || null,
+          created_by: authData.user.id,
+          host_token_hash: hostTokenHash,
+          guest_token_hash: guestTokenHash,
+        }).select('id,appointment_id,room_code,status,scheduled_start,scheduled_end').single();
+        if (roomInsertError) throw roomInsertError;
+        room = data;
+        const { error: participantError } = await supabase.from('video_call_participants').insert([
+          { room_id: room.id, user_id: authData.user.id, display_name: 'Tidori host', participant_role: 'host', status: 'invited' },
+          { room_id: room.id, user_id: null, display_name: appointment.full_name || 'Appointment guest', participant_role: 'guest', status: 'invited' },
+        ]);
+        if (participantError) {
+          await supabase.from('video_call_rooms').delete().eq('id', room.id);
+          throw participantError;
+        }
       }
       setRooms(current => ({ ...current, [appointment.id]: room }));
-      setNotice('Private meeting room created. Use the guest invitation link in this row to share access with the visitor; both participants open the same link.');
+      setRoomInvites(current => ({ ...current, [appointment.id]: { hostToken, guestToken } }));
+      setNotice('Secure host and visitor links generated. Copy each link and send it only to its intended participant.');
     } catch (err) {
-      setRoomError(err.message || 'Could not create the video-call room. Confirm that the Phase 1 SQL has finished successfully.');
+      setRoomError(err.message || 'Could not create secure video-call links. Run the Phase 4 security/history SQL migration first.');
     } finally { setRoomBusyId(''); }
   };
 
-  const copyMeetingLink = async roomCode => {
-    const link = `${window.location.origin}/meeting/${roomCode}`;
+  const copyMeetingLink = async (roomCode, token) => {
+    const link = `${window.location.origin}/meeting/${roomCode}?key=${token}`;
     try {
       await navigator.clipboard.writeText(link);
-      setNotice('Private meeting invitation link copied. Share it only with the approved visitor.');
+      setNotice('Private invitation link copied. Do not share the host link with the visitor.');
     } catch {
-      setRoomError('Could not copy automatically. Open the meeting link shown below and copy it manually.');
+      setRoomError(`Clipboard access failed. Copy this link manually: ${link}`);
     }
   };
 
@@ -146,7 +172,7 @@ export default function AppointmentsManager({ canManage = false }) {
             <td>{formatDate(row.requested_at)}</td>
             <td><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold capitalize text-blue-700">{label(row.status)}</span></td>
             <td><span className={row.payment_status === 'paid' ? 'rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700' : 'rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800'}>{label(row.payment_status || 'unpaid')}</span><span className="mt-1 block text-xs text-gray-500">{row.fee_amount ? `${row.currency || 'UGX'} ${Number(row.fee_amount).toLocaleString()}` : 'No fee recorded'}</span></td>
-            <td><div className="flex flex-wrap gap-1.5">{canManage ? <><button type="button" onClick={() => setEditing({ ...row, fee_amount: row.fee_amount ?? 0, currency: row.currency || 'UGX', payment_status: row.payment_status || 'unpaid' })} className="rounded border border-gray-200 px-3 py-1.5 text-xs font-semibold">Manage</button>{row.meeting_mode === 'video' && row.status === 'confirmed' && (rooms[row.id] ? <span className={`rounded px-2 py-1 text-xs font-semibold ${rooms[row.id].status === 'live' ? 'bg-emerald-50 text-emerald-700' : rooms[row.id].status === 'ended' ? 'bg-gray-100 text-gray-600' : 'bg-violet-50 text-violet-700'}`}>{label(rooms[row.id].status || 'scheduled')}</span> : <button type="button" disabled={roomBusyId === row.id} onClick={() => createVideoRoom(row)} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{roomBusyId === row.id ? 'Creating…' : 'Create room'}</button>)}</> : <span className="text-xs text-gray-400">View only</span>}</div>{rooms[row.id] && <div className="mt-2 max-w-[240px] text-xs text-gray-500"><span className="block break-all font-mono">Room: {rooms[row.id].room_code}</span><a className="mt-1 inline-block font-semibold text-[#009cff]" href={`/meeting/${rooms[row.id].room_code}`} target="_blank" rel="noreferrer">Open meeting</a><button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code)} className="ml-3 font-semibold text-[#009cff]">Copy guest invitation</button></div>}</td>
+            <td><div className="flex flex-wrap gap-1.5">{canManage ? <><button type="button" onClick={() => setEditing({ ...row, fee_amount: row.fee_amount ?? 0, currency: row.currency || 'UGX', payment_status: row.payment_status || 'unpaid' })} className="rounded border border-gray-200 px-3 py-1.5 text-xs font-semibold">Manage</button>{row.meeting_mode === 'video' && row.status === 'confirmed' && (rooms[row.id] ? <span className={`rounded px-2 py-1 text-xs font-semibold ${rooms[row.id].status === 'live' ? 'bg-emerald-50 text-emerald-700' : rooms[row.id].status === 'ended' ? 'bg-gray-100 text-gray-600' : 'bg-violet-50 text-violet-700'}`}>{label(rooms[row.id].status || 'scheduled')}</span> : <button type="button" disabled={roomBusyId === row.id} onClick={() => createVideoRoom(row)} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{roomBusyId === row.id ? 'Creating…' : 'Create room'}</button>)}</> : <span className="text-xs text-gray-400">View only</span>}</div>{rooms[row.id] && <div className="mt-2 max-w-[260px] space-y-1 text-xs text-gray-500"><span className="block break-all font-mono">Room: {rooms[row.id].room_code}</span>{roomInvites[row.id] ? <><button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code, roomInvites[row.id].hostToken)} className="block font-semibold text-violet-700">Copy pastor / host link</button><button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code, roomInvites[row.id].guestToken)} className="block font-semibold text-[#009cff]">Copy visitor link</button></> : <span className="block text-amber-700">Private links are hidden after refresh. Generate new links to rotate access.</span>}</div>}</td>
           </tr>)}</tbody>
         </table>
         {!loading && !filtered.length && <div className="admin-empty">No appointment requests match this view.</div>}

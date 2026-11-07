@@ -181,13 +181,17 @@ export default function AppointmentsManager({ canManage = false }) {
               <div className="flex flex-wrap gap-1.5">
                 {canManage ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => setEditing({ ...row, fee_amount: row.fee_amount ?? 0, currency: row.currency || 'UGX', payment_status: row.payment_status || 'unpaid' })}
-                      className="rounded border border-gray-200 px-3 py-1.5 text-xs font-semibold"
-                    >
-                      Manage
-                    </button>
+                    {rooms[row.id] ? (
+                      <span className="rounded bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600">Saved · View only</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ ...row, fee_amount: row.fee_amount ?? 0, currency: row.currency || 'UGX', payment_status: row.payment_status || 'unpaid' })}
+                        className="rounded border border-gray-200 px-3 py-1.5 text-xs font-semibold"
+                      >
+                        Manage
+                      </button>
+                    )}
                     {row.meeting_mode === 'video' && row.status === 'confirmed' && (
                       <>
                         {rooms[row.id] && (
@@ -215,7 +219,7 @@ export default function AppointmentsManager({ canManage = false }) {
                   <span className="block break-all font-mono">Room: {rooms[row.id].room_code}</span>
                   {roomInvites[row.id] ? (
                     <>
-                      <button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code, roomInvites[row.id].hostToken)} className="block font-semibold text-violet-700">Copy pastor / host link</button>
+                      <a href={`https://tidori.grobaltechtechnologies.workers.dev/meeting/${rooms[row.id].room_code}#key=${roomInvites[row.id].hostToken}`} target="_blank" rel="noopener noreferrer" className="block font-semibold text-violet-700 underline">Open pastor / host meeting</a>
                       <button type="button" onClick={() => copyMeetingLink(rooms[row.id].room_code, roomInvites[row.id].guestToken)} className="block font-semibold text-[#009cff]">Copy visitor link</button>
                     </>
                   ) : (

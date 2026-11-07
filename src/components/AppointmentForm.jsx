@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function AppointmentForm() {
-  const [form,setForm] = useState({ full_name:'', email:'', phone:'', appointment_type:'Appointment with the Pastor', date:'', time:'', notes:'' });
+  const [form,setForm] = useState({ full_name:'', email:'', phone:'', appointment_type:'Appointment with the Pastor', meeting_mode:'in_person', date:'', time:'', notes:'' });
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState('');
   const [error,setError] = useState('');
@@ -16,12 +16,12 @@ export default function AppointmentForm() {
       if (!Number.isFinite(requestedAt.getTime()) || requestedAt.getTime() < Date.now() - 60000) throw new Error('Please choose a future appointment date and time.');
       const { error:insertError } = await supabase.from('appointments').insert({
         full_name:form.full_name.trim(), email:form.email.trim()||null, phone:form.phone.trim()||null,
-        appointment_type:form.appointment_type, requested_at:requestedAt.toISOString(),
+        appointment_type:form.appointment_type, meeting_mode:form.meeting_mode, requested_at:requestedAt.toISOString(),
         notes:form.notes.trim()||null, status:'requested',
       });
       if (insertError) throw insertError;
       setMessage('Your appointment request has been received. Tidori Ministries will contact you to confirm it.');
-      setForm({ full_name:'', email:'', phone:'', appointment_type:'Appointment with the Pastor', date:'', time:'', notes:'' });
+      setForm({ full_name:'', email:'', phone:'', appointment_type:'Appointment with the Pastor', meeting_mode:'in_person', date:'', time:'', notes:'' });
     } catch (err) {
       setError(err.message || 'We could not submit your appointment request. Please try again.');
     } finally { setBusy(false); }
@@ -33,6 +33,7 @@ export default function AppointmentForm() {
       <label className="text-sm font-semibold">Phone number<input className="field mt-1" name="phone" type="tel" value={form.phone} onChange={update} maxLength={40} required /></label>
       <label className="text-sm font-semibold">Email address<input className="field mt-1" name="email" type="email" value={form.email} onChange={update} maxLength={200} /></label>
       <label className="text-sm font-semibold">Appointment type<select className="field mt-1" name="appointment_type" value={form.appointment_type} onChange={update}><option>Appointment with the Pastor</option><option>Pastoral appointment</option><option>Prayer and counselling</option><option>Ministry meeting</option><option>Church office visit</option><option>Other</option></select></label>
+      <label className="text-sm font-semibold">Meeting preference<select className="field mt-1" name="meeting_mode" value={form.meeting_mode} onChange={update}><option value="in_person">In-person at the church</option><option value="phone">Phone call</option><option value="video">Video call (online)</option></select></label>
       <label className="text-sm font-semibold">Preferred date<input className="field mt-1" type="date" name="date" min={new Date().toISOString().slice(0,10)} value={form.date} onChange={update} required /></label>
       <label className="text-sm font-semibold">Preferred time<input className="field mt-1" type="time" name="time" value={form.time} onChange={update} required /></label>
       <label className="text-sm font-semibold sm:col-span-2">Additional details<textarea className="field mt-1 min-h-24" name="notes" value={form.notes} onChange={update} maxLength={2000} placeholder="Tell us briefly what you would like to discuss." /></label>

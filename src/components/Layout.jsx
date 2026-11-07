@@ -141,7 +141,7 @@ function Footer() {
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Quick Links</h2>
-          {links([['/about', 'About Us'], ['/contact', 'Contact Us'], ['/outreach', 'Outreach'], ['/events', 'Upcoming Events'], ['/blog', 'Latest Blog']])}
+          {links([['/about', 'About Us'], ['/community', 'Tidori Connect'], ['/contact', 'Contact Us'], ['/outreach', 'Outreach'], ['/events', 'Upcoming Events'], ['/blog', 'Latest Blog']])}
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Get Involved</h2>

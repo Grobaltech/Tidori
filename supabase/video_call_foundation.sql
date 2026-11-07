@@ -27,8 +27,8 @@ create table if not exists public.video_call_rooms (
     check (status in ('scheduled', 'live', 'ended', 'cancelled')),
   provider text not null default 'tidori_self_hosted'
     check (provider in ('tidori_self_hosted')),
-  signalling_provider text not null default 'supabase_realtime'
-    check (signalling_provider in ('supabase_realtime')),
+  signalling_provider text not null default 'cloudflare_durable_objects'
+    check (signalling_provider in ('cloudflare_durable_objects')),
   scheduled_start timestamptz,
   scheduled_end timestamptz,
   created_by uuid references auth.users(id) on delete set null,
@@ -65,8 +65,8 @@ alter table public.video_call_rooms enable row level security;
 alter table public.video_call_participants enable row level security;
 
 -- These tables contain private meeting metadata. No public or ordinary-member
--- access is granted in Phase 1. A later server-side join flow will validate
--- one-time guest credentials without exposing room records to the browser.
+-- access is granted. The Cloudflare Worker validates separate hashed host and
+-- guest invitation keys; browser clients never read room credentials directly.
 revoke all on public.video_call_rooms from anon, authenticated;
 revoke all on public.video_call_participants from anon, authenticated;
 grant select, insert, update, delete on public.video_call_rooms to authenticated;

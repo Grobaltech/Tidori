@@ -98,7 +98,7 @@ export default function Meeting() {
       const weakType = ['2g', 'slow-2g'].includes(effectiveType);
       const mediumType = ['3g', '4g'].includes(effectiveType);
       const poor = weakType || (rtt > 500) || lossRatio > 0.10 || (downlink > 0 && downlink < 0.5);
-      const strong = !poor && ((downlink >= 10 && (!rtt || rtt <= 150)) || (effectiveType === '5g' && (!rtt || rtt <= 150))) && lossRatio < 0.03;
+      const strong = !poor && !mediumType && ((downlink >= 10 && (!rtt || rtt <= 150)) || (effectiveType === '5g' && (!rtt || rtt <= 150))) && lossRatio < 0.03;
       if (poor) setNetworkQuality({ level: 'poor', label: 'Poor connection', detail: 'Weak network, high delay or packet loss. Try moving closer to a stronger signal.' });
       else if (strong) setNetworkQuality({ level: 'good', label: 'Good connection', detail: 'Strong connection (5G+ quality tier).' });
       else if (mediumType || downlink > 0 || rtt > 0) setNetworkQuality({ level: 'medium', label: 'Medium connection', detail: 'Moderate connection (4G/3G quality tier).' });

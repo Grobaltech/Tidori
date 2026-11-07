@@ -10,6 +10,7 @@ import { getSiteContent } from '../lib/api';
 import NewsletterForm from './NewsletterForm';
 import SearchPanel from './SearchPanel';
 import { supabase, supabaseReady } from '../lib/supabase';
+import NotificationBell from './NotificationBell';
 
 const socials = [
   ['facebook', FaFacebookF], ['twitter', FaTwitter], ['youtube', FaYoutube],
@@ -107,6 +108,7 @@ function Navbar() {
           <button type="button" onClick={() => setSearchOpen((value) => !value)} aria-label={searchOpen ? "Close search" : "Open search"} aria-expanded={searchOpen} className={`p-2 text-xl transition-colors hover:text-gold ${searchOpen ? "text-gold" : "text-white"}`}>
             {searchOpen ? <FaTimes /> : <FaSearch />}
           </button>
+          {signedIn && <NotificationBell />}
           <Link to={signedIn ? "/profile" : "/login"} aria-label={signedIn ? "My account" : "Login or register"} title={signedIn ? "My account" : "Login / Register"} className="p-2 text-xl text-white transition-colors hover:text-gold">
             <FaUserCircle />
           </Link>

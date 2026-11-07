@@ -163,7 +163,7 @@ export default function Profile() {
     return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
   };
 
-  const createVideoTestRoom = async () => {
+  const createVideoTestRoom = async (mode = 'video') => {
     if (!user) return;
     setTestRoomBusy(true); setVideoTestError(''); setMessage('');
     try {
@@ -176,6 +176,7 @@ export default function Profile() {
         appointment_id: null,
         owner_user_id: user.id,
         is_test: true,
+        call_mode: mode,
         room_code: crypto.randomUUID(),
         status: 'scheduled',
         created_by: user.id,
@@ -186,15 +187,16 @@ export default function Profile() {
 
       const { error: participantError } = await supabase.from('video_call_participants').insert([
         { room_id: room.id, user_id: user.id, display_name: profile.full_name || user.email || 'Tidori member', participant_role: 'host', status: 'invited' },
-        { room_id: room.id, user_id: null, display_name: 'Video test guest', participant_role: 'guest', status: 'invited' },
+        { room_id: room.id, user_id: null, display_name: `${mode === 'audio' ? 'Audio' : 'Video'} test guest`, participant_role: 'guest', status: 'invited' },
       ]);
       if (participantError) throw participantError;
 
       const base = window.location.origin;
       setTestRoom({
         ...room,
-        hostLink: `${base}/meeting/${room.room_code}#key=${hostToken}`,
-        guestLink: `${base}/meeting/${room.room_code}#key=${guestToken}`,
+        call_mode: mode,
+        hostLink: `${base}/meeting/${room.room_code}?mode=${mode}#key=${hostToken}`,
+        guestLink: `${base}/meeting/${room.room_code}?mode=${mode}#key=${guestToken}`,
       });
     } catch (err) {
       setVideoTestError(err.message || 'Could not create a video test room. Confirm the member video-call SQL migration has been run.');
@@ -277,14 +279,19 @@ export default function Profile() {
           <button className="btn-custom w-full" disabled={saving}>{saving ? 'Saving...' : 'Save Member Profile'}</button>
         </form>
         <section className="mt-8 border-t border-gray-300 pt-6">
-          <h2 className="mb-2 text-xl font-semibold">Video calling test</h2>
-          <p className="mb-4 text-sm text-gray-600">Create a private test meeting to check your camera, microphone, internet connection and two-device calling. Open the pastor/host link on this device and the guest link on another device.</p>
-          <button type="button" onClick={createVideoTestRoom} disabled={testRoomBusy} className="btn-custom disabled:opacity-50">
-            {testRoomBusy ? 'Creating secure test room…' : 'Create video call test'}
-          </button>
+          <h2 className="mb-2 text-xl font-semibold">Audio and video call tests</h2>
+          <p className="mb-4 text-sm text-gray-600">Create a private test room and check your microphone, camera (video test only), speaker, internet connection and two-device calling. Open the host link on this device and the guest link on another device.</p>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => createVideoTestRoom('audio')} disabled={testRoomBusy} className="btn-custom disabled:opacity-50">
+              {testRoomBusy ? 'Creating secure test room…' : 'Test audio call'}
+            </button>
+            <button type="button" onClick={() => createVideoTestRoom('video')} disabled={testRoomBusy} className="btn-custom disabled:opacity-50">
+              {testRoomBusy ? 'Creating secure test room…' : 'Test video call'}
+            </button>
+          </div>
           {videoTestError && <p role="alert" className="mt-3 text-sm text-red-600">{videoTestError}</p>}
           {testRoom && <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-            <p className="font-semibold text-navy">Test room saved</p>
+            <p className="font-semibold text-navy">{testRoom.call_mode === 'audio' ? 'Audio' : 'Video'} test room saved</p>
             <p className="mt-1 text-xs text-gray-500">Room: {testRoom.room_code}</p>
             <a href={testRoom.hostLink} className="mt-3 inline-block rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white">Open pastor / host call</a>
             <div className="mt-3 break-all text-xs text-gray-600">Guest link: {testRoom.guestLink}</div>

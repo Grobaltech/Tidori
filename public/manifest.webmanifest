@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "Tidori Ministries",
+  "short_name": "Tidori",
+  "description": "Tidori Ministries - a community of faith, hope and service.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#20212b",
+  "categories": ["lifestyle", "social"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

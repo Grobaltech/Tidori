@@ -3,10 +3,14 @@ import { supabase } from '../lib/supabase';
 
 export default function AppointmentForm() {
   const [form,setForm] = useState({ full_name:'', email:'', phone:'', appointment_type:'Appointment with the Pastor', meeting_mode:'in_person', date:'', time:'', notes:'' });
-  const [busy,setBusy] = useState(false);\n  const [feeRules,setFeeRules] = useState([]);\n  const [feesLoading,setFeesLoading] = useState(true);
+  const [busy,setBusy] = useState(false);
+  const [feeRules,setFeeRules] = useState([]);
+  const [feesLoading,setFeesLoading] = useState(true);
   const [message,setMessage] = useState('');
   const [error,setError] = useState('');
-  const update = event => setForm(current=>({...current,[event.target.name]:event.target.value}));\n  const selectedFee = useMemo(() => feeRules.find(rule => rule.appointment_type === form.appointment_type && rule.meeting_mode === form.meeting_mode) || null, [feeRules, form.appointment_type, form.meeting_mode]);\n  useEffect(() => { let active = true; fetch('/api/appointments/fees',{cache:'no-store'}).then(r=>r.json()).then(data=>{if(active)setFeeRules(Array.isArray(data.rules)?data.rules:[]);}).catch(()=>{if(active)setFeeRules([]);}).finally(()=>{if(active)setFeesLoading(false);}); return ()=>{active=false;}; }, []);
+  const update = event => setForm(current=>({...current,[event.target.name]:event.target.value}));
+  const selectedFee = useMemo(() => feeRules.find(rule => rule.appointment_type === form.appointment_type && rule.meeting_mode === form.meeting_mode) || null, [feeRules, form.appointment_type, form.meeting_mode]);
+  useEffect(() => { let active = true; fetch('/api/appointments/fees',{cache:'no-store'}).then(r=>r.json()).then(data=>{if(active)setFeeRules(Array.isArray(data.rules)?data.rules:[]);}).catch(()=>{if(active)setFeeRules([]);}).finally(()=>{if(active)setFeesLoading(false);}); return ()=>{active=false;}; }, []);
   const submit = async event => {
     event.preventDefault();
     setBusy(true);setError('');setMessage('');
@@ -44,7 +48,8 @@ export default function AppointmentForm() {
       <label className="text-sm font-semibold">Meeting preference<select className="field mt-1" name="meeting_mode" value={form.meeting_mode} onChange={update}><option value="in_person">In-person at the church</option><option value="phone">Phone call (telephone)</option><option value="audio">Audio call (online, microphone only)</option><option value="video">Video call (camera and microphone)</option></select></label>
       <label className="text-sm font-semibold">Preferred date<input className="field mt-1" type="date" name="date" min={new Date().toISOString().slice(0,10)} value={form.date} onChange={update} required /></label>
       <label className="text-sm font-semibold">Preferred time<input className="field mt-1" type="time" name="time" value={form.time} onChange={update} required /></label>
-      <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm sm:col-span-2">{feesLoading ? "Loading appointment fees…" : selectedFee ? <><span className="text-gray-500">Appointment fee</span><strong className="ml-2 text-lg text-[#191c24]">{selectedFee.currency} {Number(selectedFee.amount).toLocaleString("en-UG")}</strong><p className="mt-1 text-xs text-gray-500">{Number(selectedFee.amount) > 0 ? "You will be redirected to secure Pesapal checkout after submitting." : "This appointment has been explicitly configured as free."}</p></> : <p className="text-amber-700">This appointment option is not configured yet. Please choose another option or contact the church office.</p>}</div>\n      <label className="text-sm font-semibold sm:col-span-2">Additional details<textarea className="field mt-1 min-h-24" name="notes" value={form.notes} onChange={update} maxLength={2000} placeholder="Tell us briefly what you would like to discuss." /></label>
+      <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm sm:col-span-2">{feesLoading ? "Loading appointment fees…" : selectedFee ? <><span className="text-gray-500">Appointment fee</span><strong className="ml-2 text-lg text-[#191c24]">{selectedFee.currency} {Number(selectedFee.amount).toLocaleString("en-UG")}</strong><p className="mt-1 text-xs text-gray-500">{Number(selectedFee.amount) > 0 ? "You will be redirected to secure Pesapal checkout after submitting." : "This appointment has been explicitly configured as free."}</p></> : <p className="text-amber-700">This appointment option is not configured yet. Please choose another option or contact the church office.</p>}</div>
+      <label className="text-sm font-semibold sm:col-span-2">Additional details<textarea className="field mt-1 min-h-24" name="notes" value={form.notes} onChange={update} maxLength={2000} placeholder="Tell us briefly what you would like to discuss." /></label>
       {error&&<p role="alert" className="text-sm text-red-600 sm:col-span-2">{error}</p>}
       {message&&<p role="status" className="text-sm text-green-700 sm:col-span-2">{message}</p>}
       <div className="sm:col-span-2"><button className="btn-custom" type="submit" disabled={busy || feesLoading || !selectedFee}>{busy?'Processing…':selectedFee && Number(selectedFee.amount)>0?'Request & pay securely':'Request appointment'}</button></div>

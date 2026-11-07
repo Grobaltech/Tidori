@@ -27,6 +27,9 @@ export default function Profile() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [messageSent, setMessageSent] = useState('');
   const [messageError, setMessageError] = useState('');
+  const [testRoomBusy, setTestRoomBusy] = useState(false);
+  const [testRoom, setTestRoom] = useState(null);
+  const [videoTestError, setVideoTestError] = useState('');
 
   useEffect(() => {
     if (!supabaseReady) { setBusy(false); return; }
@@ -150,6 +153,56 @@ export default function Profile() {
     } finally { setSendingMessage(false); }
   };
 
+  const makeVideoToken = () => Array.from(
+    crypto.getRandomValues(new Uint8Array(32)),
+    byte => byte.toString(16).padStart(2, '0')
+  ).join('');
+
+  const hashVideoToken = async token => {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  };
+
+  const createVideoTestRoom = async () => {
+    if (!user) return;
+    setTestRoomBusy(true); setVideoTestError(''); setMessage('');
+    try {
+      const hostToken = makeVideoToken();
+      const guestToken = makeVideoToken();
+      const [hostTokenHash, guestTokenHash] = await Promise.all([
+        hashVideoToken(hostToken), hashVideoToken(guestToken)
+      ]);
+      const { data: room, error: roomError } = await supabase.from('video_call_rooms').insert({
+        appointment_id: null,
+        owner_user_id: user.id,
+        is_test: true,
+        room_code: crypto.randomUUID(),
+        status: 'scheduled',
+        created_by: user.id,
+        host_token_hash: hostTokenHash,
+        guest_token_hash: guestTokenHash,
+      }).select('id,room_code,status,created_at').single();
+      if (roomError) throw roomError;
+
+      const { error: participantError } = await supabase.from('video_call_participants').insert([
+        { room_id: room.id, user_id: user.id, display_name: profile.full_name || user.email || 'Tidori member', participant_role: 'host', status: 'invited' },
+        { room_id: room.id, user_id: null, display_name: 'Video test guest', participant_role: 'guest', status: 'invited' },
+      ]);
+      if (participantError) throw participantError;
+
+      const base = window.location.origin;
+      setTestRoom({
+        ...room,
+        hostLink: `${base}/meeting/${room.room_code}#key=${hostToken}`,
+        guestLink: `${base}/meeting/${room.room_code}#key=${guestToken}`,
+      });
+    } catch (err) {
+      setVideoTestError(err.message || 'Could not create a video test room. Confirm the member video-call SQL migration has been run.');
+    } finally {
+      setTestRoomBusy(false);
+    }
+  };
+
   const logout = async () => { await supabase.auth.signOut(); navigate('/'); };
 
   if (busy) return <div className="container-page py-20 text-center">Loading your profile...</div>;
@@ -223,6 +276,23 @@ export default function Profile() {
           {message && <p role="status" className="text-sm text-green-700">{message}</p>}
           <button className="btn-custom w-full" disabled={saving}>{saving ? 'Saving...' : 'Save Member Profile'}</button>
         </form>
+        <section className="mt-8 border-t border-gray-300 pt-6">
+          <h2 className="mb-2 text-xl font-semibold">Video calling test</h2>
+          <p className="mb-4 text-sm text-gray-600">Create a private test meeting to check your camera, microphone, internet connection and two-device calling. Open the pastor/host link on this device and the guest link on another device.</p>
+          <button type="button" onClick={createVideoTestRoom} disabled={testRoomBusy} className="btn-custom disabled:opacity-50">
+            {testRoomBusy ? 'Creating secure test room…' : 'Create video call test'}
+          </button>
+          {videoTestError && <p role="alert" className="mt-3 text-sm text-red-600">{videoTestError}</p>}
+          {testRoom && <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+            <p className="font-semibold text-navy">Test room saved</p>
+            <p className="mt-1 text-xs text-gray-500">Room: {testRoom.room_code}</p>
+            <a href={testRoom.hostLink} className="mt-3 inline-block rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white">Open pastor / host call</a>
+            <div className="mt-3 break-all text-xs text-gray-600">Guest link: {testRoom.guestLink}</div>
+            <button type="button" onClick={() => navigator.clipboard?.writeText(testRoom.guestLink)} className="mt-2 text-sm font-semibold text-[#009cff]">Copy guest link</button>
+            <p className="mt-2 text-xs text-gray-500">Keep the guest link private and use it only on your second device. The invitation keys are shown once for security.</p>
+          </div>}
+        </section>
+
         <section className="mt-8 border-t border-gray-300 pt-6">
           <h2 className="mb-2 text-xl font-semibold">Send a message to Tidori</h2>
           <p className="mb-4 text-sm text-gray-600">Send a question or request directly to the church administration team. Your account name and email will be attached automatically.</p>

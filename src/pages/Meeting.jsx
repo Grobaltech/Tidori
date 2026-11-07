@@ -35,6 +35,7 @@ export default function Meeting() {
   const [participantRole, setParticipantRole] = useState('guest');
   const [guestWaiting, setGuestWaiting] = useState(false);
   const [admitted, setAdmitted] = useState(false);
+  const [turnConfigured, setTurnConfigured] = useState(false);
 
   const send = packet => {
     const socket = socketRef.current;
@@ -63,14 +64,16 @@ export default function Meeting() {
     }
     setJoining(true); setError(''); setStatus('Requesting camera and microphone access…');
     try {
+      const iceResponse = await fetch(`/api/video/rooms/${roomCode}/ice?key=${encodeURIComponent(accessKey)}`);
+      const iceConfig = await iceResponse.json().catch(() => ({}));
+      if (!iceResponse.ok) throw new Error(iceConfig.error || 'This meeting invitation is invalid or has expired.');
+      setTurnConfigured(Boolean(iceConfig.turnConfigured));
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
       localStreamRef.current = stream;
       cameraTrackRef.current = stream.getVideoTracks()[0] || null;
       if (localVideo.current) localVideo.current.srcObject = stream;
 
-      const peer = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-      });
+      const peer = new RTCPeerConnection({ iceServers: iceConfig.iceServers || [{ urls: 'stun:stun.l.google.com:19302' }] });
       peerRef.current = peer;
       stream.getTracks().forEach(track => peer.addTrack(track, stream));
       peer.ontrack = event => {
@@ -212,14 +215,17 @@ export default function Meeting() {
           if (sender && cameraTrackRef.current) await sender.replaceTrack(cameraTrackRef.current);
           displayStreamRef.current = null;
           setSharing(false);
+          send({ type: 'screen-share-stopped' });
         };
         setSharing(true);
+        send({ type: 'screen-share-started' });
       } else {
         const sender = peerRef.current.getSenders().find(item => item.track?.kind === 'video');
         if (sender && cameraTrackRef.current) await sender.replaceTrack(cameraTrackRef.current);
         displayStreamRef.current?.getTracks().forEach(track => track.stop());
         displayStreamRef.current = null;
         setSharing(false);
+        send({ type: 'screen-share-stopped' });
       }
     } catch (shareError) {
       setError(shareError.message || 'Screen sharing was cancelled or is unavailable.');
@@ -260,7 +266,7 @@ export default function Meeting() {
           </div>}
           {joined && participantRole === 'host' && guestWaiting && <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-950/40 p-3"><p className="text-sm font-semibold text-amber-100">A visitor is waiting to join.</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={admitGuest} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold">Admit visitor</button><button type="button" onClick={removeGuest} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold">Decline</button></div></div>}
           {joined && participantRole === 'host' && admitted && <button type="button" onClick={endCallForEveryone} className="mt-3 w-full rounded-lg bg-red-800 px-3 py-2 text-sm font-semibold">End meeting for everyone</button>}
-          <div className="mt-5 border-t border-white/10 pt-4 text-xs leading-5 text-slate-400">Your role: <strong>{participantRole === 'host' ? 'Pastor / host' : 'Visitor'}</strong><br />Room ID: <span className="break-all font-mono">{roomCode}</span><br />For a successful two-way call, both participants should use a modern browser and allow camera/microphone access.</div>
+          <div className="mt-5 border-t border-white/10 pt-4 text-xs leading-5 text-slate-400">Your role: <strong>{participantRole === 'host' ? 'Pastor / host' : 'Visitor'}</strong><br />Room ID: <span className="break-all font-mono">{roomCode}</span><br />For a successful two-way call, both participants should use a modern browser and allow camera/microphone access. {turnConfigured ? 'Relay connectivity is configured.' : 'TURN relay is not configured yet; some networks may not connect.'}</div>
         </aside>
       </div>
     </div>

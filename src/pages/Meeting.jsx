@@ -4,7 +4,7 @@ import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash, FaPhoneSlash, F
 import { useDocTitle } from '../hooks/hooks';
 import { Capacitor } from '@capacitor/core';
 
-const VIDEO_API_ORIGIN = 'https://tidori.grobaltechtechnologies.workers.dev';
+const VIDEO_API_ORIGIN = 'https://tidori-ministries.grobaltechtechnologies.workers.dev';
 
 const labelForError = error => {
   if (error?.name === 'NotAllowedError') return 'Camera or microphone permission was denied. Allow access in your browser settings and try again.';

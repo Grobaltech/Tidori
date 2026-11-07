@@ -11,6 +11,13 @@
   "background_color": "#ffffff",
   "theme_color": "#20212b",
   "categories": ["lifestyle", "social"],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "/manifest.webmanifest",
+      "id": "https://tidori.grobaltechtechnologies.workers.dev/"
+    }
+  ],
   "icons": [
     {
       "src": "/icons/tidori-192.svg",

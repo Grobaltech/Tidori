@@ -8,6 +8,8 @@ on:
       - 'capacitor.config.json'
       - 'firebase/google-services.json'
       - 'native/android/**'
+      - 'worker/**'
+      - 'supabase/**'
       - 'src/**'
       - 'public/**'
       - 'package.json'

@@ -102,6 +102,15 @@ for each row execute function private.notify_tidori_prayer();
 -- Link authenticated appointment requests to their member account so status changes can be delivered privately.
 alter table public.appointments add column if not exists user_id uuid references auth.users(id) on delete set null;
 
+-- A signed-in visitor may only attach their own account to an appointment.
+drop policy if exists "Public can request an appointment" on public.appointments;
+create policy "Public can request an appointment" on public.appointments
+  for insert to anon, authenticated
+  with check (
+    status = 'requested' and payment_status = 'unpaid' and fee_amount = 0
+    and (user_id is null or user_id = (select auth.uid()))
+  );
+
 -- Notify administrators on new requests and the member when their appointment changes.
 create or replace function private.notify_tidori_appointment()
 returns trigger language plpgsql security definer set search_path = ''

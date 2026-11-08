@@ -37,6 +37,8 @@ export default function Bursaries() {
   const [villages,setVillages] = useState([]);
   const [locBusy,setLocBusy] = useState(false);
   const [results,setResults] = useState([]);
+  const [nationalIdFile,setNationalIdFile] = useState(null);
+  const [passportFile,setPassportFile] = useState(null);
 
   const set = (key,value) => setForm(current=>({...current,[key]:value}));
   const token = async () => {
@@ -78,7 +80,7 @@ export default function Bursaries() {
     return()=>{active=false;};
   },[]);
 
-  useEffect(()=>{if(!form.region)return;let active=true;setLocBusy(true);setDistricts([]);setCounties([]);setSubcounties([]);setParishes([]);setVillages([]);set(['district','county','subcounty','parish','village'].join(''), '');
+  useEffect(()=>{if(!form.region)return;let active=true;setLocBusy(true);setDistricts([]);setCounties([]);setSubcounties([]);setParishes([]);setVillages([]);set('district','');set('county','');set('subcounty','');set('parish','');set('village','');
     fetch(LOCATION_API+'/districts?regionId='+encodeURIComponent(form.region)).then(r=>r.json()).then(d=>{if(active)setDistricts(unwrap(d));}).catch(()=>setError('Could not load districts for the selected region.')).finally(()=>{if(active)setLocBusy(false);});
     return()=>{active=false;};
   },[form.region]);
@@ -100,7 +102,20 @@ export default function Bursaries() {
   const application=rows.find(r=>r.id===selected) || paidRows[0];
   const update=async e=>{
     e.preventDefault();if(!application)return;setSaving(true);setError('');setNotice('');
-    try{const data=await api('/api/bursary/applications',{method:'POST',body:JSON.stringify({...form,application_id:application.id})});setNotice('Your bursary application has been submitted successfully.');setResults(data.application?[data.application]:[]);await loadApplications();}
+    try{
+      const uploadPrivate = async (file, label) => {
+        if (!file) return null;
+        if (!['image/jpeg','image/png','image/webp','application/pdf'].includes(file.type) || file.size > 10*1024*1024) throw new Error(label+' must be JPG, PNG, WebP or PDF and no larger than 10 MB.');
+        const ext = file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'');
+        const path = user.id+'/'+application.id+'/'+label+'-'+Date.now()+'.'+ext;
+        const {error:uploadError}=await supabase.storage.from('bursary-private').upload(path,file,{contentType:file.type,upsert:false});
+        if(uploadError) throw uploadError;
+        return path;
+      };
+      const [national_id_document_path,passport_photo_path]=await Promise.all([
+        uploadPrivate(nationalIdFile,'national-id'),uploadPrivate(passportFile,'passport-photo')
+      ]);
+      const data=await api('/api/bursary/applications',{method:'POST',body:JSON.stringify({...form,application_id:application.id,national_id_document_path,passport_photo_path})});setNotice('Your bursary application has been submitted successfully.');setResults(data.application?[data.application]:[]);await loadApplications();}
     catch(e){setError(e.message);}finally{setSaving(false);}
   };
   const pay=async()=>{
@@ -127,6 +142,10 @@ export default function Bursaries() {
           <div className="mb-5 flex flex-wrap items-center gap-4"><img src={photoQr||'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=Tidori+Bursary'} alt="Application QR code" className="h-24 w-24"/><div><p className="font-semibold">Application serial</p><p>{application?.application_serial||'Assigned after payment confirmation'}</p></div></div>
           <div className="grid gap-4 sm:grid-cols-2">
             {['applicant_name','class_applied_for','level_applied_for','guardian_name','guardian_contact','guardian_email','former_school','first_choice','option_one','option_two','national_id_number'].map(key=><label key={key} className="block text-sm font-semibold text-navy">{({applicant_name:'Applicant full name',class_applied_for:'Class applied for',level_applied_for:'Level applied for',guardian_name:'Guardian name',guardian_contact:'Guardian contact',guardian_email:'Guardian email',former_school:'Former school',first_choice:'First school choice',option_one:'School option one',option_two:'School option two',national_id_number:'National Identification Number (NIN)'})[key]}<input className="field mt-2" required value={form[key]} onChange={e=>set(key,e.target.value)} maxLength={key==='national_id_number'?20:160}/></label>)}
+          </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-navy">National ID copy (front or PDF)<input className="field mt-2" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e=>setNationalIdFile(e.target.files?.[0]||null)}/><span className="mt-1 block text-xs font-normal text-gray-500">Private upload, maximum 10 MB.</span></label>
+            <label className="block text-sm font-semibold text-navy">Passport-size applicant photograph<input className="field mt-2" type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setPassportFile(e.target.files?.[0]||null)}/><span className="mt-1 block text-xs font-normal text-gray-500">JPG, PNG or WebP, maximum 10 MB.</span></label>
           </div>
           <label className="mt-4 block text-sm font-semibold text-navy">Stipulated academic results<textarea className="field mt-2" rows="4" required value={form.stipulated_results} onChange={e=>set('stipulated_results',e.target.value)}/></label>
           <div className="mt-7 border-t pt-5"><h3 className="mb-4 text-lg font-semibold">Applicant location — Uganda administrative areas</h3><div className="grid gap-4 sm:grid-cols-2">

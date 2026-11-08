@@ -19,6 +19,8 @@ export default function Login() {
   const [welcomeName, setWelcomeName] = useState('');
 
   const chooseProfile = (profile) => {
+    const requestedNext = params.get('next');
+    if (requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//')) { navigate(requestedNext, { replace: true }); return; }
     if (profile === 'super_admin' || profile === 'admin' || profile === 'church_admin') navigate('/admin', { replace: true });
     else navigate('/profile', { replace: true });
   };
@@ -89,7 +91,8 @@ export default function Login() {
         } else if (choices.length === 1) {
           chooseProfile(choices[0]);
         } else {
-          navigate('/profile', { replace: true });
+          const requestedNext = params.get('next');
+          navigate(requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/profile', { replace: true });
         }
       }
     } catch (err) {

@@ -542,6 +542,90 @@ async function createAppointmentRequest(request, env) {
   }
 }
 
+async function requireApplicant(request, env) {
+  const token = (request.headers.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1];
+  if (!token) return { error: json({ error: "Sign in to your Tidori account before applying." }, 401) };
+  const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) return { error: json({ error: "Your session has expired. Please sign in again." }, 401) };
+  return { user: await response.json() };
+}
+
+async function createBursaryPayment(request, env) {
+  const missing = requiredEnv(env);
+  if (missing.length) return json({ error: `Cloudflare is missing: ${missing.join(", ")}` }, 503);
+  const access = await requireApplicant(request, env);
+  if (access.error) return access.error;
+  const user = access.user;
+  const input = await request.json().catch(() => ({}));
+  const name = clean(input.name, 120);
+  const email = clean(input.email || user.email, 200).toLowerCase();
+  const phone = clean(input.phone, 40);
+  if (name.length < 2 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return json({ error: "Enter the applicant's full name and a valid email." }, 400);
+  const reference = `TIDORI-BURSARY-${crypto.randomUUID()}`;
+  const rows = await supabaseRequest(env, "bursary_applications", {
+    method: "POST", headers: { prefer: "return=representation" },
+    body: JSON.stringify([{ applicant_id: user.id, applicant_name: name, applicant_email: email, applicant_phone: phone || null,
+      application_fee: 11000, currency: "UGX", payment_status: "pending", application_status: "awaiting_payment", merchant_reference: reference }]),
+  });
+  const row = rows?.[0];
+  if (!row?.id) throw new Error("Could not create the bursary payment record.");
+  try {
+    const token = await pesapalToken(env);
+    const origin = new URL(request.url).origin;
+    const ipn = await ensurePesapalIpn(env, token, origin);
+    const [firstName, ...last] = name.split(/\\s+/);
+    const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
+      id: reference, currency: "UGX", amount: 11000, description: "Tidori Bursary and Scholarship Application Fee",
+      callback_url: `${origin}/api/payments/pesapal/callback`, redirect_mode: "PARENT_WINDOW",
+      cancellation_url: `${origin}/bursaries?payment=cancelled&reference=${encodeURIComponent(reference)}`,
+      notification_id: ipn.ipn_id,
+      billing_address: { email_address: email, phone_number: phone || undefined, country_code: "UG", first_name: firstName, last_name: last.join(" ") },
+    });
+    if (!order.redirect_url || !order.order_tracking_id) throw new Error("Pesapal did not return a checkout link.");
+    await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(row.id)}`, {
+      method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ pesapal_order_tracking_id: order.order_tracking_id }),
+    });
+    return json({ redirect_url: order.redirect_url, reference });
+  } catch (error) {
+    await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(row.id)}`, {
+      method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ payment_status: "failed" }),
+    }).catch(() => {});
+    throw error;
+  }
+}
+
+async function bursaryApplicantApi(request, env) {
+  const access = await requireApplicant(request, env);
+  if (access.error) return access.error;
+  const user = access.user;
+  if (request.method === "GET") {
+    const rows = await supabaseRequest(env, `bursary_applications?select=*&applicant_id=eq.${encodeURIComponent(user.id)}&order=created_at.desc`);
+    return json({ applications: rows || [] });
+  }
+  const input = await request.json().catch(() => null);
+  if (!input || typeof input !== "object") return json({ error: "Invalid application data." }, 400);
+  const id = clean(input.application_id, 50);
+  const rows = await supabaseRequest(env, `bursary_applications?select=id,payment_status,application_status& id=eq.${encodeURIComponent(id)}&applicant_id=eq.${encodeURIComponent(user.id)}&limit=1`.replace("& id=", "&id="));
+  const application = rows?.[0];
+  if (!application) return json({ error: "Application not found." }, 404);
+  if (application.payment_status !== "paid") return json({ error: "Complete and verify the UGX 11,000 application fee before opening the form." }, 402);
+  const required = ["applicant_name","class_applied_for","level_applied_for","guardian_name","guardian_contact","region","district","county","subcounty","parish","village","former_school","stipulated_results","first_choice","option_one","option_two","national_id_number"];
+  for (const field of required) if (!clean(input[field], 500)) return json({ error: `Please complete ${field.replaceAll("_", " ")}.` }, 400);
+  const nationalId = clean(input.national_id_number, 20).toUpperCase().replace(/\\s/g, "");
+  if (!/^[A-Z0-9]{8,20}$/.test(nationalId)) return json({ error: "Enter a valid National Identification Number." }, 400);
+  const patch = {};
+  for (const field of required) patch[field] = field === "national_id_number" ? nationalId : clean(input[field], field === "stipulated_results" ? 3000 : 500);
+  for (const field of ["guardian_email","applicant_photo_url"]) if (input[field] !== undefined) patch[field] = clean(input[field], 500) || null;
+  patch.application_status = "submitted";
+  patch.submitted_at = new Date().toISOString();
+  const updated = await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(id)}&applicant_id=eq.${encodeURIComponent(user.id)}&payment_status=eq.paid`, {
+    method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify(patch),
+  });
+  return json({ success: Boolean(updated?.length), application: updated?.[0] || null });
+}
+
 async function verifyPayment(env, trackingId, merchantReference) {
   const token = await pesapalToken(env);
   const url = new URL(`${PESAPAL_BASE}/api/Transactions/GetTransactionStatus`);
@@ -560,6 +644,24 @@ async function verifyPayment(env, trackingId, merchantReference) {
       : status === "REVERSED" || Number(data.status_code) === 3
         ? "reversed"
         : "pending";
+
+  if (merchantReference.startsWith("TIDORI-BURSARY-")) {
+    const records = await supabaseRequest(env, `bursary_applications?select=id,application_fee,currency,payment_status&merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}&limit=1`);
+    const application = records?.[0];
+    if (!application) throw new Error("No matching bursary application payment exists.");
+    if (String(data.currency || "").toUpperCase() !== "UGX" || Math.abs(Number(data.amount) - 11000) > 0.01
+        || Number(application.application_fee) !== 11000 || String(application.currency).toUpperCase() !== "UGX") {
+      throw new Error("The verified Pesapal amount or currency does not match the UGX 11,000 bursary application fee.");
+    }
+    const updated = await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(application.id)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}`, {
+      method: "PATCH", headers: { prefer: "return=representation" },
+      body: JSON.stringify({ payment_status: paymentStatus, ...(paymentStatus === "paid" ? {
+        paid_at: data.created_date || new Date().toISOString(),
+        application_serial: `TMB-${new Date().getFullYear()}-${application.id.slice(0,8).toUpperCase()}`,
+      } : {}) }),
+    });
+    return { paymentStatus, amount: data.amount, currency: data.currency, bursary: true, updated: Boolean(updated?.length) };
+  }
 
   if (merchantReference.startsWith("TIDORI-APPT-")) {
     const records = await supabaseRequest(env,
@@ -706,7 +808,7 @@ async function handleNotification(request, env, isCallback) {
   }
   if (isCallback) {
     const status = result?.paymentStatus || "processing";
-    const destination = merchantReference.startsWith("TIDORI-APPT-") ? "/appointments" : "/give";
+    const destination = merchantReference.startsWith("TIDORI-APPT-") ? "/appointments" : merchantReference.startsWith("TIDORI-BURSARY-") ? "/bursaries" : "/give";
     return Response.redirect(`${url.origin}${destination}?payment=${encodeURIComponent(status)}&reference=${encodeURIComponent(merchantReference)}`, 302);
   }
   return json({
@@ -1080,7 +1182,7 @@ export default {
       if (url.pathname === "/api/appointments/request" && request.method === "POST") {
         return await createAppointmentRequest(request, env);
       }
-      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
+      if (url.pathname === "/api/bursary/payment" && request.method === "POST") return await createBursaryPayment(request, env);\n      if (url.pathname === "/api/bursary/applications" && ["GET", "POST"].includes(request.method)) return await bursaryApplicantApi(request, env);\n      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
         return await createPayment(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {

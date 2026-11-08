@@ -99,6 +99,7 @@ export default function Bursaries() {
 
   const paidRows=rows.filter(r=>r.payment_status==='paid');
   const unpaidRows=rows.filter(r=>r.payment_status!=='paid');
+  const pendingRows=rows.filter(r=>r.payment_status==='pending');
   const application=rows.find(r=>r.id===selected) || paidRows[0];
   const update=async e=>{
     e.preventDefault();if(!application)return;setSaving(true);setError('');setNotice('');
@@ -133,7 +134,7 @@ export default function Bursaries() {
       {error&&<p role="alert" className="mb-5 rounded bg-red-50 p-3 text-red-700">{error}</p>}
       {notice&&<p role="status" className="mb-5 rounded bg-green-50 p-3 text-green-800">{notice}</p>}
       {params.get('payment')==='cancelled'&&<p className="mb-5 rounded bg-yellow-50 p-3 text-yellow-900">Checkout was cancelled. Your application remains locked until payment is completed.</p>}
-      {!paidRows.length ? <div className="rounded-xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Unlock your application form</h2><p className="mt-2 text-gray-600">Sign in with your Tidori account, then pay the fixed application fee. The form unlocks only after Pesapal confirms payment.</p><button type="button" className="btn-custom mt-5" onClick={pay}>Pay UGX 11,000 with Pesapal</button>{unpaidRows.length>0&&<p className="mt-3 text-sm text-amber-700">You have a payment awaiting confirmation. Please do not pay again; refresh this page shortly or contact Tidori if it remains pending.</p>}</div> : <>
+      {!paidRows.length ? <div className="rounded-xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Unlock your application form</h2><p className="mt-2 text-gray-600">Sign in with your Tidori account, then pay the fixed application fee. The form unlocks only after Pesapal confirms payment.</p>{pendingRows.length ? <button type="button" className="btn-custom mt-5" onClick={loadApplications}>Refresh payment status</button> : <button type="button" className="btn-custom mt-5" onClick={pay}>Pay UGX 11,000 with Pesapal</button>}{pendingRows.length>0&&<p className="mt-3 text-sm text-amber-700">You have a payment awaiting confirmation. A second checkout is blocked while this payment is pending.</p>}</div> : <>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold">Your application</h2><span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">Payment verified</span></div>
         {paidRows.length>1&&<label className="mb-5 block text-sm font-semibold">Choose application<select className="field mt-2" value={selected||paidRows[0].id} onChange={e=>setSelected(e.target.value)}>{paidRows.map(r=><option key={r.id} value={r.id}>{r.application_serial||r.merchant_reference} — {r.application_status}</option>)}</select></label>}
         {application?.application_status==='submitted' ? <div className="rounded-xl border bg-white p-6" id="bursary-print">

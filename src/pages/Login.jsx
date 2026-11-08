@@ -54,7 +54,15 @@ export default function Login() {
           throw new Error(`You are signed in, but we could not verify your account permissions: ${roleError.message}`);
         }
 
-        const accountRole = String(accountProfile?.role || 'member').trim().toLowerCase();
+        if (!accountProfile?.role) {
+          throw new Error('Your account profile is missing its assigned role. Please contact a Tidori administrator; the system will not assume you are a member.');
+        }
+
+        const accountRole = String(accountProfile.role).trim().toLowerCase();
+        if (!['member', 'leader', 'admin', 'super_admin'].includes(accountRole)) {
+          throw new Error('Your account has an unrecognised role. Please contact a Tidori administrator.');
+        }
+
         let hasPortalAccess = ['admin', 'super_admin'].includes(accountRole);
         if (!hasPortalAccess) {
           const { data: grants, error: grantsError } = await supabase.from('user_permissions').select('permission').eq('user_id', authData.user.id).limit(1);

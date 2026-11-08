@@ -634,8 +634,27 @@ async function verifyPayment(env, trackingId, merchantReference) {
   url.searchParams.set("orderTrackingId", trackingId);
   const response = await fetch(url, { headers: { accept: "application/json", authorization: `Bearer ${token}` } });
   const data = await response.json();
-  if (!response.ok || data.error || String(data.merchant_reference || "") !== merchantReference) {
-    throw new Error(data.error?.message || "Could not verify the Pesapal transaction reference.");
+  // Pesapal's documented successful response may still contain an
+  // "error" object whose fields are all null. Only treat it as an error
+  // when it actually contains an error code/type/message.
+  const apiError = data?.error && (
+    data.error.message || data.error.code || data.error.error_type || data.error.type
+  );
+  if (!response.ok || apiError || String(data.merchant_reference || "") !== merchantReference) {
+    const reason = apiError
+      ? String(data.error.message || data.error.code || data.error.error_type || data.error.type)
+      : !response.ok
+        ? `Pesapal status request failed with HTTP ${response.status}.`
+        : "Pesapal returned a different merchant reference.";
+    console.error("Pesapal status verification rejected:", {
+      trackingId,
+      merchantReference,
+      httpStatus: response.status,
+      returnedMerchantReference: data?.merchant_reference || null,
+      apiError: apiError || null,
+      reason,
+    });
+    throw new Error(reason);
   }
 
   const status = String(data.payment_status_description || "").toUpperCase();

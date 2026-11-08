@@ -543,7 +543,7 @@ async function createAppointmentRequest(request, env) {
 }
 
 async function requireApplicant(request, env) {
-  const token = (request.headers.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token = (request.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return { error: json({ error: "Sign in to your Tidori account before applying." }, 401) };
   const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${token}` },
@@ -562,7 +562,7 @@ async function createBursaryPayment(request, env) {
   const name = clean(input.name, 120);
   const email = clean(input.email || user.email, 200).toLowerCase();
   const phone = clean(input.phone, 40);
-  if (name.length < 2 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return json({ error: "Enter the applicant's full name and a valid email." }, 400);
+  if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Enter the applicant's full name and a valid email." }, 400);
   const reference = `TIDORI-BURSARY-${crypto.randomUUID()}`;
   const rows = await supabaseRequest(env, "bursary_applications", {
     method: "POST", headers: { prefer: "return=representation" },
@@ -575,7 +575,7 @@ async function createBursaryPayment(request, env) {
     const token = await pesapalToken(env);
     const origin = new URL(request.url).origin;
     const ipn = await ensurePesapalIpn(env, token, origin);
-    const [firstName, ...last] = name.split(/\\s+/);
+    const [firstName, ...last] = name.split(/\s+/);
     const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
       id: reference, currency: "UGX", amount: 11000, description: "Tidori Bursary and Scholarship Application Fee",
       callback_url: `${origin}/api/payments/pesapal/callback`, redirect_mode: "PARENT_WINDOW",
@@ -613,7 +613,7 @@ async function bursaryApplicantApi(request, env) {
   if (application.payment_status !== "paid") return json({ error: "Complete and verify the UGX 11,000 application fee before opening the form." }, 402);
   const required = ["applicant_name","class_applied_for","level_applied_for","guardian_name","guardian_contact","region","district","county","subcounty","parish","village","former_school","stipulated_results","first_choice","option_one","option_two","national_id_number"];
   for (const field of required) if (!clean(input[field], 500)) return json({ error: `Please complete ${field.replaceAll("_", " ")}.` }, 400);
-  const nationalId = clean(input.national_id_number, 20).toUpperCase().replace(/\\s/g, "");
+  const nationalId = clean(input.national_id_number, 20).toUpperCase().replace(/\s/g, "");
   if (!/^[A-Z0-9]{8,20}$/.test(nationalId)) return json({ error: "Enter a valid National Identification Number." }, 400);
   const patch = {};
   for (const field of required) patch[field] = field === "national_id_number" ? nationalId : clean(input[field], field === "stipulated_results" ? 3000 : 500);

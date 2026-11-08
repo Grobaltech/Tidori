@@ -1,22 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
+import LocationPicker from '../components/LocationPicker';
 import { supabase, supabaseReady } from '../lib/supabase';
 
-const LOCATION_API = 'https://data.mnwll.tech/api';
 const empty = { applicant_name:'', class_applied_for:'', level_applied_for:'', guardian_name:'', guardian_contact:'', guardian_email:'', region:'', district:'', county:'', subcounty:'', parish:'', village:'', former_school:'', stipulated_results:'', first_choice:'', option_one:'', option_two:'', national_id_number:'' };
-const unwrap = value => Array.isArray(value) ? value : value?.data || value?.items || value?.results || [];
-const labelOf = item => item?.name?.en || item?.name?.local || item?.name || item?.label || '';
-const idOf = item => item?.id || item?.code || item?.slug || labelOf(item);
-
-function LocationSelect({label,value,items,disabled,onChange}) {
-  return <label className="block text-sm font-semibold text-navy">{label}
-    <select className="field mt-2" value={value} disabled={disabled} required onChange={e=>onChange(e.target.value)}>
-      <option value="">Select {label.toLowerCase()}</option>{items.map(item=><option key={idOf(item)} value={idOf(item)}>{labelOf(item)}</option>)}
-    </select>
-  </label>;
-}
-
 export default function Bursaries() {
   const [params] = useSearchParams();
   const [user,setUser] = useState(null);
@@ -30,14 +18,6 @@ export default function Bursaries() {
   const [notice,setNotice] = useState('');
   const [checkout,setCheckout] = useState('');
   const [checkoutReference,setCheckoutReference] = useState('');
-  const [regions,setRegions] = useState([]);
-  const [districts,setDistricts] = useState([]);
-  const [counties,setCounties] = useState([]);
-  const [subcounties,setSubcounties] = useState([]);
-  const [parishes,setParishes] = useState([]);
-  const [villages,setVillages] = useState([]);
-  const [locBusy,setLocBusy] = useState(false);
-  const [locationError,setLocationError] = useState('');
   const [results,setResults] = useState([]);
   const [nationalIdFile,setNationalIdFile] = useState(null);
   const [passportFile,setPassportFile] = useState(null);
@@ -72,46 +52,17 @@ export default function Bursaries() {
         const {data:account}=await supabase.from('profiles').select('full_name,email,phone').eq('id',data.user.id).maybeSingle();
         setProfile(account || {});
         setForm(f=>({...f,applicant_name:account?.full_name || data.user.user_metadata?.full_name || ''}));
-        // Load the applicant's own records independently of the optional location directory.
-        // A third-party location API outage must never prevent the bursary portal from opening.
         await loadApplications();
-        try {
-          const regionsResponse=await fetch(LOCATION_API+'/regions');
-          if(!regionsResponse.ok) throw new Error('Uganda location directory returned HTTP '+regionsResponse.status+'.');
-          const regionData=unwrap(await regionsResponse.json());
-          if(!regionData.length) throw new Error('The Uganda location directory returned no regions.');
-          if(active) setRegions(regionData);
-        } catch(locationFailure) {
-          if(active) setLocationError('Uganda location dropdowns are temporarily unavailable. You can still view your bursary account and payment status. Please try again later.');
-          console.warn('Bursary location directory unavailable:', locationFailure?.message || locationFailure);
-        }
       } catch(e){if(active)setError(e.message);}
       finally{if(active)setBusy(false);}
     })();
     return()=>{active=false;};
   },[]);
 
-  useEffect(()=>{if(!form.region)return;let active=true;setLocBusy(true);setDistricts([]);setCounties([]);setSubcounties([]);setParishes([]);setVillages([]);set('district','');set('county','');set('subcounty','');set('parish','');set('village','');
-    fetch(LOCATION_API+'/districts?regionId='+encodeURIComponent(form.region)).then(r=>r.json()).then(d=>{if(active)setDistricts(unwrap(d));}).catch(()=>setError('Could not load districts for the selected region.')).finally(()=>{if(active)setLocBusy(false);});
-    return()=>{active=false;};
-  },[form.region]);
-  useEffect(()=>{if(!form.district)return;let active=true;setCounties([]);setSubcounties([]);setParishes([]);setVillages([]);set('county','');set('subcounty','');set('parish','');set('village','');
-    fetch(LOCATION_API+'/districts/'+encodeURIComponent(form.district)+'/counties').then(r=>r.json()).then(d=>{if(active)setCounties(unwrap(d));}).catch(()=>setError('Could not load counties.'));return()=>{active=false;};
-  },[form.district]);
-  useEffect(()=>{if(!form.county)return;let active=true;setSubcounties([]);setParishes([]);setVillages([]);set('subcounty','');set('parish','');set('village','');
-    fetch(LOCATION_API+'/counties/'+encodeURIComponent(form.county)+'/subcounties').then(r=>r.json()).then(d=>{if(active)setSubcounties(unwrap(d));}).catch(()=>setError('Could not load sub-counties.'));return()=>{active=false;};
-  },[form.county]);
-  useEffect(()=>{if(!form.subcounty)return;let active=true;setParishes([]);setVillages([]);set('parish','');set('village','');
-    fetch(LOCATION_API+'/subcounties/'+encodeURIComponent(form.subcounty)+'/parishes').then(r=>r.json()).then(d=>{if(active)setParishes(unwrap(d));}).catch(()=>setError('Could not load parishes.'));return()=>{active=false;};
-  },[form.subcounty]);
-  useEffect(()=>{if(!form.parish)return;let active=true;setVillages([]);set('village','');
-    fetch(LOCATION_API+'/units?level=village&parishId='+encodeURIComponent(form.parish)+'&limit=1000').then(r=>r.json()).then(d=>{if(active)setVillages(unwrap(d));}).catch(()=>setError('Could not load villages.'));return()=>{active=false;};
-  },[form.parish]);
-
   const paidRows=rows.filter(r=>r.payment_status==='paid');
   const unpaidRows=rows.filter(r=>r.payment_status!=='paid');
   const pendingRows=rows.filter(r=>r.payment_status==='pending');
-  const application=rows.find(r=>r.id===selected) || paidRows[0];
+  const application=rows.find(r=>r.id===selected) || paidRows[0] || rows.find(r=>r.application_status==='draft') || rows[0];
   const update=async e=>{
     e.preventDefault();if(!application)return;setSaving(true);setError('');setNotice('');
     try{
@@ -141,16 +92,16 @@ export default function Bursaries() {
   return <>
     <PageHeader title="Bursary and Scholarship Programme"/>
     <section className="container-page max-w-5xl py-10">
-      <div className="mb-8 rounded-xl bg-ink p-6 text-white"><p className="text-sm uppercase tracking-widest text-gold">Tidori Ministries Uganda</p><h1 className="mt-2 text-3xl">Bursary & Scholarship Programme</h1><p className="mt-3 text-white/80">Applications are available to signed-in applicants after successful payment verification.</p><p className="mt-4 text-2xl font-bold text-gold">UGX 11,000 <span className="text-sm font-normal text-white">application fee</span></p></div>
+      <div className="mb-8 rounded-xl bg-ink p-6 text-white"><p className="text-sm uppercase tracking-widest text-gold">Tidori Ministries Uganda</p><h1 className="mt-2 text-3xl">Bursary & Scholarship Programme</h1><p className="mt-3 text-white/80">Signed-in applicants can now complete the form while payment verification is being restored.</p><p className="mt-4 text-2xl font-bold text-gold">UGX 11,000 <span className="text-sm font-normal text-white">application fee</span></p></div>
       {error&&<p role="alert" className="mb-5 rounded bg-red-50 p-3 text-red-700">{error}</p>}
       {notice&&<p role="status" className="mb-5 rounded bg-green-50 p-3 text-green-800">{notice}</p>}
       {params.get('payment')==='cancelled'&&<p className="mb-5 rounded bg-yellow-50 p-3 text-yellow-900">Checkout was cancelled. Your application remains locked until payment is completed.</p>}
-      {!paidRows.length ? <div className="rounded-xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Unlock your application form</h2><p className="mt-2 text-gray-600">Sign in with your Tidori account, then pay the fixed application fee. The form unlocks only after Pesapal confirms payment.</p>{checkout ? <div className="mt-6 rounded-xl bg-mist p-4 sm:p-6" aria-label="Secure Pesapal checkout">
+      {!application || (application.payment_status!=='paid' && application.application_status!=='draft' && application.application_status!=='submitted') ? <div className="rounded-xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Bursary application access</h2><p className="mt-2 text-gray-600">The application form is temporarily being made available while we resolve Pesapal payment verification. Please refresh this page to create or reopen your draft.</p>{checkout ? <div className="mt-6 rounded-xl bg-mist p-4 sm:p-6" aria-label="Secure Pesapal checkout">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-semibold text-ink">Complete your bursary application payment</h3><p className="text-sm text-ink/70">Secure payment powered by Pesapal. You are still on Tidori Ministries.</p></div><button type="button" className="btn-custom !px-4" onClick={()=>setCheckout('')}>Back</button></div>
           <iframe title="Pesapal secure payment" src={checkout} className="block w-full rounded-lg bg-white" style={{height:'min(780px, 78vh)',minHeight:'560px',border:0}} allow="payment *" referrerPolicy="strict-origin-when-cross-origin"/>
           <p className="mt-3 text-xs text-ink/65">If the payment window does not load, <a className="underline" href={checkout} target="_blank" rel="noopener noreferrer">open secure checkout in a new tab</a>.{checkoutReference ? ' Reference: '+checkoutReference : ''}</p>
         </div> : pendingRows.length ? <button type="button" className="btn-custom mt-5" onClick={loadApplications}>Refresh payment status</button> : <button type="button" className="btn-custom mt-5" onClick={pay}>Pay UGX 11,000 with Pesapal</button>}{!checkout&&pendingRows.length>0&&<p className="mt-3 text-sm text-amber-700">You have a payment awaiting confirmation. A second checkout is blocked while this payment is pending.</p>}</div> : <>
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold">Your application</h2><span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">Payment verified</span></div>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold">Your application</h2><span className={"rounded-full px-3 py-1 text-sm "+(application.payment_status==='paid'?'bg-green-100 text-green-800':'bg-amber-100 text-amber-800')}>{application.payment_status==='paid'?'Payment verified':'Temporary form access · payment pending'}</span></div>
         {paidRows.length>1&&<label className="mb-5 block text-sm font-semibold">Choose application<select className="field mt-2" value={selected||paidRows[0].id} onChange={e=>setSelected(e.target.value)}>{paidRows.map(r=><option key={r.id} value={r.id}>{r.application_serial||r.merchant_reference} — {r.application_status}</option>)}</select></label>}
         {application?.application_status==='submitted' ? <div className="rounded-xl border bg-white p-6" id="bursary-print">
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b-2 border-ink pb-4">
@@ -163,7 +114,7 @@ export default function Bursaries() {
             {['applicant_name','class_applied_for','level_applied_for','guardian_name','guardian_contact','guardian_email','region','district','county','subcounty','parish','village','former_school','stipulated_results','first_choice','option_one','option_two','national_id_number'].map(key=><div key={key} className="border-b border-dotted py-2"><p className="text-xs uppercase text-gray-500">{key.replaceAll('_',' ')}</p><p className="whitespace-pre-wrap text-sm">{application[key]||'—'}</p></div>)}
           </div>
           <div className="mt-6 flex flex-col items-center border-t pt-4"><img src={barcode} alt="Application serial barcode" className="max-w-full"/><p className="mt-2 italic">Time to do right</p></div>
-          <p className="mt-4 text-sm text-green-800">Your application has been submitted successfully. Payment of UGX 11,000 is verified.</p>
+          <p className="mt-4 text-sm text-green-800">Your application has been submitted successfully. {application.payment_status==='paid'?'Payment of UGX 11,000 is verified.':'Your application is saved. Payment is still pending and will be reconciled separately.'}</p>
           <button className="btn-custom mt-4 print:hidden" onClick={()=>window.print()}>Print / Save as PDF</button>
         </div> :
         <form onSubmit={update} className="rounded-xl border bg-white p-5 sm:p-8">
@@ -177,14 +128,7 @@ export default function Bursaries() {
             <label className="block text-sm font-semibold text-navy">Passport-size applicant photograph<input className="field mt-2" type="file" accept="image/jpeg,image/png,image/webp" required onChange={e=>setPassportFile(e.target.files?.[0]||null)}/><span className="mt-1 block text-xs font-normal text-gray-500">JPG, PNG or WebP, maximum 10 MB.</span></label>
           </div>
           <label className="mt-4 block text-sm font-semibold text-navy">Stipulated academic results<textarea className="field mt-2" rows="4" required value={form.stipulated_results} onChange={e=>set('stipulated_results',e.target.value)}/></label>
-          <div className="mt-7 border-t pt-5"><h3 className="mb-4 text-lg font-semibold">Applicant location — Uganda administrative areas</h3>{locationError&&<p role="status" className="mb-3 rounded bg-amber-50 p-3 text-sm text-amber-800">{locationError}</p>}<div className="grid gap-4 sm:grid-cols-2">
-            <LocationSelect label="Region" value={form.region} items={regions} onChange={v=>set('region',v)}/>
-            <LocationSelect label="District / City" value={form.district} items={districts} disabled={!form.region||locBusy} onChange={v=>set('district',v)}/>
-            <LocationSelect label="County / Municipality" value={form.county} items={counties} disabled={!form.district} onChange={v=>set('county',v)}/>
-            <LocationSelect label="Sub-county / Town Council / Division" value={form.subcounty} items={subcounties} disabled={!form.county} onChange={v=>set('subcounty',v)}/>
-            <LocationSelect label="Parish / Ward" value={form.parish} items={parishes} disabled={!form.subcounty} onChange={v=>set('parish',v)}/>
-            <LocationSelect label="Village / Cell" value={form.village} items={villages} disabled={!form.parish} onChange={v=>set('village',v)}/>
-          </div><p className="mt-2 text-xs text-gray-500">Dropdowns are populated hierarchically from the Uganda administrative location directory. Urban areas use their corresponding divisions, wards and cells.</p></div>
+          <div className="mt-7 border-t pt-5"><h3 className="mb-4 text-lg font-semibold">Applicant location — Uganda administrative areas</h3><LocationPicker value={form} onChange={next=>setForm(current=>({...current,...next}))}/></div>
           <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t pt-5"><p className="text-xs text-gray-500">Your National ID details are collected only for bursary applicant verification.</p><button className="btn-custom" disabled={saving}>{saving?'Submitting…':'Submit bursary application'}</button></div>
           {application?.application_serial&&<>
             <section className="mt-6 border-t pt-4"><h3 className="font-bold uppercase">Official use only</h3><div className="mt-3 grid gap-4 sm:grid-cols-2"><p className="border-b border-dotted py-2">Name of staff: ______________________________</p><p className="border-b border-dotted py-2">Staff identification No.: _____________________</p></div></section>

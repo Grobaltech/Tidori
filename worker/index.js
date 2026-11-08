@@ -735,7 +735,9 @@ async function createPayment(request, env) {
     return json({ error: "Enter a valid donation amount." }, 400);
   }
 
-  const currency = clean(env.PESAPAL_CURRENCY || "USD", 3).toUpperCase();
+  const allowedCurrencies = new Set(["UGX","USD","EUR","GBP","KES","TZS","RWF","MWK","ZMW"]);
+  const currency = clean(input.currency || "UGX", 3).toUpperCase();
+  if (!allowedCurrencies.has(currency)) return json({ error: "Please select a supported giving currency." }, 400);
   const merchantReference = `TIDORI-${crypto.randomUUID()}`;
   const [firstName, ...lastParts] = name.split(/\s+/);
   const lastName = lastParts.join(" ");

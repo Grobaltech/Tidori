@@ -33,7 +33,11 @@ export default function LocationPicker({ value = {}, onChange }) {
     </label>
     <label className="block text-sm font-semibold text-navy">District / City *
       <SearchableSelect value={value.district || ''} placeholder="Search districts…" options={districts}
-        onChange={next => update({ region: 'Uganda', district: next, county: '', subcounty: '', parish: '', village: '' })} />
+        onChange={next => {
+          const selectedDistrict = uganda.districts.find(([name]) => name === next)
+          const hasCountyTier = Boolean(selectedDistrict?.[1]?.length)
+          update({ region: 'Uganda', district: next, county: hasCountyTier ? '' : 'Not applicable', subcounty: '', parish: '', village: '' })
+        }} />
     </label>
     <label className="block text-sm font-semibold text-navy">County / Municipality
       {countyNodes.length ? <SearchableSelect value={value.county || ''} disabled={!value.district}

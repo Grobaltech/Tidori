@@ -611,7 +611,7 @@ async function bursaryApplicantApi(request, env) {
   const application = rows?.[0];
   if (!application) return json({ error: "Application not found." }, 404);
   if (application.payment_status !== "paid") return json({ error: "Complete and verify the UGX 11,000 application fee before opening the form." }, 402);
-  const required = ["applicant_name","class_applied_for","level_applied_for","guardian_name","guardian_contact","region","district","county","subcounty","parish","village","former_school","stipulated_results","first_choice","option_one","option_two","national_id_number"];
+  const required = ["applicant_name","class_applied_for","level_applied_for","guardian_name","guardian_contact","region","district","county","subcounty","parish","village","former_school","stipulated_results","first_choice","option_one","option_two","national_id_number","national_id_document_path","passport_photo_path"];
   for (const field of required) if (!clean(input[field], 500)) return json({ error: `Please complete ${field.replaceAll("_", " ")}.` }, 400);
   const nationalId = clean(input.national_id_number, 20).toUpperCase().replace(/\s/g, "");
   if (!/^[A-Z0-9]{8,20}$/.test(nationalId)) return json({ error: "Enter a valid National Identification Number." }, 400);

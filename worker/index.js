@@ -617,7 +617,7 @@ async function bursaryApplicantApi(request, env) {
   if (!/^[A-Z0-9]{8,20}$/.test(nationalId)) return json({ error: "Enter a valid National Identification Number." }, 400);
   const patch = {};
   for (const field of required) patch[field] = field === "national_id_number" ? nationalId : clean(input[field], field === "stipulated_results" ? 3000 : 500);
-  for (const field of ["guardian_email","applicant_photo_url"]) if (input[field] !== undefined) patch[field] = clean(input[field], 500) || null;
+  for (const field of ["guardian_email","applicant_photo_url","national_id_document_path","passport_photo_path"]) if (input[field] !== undefined) patch[field] = clean(input[field], 500) || null;
   patch.application_status = "submitted";
   patch.submitted_at = new Date().toISOString();
   const updated = await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(id)}&applicant_id=eq.${encodeURIComponent(user.id)}&payment_status=eq.paid`, {

@@ -603,8 +603,32 @@ async function bursaryApplicantApi(request, env) {
   if (access.error) return access.error;
   const user = access.user;
   if (request.method === "GET") {
-    const rows = await supabaseRequest(env, `bursary_applications?select=*&applicant_id=eq.${encodeURIComponent(user.id)}&order=created_at.desc`);
-    return json({ applications: rows || [] });
+    let rows = await supabaseRequest(env, `bursary_applications?select=*&applicant_id=eq.${encodeURIComponent(user.id)}&order=created_at.desc`);
+    // TEMPORARY ACCESS MODE: make the application form available while Pesapal
+    // verification is being repaired. Drafts remain payment_status=pending so
+    // they are never mistaken for verified/paid applications.
+    const hasOpenApplication = (rows || []).some((row) =>
+      row.application_status === "draft" || row.application_status === "submitted"
+    );
+    if (!hasOpenApplication) {
+      const draftReference = `TIDORI-BURSARY-DRAFT-${crypto.randomUUID()}`;
+      const created = await supabaseRequest(env, "bursary_applications", {
+        method: "POST",
+        headers: { prefer: "return=representation" },
+        body: JSON.stringify([{
+          applicant_id: user.id,
+          applicant_name: clean(user.user_metadata?.full_name || user.email || "Applicant"),
+          applicant_email: clean(user.email || "", 254),
+          application_fee: 11000,
+          currency: "UGX",
+          payment_status: "pending",
+          application_status: "draft",
+          merchant_reference: draftReference,
+        }]),
+      });
+      if (created?.[0]) rows = [created[0], ...(rows || [])];
+    }
+    return json({ applications: rows || [], temporary_access: true });
   }
   const input = await request.json().catch(() => null);
   if (!input || typeof input !== "object") return json({ error: "Invalid application data." }, 400);
@@ -612,7 +636,10 @@ async function bursaryApplicantApi(request, env) {
   const rows = await supabaseRequest(env, `bursary_applications?select=id,payment_status,application_status& id=eq.${encodeURIComponent(id)}&applicant_id=eq.${encodeURIComponent(user.id)}&limit=1`.replace("& id=", "&id="));
   const application = rows?.[0];
   if (!application) return json({ error: "Application not found." }, 404);
-  if (application.payment_status !== "paid") return json({ error: "Complete and verify the UGX 11,000 application fee before opening the form." }, 402);
+  const temporaryDraftAccess = application.application_status === "draft";
+  if (application.payment_status !== "paid" && !temporaryDraftAccess) {
+    return json({ error: "This application is not eligible for submission." }, 402);
+  }
   const required = ["applicant_name","class_applied_for","level_applied_for","guardian_name","guardian_contact","region","district","county","subcounty","parish","village","former_school","stipulated_results","first_choice","option_one","option_two","national_id_number","national_id_document_path","passport_photo_path"];
   for (const field of required) if (!clean(input[field], 500)) return json({ error: `Please complete ${field.replaceAll("_", " ")}.` }, 400);
   const nationalId = clean(input.national_id_number, 20).toUpperCase().replace(/\s/g, "");
@@ -622,7 +649,8 @@ async function bursaryApplicantApi(request, env) {
   for (const field of ["guardian_email","applicant_photo_url","national_id_document_path","passport_photo_path"]) if (input[field] !== undefined) patch[field] = clean(input[field], 500) || null;
   patch.application_status = "submitted";
   patch.submitted_at = new Date().toISOString();
-  const updated = await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(id)}&applicant_id=eq.${encodeURIComponent(user.id)}&payment_status=eq.paid`, {
+  const paymentFilter = temporaryDraftAccess ? "application_status=eq.draft" : "payment_status=eq.paid";
+  const updated = await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(id)}&applicant_id=eq.${encodeURIComponent(user.id)}&${paymentFilter}`, {
     method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify(patch),
   });
   return json({ success: Boolean(updated?.length), application: updated?.[0] || null });

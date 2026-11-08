@@ -8,7 +8,7 @@ create table if not exists public.profiles (
   email text,
   phone text,
   photo_url text,
-  role text not null default 'member' check (role in ('member','leader','admin')),
+  role text not null default 'member' check (role in ('member','leader','admin','super_admin')),
   member_status text not null default 'visitor' check (member_status in ('visitor','member','leader')),
   join_date date,
   small_group text,

@@ -20,6 +20,7 @@ import MobileAppBridge from './components/MobileAppBridge';
 import Meeting from './pages/Meeting';
 import Community from './pages/Community';
 import Notifications from './pages/Notifications';
+import Bursaries from './pages/Bursaries';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/ministries" element={<Ministries />} />
         <Route path="/team" element={<Team />} />
         <Route path="/give" element={<Give />} />
+        <Route path="/bursaries" element={<Bursaries />} />
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/appointments" element={<Appointments />} />

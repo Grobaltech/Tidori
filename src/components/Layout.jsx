@@ -73,9 +73,9 @@ function Navbar() {
     `block px-4 py-2 text-white hover:text-gold ${isActive ? 'text-gold' : ''}`;
 
   const navItems = activeSite.nav.some(item => item.to === '/appointments')
-    ? activeSite.nav
+    ? [...activeSite.nav, { to: '/bursaries', label: 'Bursaries' }]
     : activeSite.nav.flatMap(item => item.to === '/contact'
-      ? [{ to: '/appointments', label: 'Appointments' }, item]
+      ? [{ to: '/bursaries', label: 'Bursaries' }, { to: '/appointments', label: 'Appointments' }, item]
       : [item]);
 
   return (
@@ -148,7 +148,7 @@ function Footer() {
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Get Involved</h2>
-          {links([['/give', 'Give'], ['/volunteer', 'Serve With Us'], ['/ministries', 'Our Ministries'], ['/team', 'Our Leaders']])}
+          {links([['/give', 'Give'], ['/bursaries', 'Bursaries & Scholarships'], ['/volunteer', 'Serve With Us'], ['/ministries', 'Our Ministries'], ['/team', 'Our Leaders']])}
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Newsletter</h2>

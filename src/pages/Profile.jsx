@@ -16,6 +16,7 @@ export default function Profile() {
   const [profile, setProfile] = useState(emptyProfile);
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -106,6 +107,7 @@ export default function Profile() {
       const { error: saveError } = await supabase.from('profiles').update(updates).eq('id', user.id);
       if (saveError) throw saveError;
       setMessage('Your member profile has been saved.');
+      setEditingProfile(false);
     } catch (err) { setError(err.message || 'Could not save your profile.'); }
     finally { setSaving(false); }
   };
@@ -245,6 +247,22 @@ export default function Profile() {
           </div>
         </div>
 
+        {!editingProfile ? <section className="mb-8 rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><h2 className="text-xl font-semibold text-navy">Your profile details</h2><p className="mt-1 text-sm text-gray-500">Your saved information is shown here. You can update it whenever necessary.</p></div>
+            <button type="button" onClick={() => { setEditingProfile(true); setMessage(''); setError(''); }} className="btn-custom">Edit profile</button>
+          </div>
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Full name</dt><dd className="mt-1 text-sm text-gray-900">{profile.full_name || 'Not provided'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Phone</dt><dd className="mt-1 text-sm text-gray-900">{profile.phone || 'Not provided'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Membership status</dt><dd className="mt-1 text-sm capitalize text-gray-900">{profile.member_status || 'Visitor'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Join date</dt><dd className="mt-1 text-sm text-gray-900">{profile.join_date || 'Not recorded'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Small group</dt><dd className="mt-1 text-sm text-gray-900">{profile.small_group || 'Not provided'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Ministry</dt><dd className="mt-1 text-sm text-gray-900">{profile.ministry || 'Not provided'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Areas served</dt><dd className="mt-1 text-sm text-gray-900">{profile.areas_served?.length ? profile.areas_served.join(', ') : 'Not provided'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Address</dt><dd className="mt-1 text-sm text-gray-900">{profile.address || 'Not provided'}</dd></div>
+          </dl>
+        </section> : <>
         <form onSubmit={save} className="space-y-8">
           <section className="space-y-4">
             <h2 className="border-b border-gray-300 pb-2 text-xl font-semibold">Basic information</h2>
@@ -284,6 +302,7 @@ export default function Profile() {
           {message && <p role="status" className="text-sm text-green-700">{message}</p>}
           <button className="btn-custom w-full" disabled={saving}>{saving ? 'Saving...' : 'Save Member Profile'}</button>
         </form>
+        </>}
         <section className="mt-8 border-t border-gray-300 pt-6">
           <h2 className="mb-2 text-xl font-semibold">Audio and video call tests</h2>
           <p className="mb-4 text-sm text-gray-600">Create a private test room and check your microphone, camera (video test only), speaker, internet connection and two-device calling. Open the host link on this device and the guest link on another device.</p>

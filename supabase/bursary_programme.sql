@@ -34,6 +34,8 @@ create table if not exists public.bursary_applications (
   option_one text,
   option_two text,
   national_id_number text,
+  national_id_document_path text,
+  passport_photo_path text,
   applicant_photo_url text,
   submitted_at timestamptz,
   created_at timestamptz not null default now(),

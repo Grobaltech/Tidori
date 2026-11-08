@@ -11,7 +11,9 @@ export default function FinancialManager() {
   const monthStart = today.slice(0, 7) + '-01';
   const [start, setStart] = useState(monthStart);
   const [end, setEnd] = useState(today);
-  const [donations, setDonations] = useState([]);\n  const [pendingDonations, setPendingDonations] = useState([]);\n  const [reconciling, setReconciling] = useState('');
+  const [donations, setDonations] = useState([]);
+  const [pendingDonations, setPendingDonations] = useState([]);
+  const [reconciling, setReconciling] = useState('');
   const [appointments, setAppointments] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);

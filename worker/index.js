@@ -1195,7 +1195,10 @@ export default {
       if (url.pathname === "/api/payments/pesapal/callback" && request.method === "GET") {
         return await handleNotification(request, env, true);
       }
-      if (url.pathname === "/api/admin/payments/reconcile" && request.method === "POST") {\n        return await reconcilePesapalPayment(request, env);\n      }\n      if (url.pathname === "/api/payments/status" && request.method === "GET") {
+      if (url.pathname === "/api/admin/payments/reconcile" && request.method === "POST") {
+        return await reconcilePesapalPayment(request, env);
+      }
+      if (url.pathname === "/api/payments/status" && request.method === "GET") {
         return await paymentStatus(request, env);
       }
       if (url.pathname.startsWith("/api/")) return json({ error: "Not found." }, 404);

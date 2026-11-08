@@ -1182,7 +1182,9 @@ export default {
       if (url.pathname === "/api/appointments/request" && request.method === "POST") {
         return await createAppointmentRequest(request, env);
       }
-      if (url.pathname === "/api/bursary/payment" && request.method === "POST") return await createBursaryPayment(request, env);\n      if (url.pathname === "/api/bursary/applications" && ["GET", "POST"].includes(request.method)) return await bursaryApplicantApi(request, env);\n      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
+      if (url.pathname === "/api/bursary/payment" && request.method === "POST") return await createBursaryPayment(request, env);
+      if (url.pathname === "/api/bursary/applications" && ["GET", "POST"].includes(request.method)) return await bursaryApplicantApi(request, env);
+      if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
         return await createPayment(request, env);
       }
       if (url.pathname === "/api/payments/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {

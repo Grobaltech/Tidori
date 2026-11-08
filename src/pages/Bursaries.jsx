@@ -171,8 +171,10 @@ export default function Bursaries() {
             <LocationSelect label="Village / Cell" value={form.village} items={villages} disabled={!form.parish} onChange={v=>set('village',v)}/>
           </div><p className="mt-2 text-xs text-gray-500">Dropdowns are populated hierarchically from the Uganda administrative location directory. Urban areas use their corresponding divisions, wards and cells.</p></div>
           <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t pt-5"><p className="text-xs text-gray-500">Your National ID details are collected only for bursary applicant verification.</p><button className="btn-custom" disabled={saving}>{saving?'Submitting…':'Submit bursary application'}</button></div>
-          {application?.application_serial&&<section className="mt-6 border-t pt-4"><h3 className="font-bold uppercase">Official use only</h3><div className="mt-3 grid gap-4 sm:grid-cols-2"><p className="border-b border-dotted py-2">Name of staff: ______________________________</p><p className="border-b border-dotted py-2">Staff identification No.: _____________________</p></div></section>
-          <div className="mt-8 flex flex-col items-center border-t pt-5"><img src={barcode} alt="Application serial barcode" className="max-w-full"/><p className="mt-2 italic">Time to do right</p></div>}
+          {application?.application_serial&&<>
+            <section className="mt-6 border-t pt-4"><h3 className="font-bold uppercase">Official use only</h3><div className="mt-3 grid gap-4 sm:grid-cols-2"><p className="border-b border-dotted py-2">Name of staff: ______________________________</p><p className="border-b border-dotted py-2">Staff identification No.: _____________________</p></div></section>
+            <div className="mt-8 flex flex-col items-center border-t pt-5"><img src={barcode} alt="Application serial barcode" className="max-w-full"/><p className="mt-2 italic">Time to do right</p></div>
+          </>}
         </form>}
       </>}
       <p className="mt-8 text-sm text-gray-500">Need an account? <Link to="/register" className="underline">Register here</Link>. Already registered? <Link to="/login" className="underline">Sign in</Link>.</p>

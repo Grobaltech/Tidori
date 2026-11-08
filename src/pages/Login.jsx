@@ -19,7 +19,7 @@ export default function Login() {
   const [welcomeName, setWelcomeName] = useState('');
 
   const chooseProfile = (profile) => {
-    if (profile === 'super_admin' || profile === 'admin') navigate('/admin', { replace: true });
+    if (profile === 'super_admin' || profile === 'admin' || profile === 'church_admin') navigate('/admin', { replace: true });
     else navigate('/profile', { replace: true });
   };
 
@@ -81,7 +81,7 @@ export default function Login() {
           const { data: grants, error: grantsError } = await supabase.from('user_permissions').select('permission').eq('user_id', authData.user.id).limit(1);
           hasPortalAccess = !grantsError && Boolean(grants?.length);
         }
-        if (hasPortalAccess && !choices.includes('church_admin')) choices.push('church_admin');
+        if (hasPortalAccess && !['admin', 'super_admin'].includes(accountRole) && !choices.includes('church_admin')) choices.push('church_admin');
 
         setWelcomeName(accountProfile.full_name || authData.user.email || 'there');
         if (choices.length > 1) {

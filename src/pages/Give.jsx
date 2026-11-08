@@ -1,14 +1,50 @@
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import SectionHeader from '../components/SectionHeader';
 import GiveForm from '../components/GiveForm';
 
-function PaymentNotice({ status, reference }) {
+function PaymentNotice({ initialStatus, reference }) {
+  const [status, setStatus] = useState(initialStatus);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    setStatus(initialStatus);
+  }, [initialStatus, reference]);
+
+  useEffect(() => {
+    if (!reference || !/^TIDORI-[0-9a-f-]{36}$/i.test(reference) || ['paid', 'failed', 'reversed', 'cancelled'].includes(status)) return;
+    let active = true;
+    let attempts = 0;
+    let timer;
+    const check = async () => {
+      if (!active || attempts >= 24) return;
+      attempts += 1;
+      setChecking(true);
+      try {
+        const response = await fetch(`/api/payments/status?reference=${encodeURIComponent(reference)}`, { cache: 'no-store' });
+        const data = await response.json();
+        if (!active) return;
+        const next = String(data.status || '').toLowerCase();
+        if (['paid', 'failed', 'reversed'].includes(next)) {
+          setStatus(next);
+          setChecking(false);
+          return;
+        }
+      } catch (error) {
+        console.warn('Could not refresh Tidori donation status:', error);
+      }
+      if (active && attempts < 24) timer = setTimeout(check, 5000);
+      else if (active) setChecking(false);
+    };
+    check();
+    return () => { active = false; clearTimeout(timer); };
+  }, [reference, status]); 
   if (!status) return null;
   const messages = {
     paid: { title: 'Thank you — your donation was received.', detail: 'Pesapal has confirmed your payment.' },
     failed: { title: 'The payment was not completed.', detail: 'You can try again using the donation form below.' },
-    pending: { title: 'Your payment is being processed.', detail: 'The payment status is not final yet. Please allow a moment for confirmation.' },
+    pending: { title: 'Confirming your donation with Pesapal…', detail: 'Please keep this page open. Tidori is checking the transaction and will update this message automatically.' },
     processing: { title: 'Your payment is being verified.', detail: 'Tidori is checking the transaction status with Pesapal.' },
     cancelled: { title: 'Checkout was cancelled.', detail: 'No completed payment was confirmed. You can try again below.' },
     reversed: { title: 'This payment was reversed.', detail: 'Please contact Tidori Ministries if you need assistance.' },
@@ -20,6 +56,7 @@ function PaymentNotice({ status, reference }) {
     <div className={`mb-6 rounded-lg border p-4 ${positive ? 'border-green-300 bg-green-50 text-green-900' : 'border-white/30 bg-white/10 text-white'}`} role="status" aria-live="polite">
       <h3 className="font-semibold">{notice.title}</h3>
       <p className="mt-1 text-sm">{notice.detail}</p>
+      {status !== 'paid' && checking && <p className="mt-2 text-xs opacity-80">Checking payment status…</p>}
       {reference && <p className="mt-2 text-xs opacity-80">Reference: {reference}</p>}
     </div>
   );
@@ -38,7 +75,7 @@ export default function Give() {
             <p className="text-white">Your gifts support worship, outreach and care for families in need. Thank you for partnering with Tidori Ministries.</p>
           </div>
           <div>
-            <PaymentNotice status={params.get('payment')} reference={params.get('reference')} />
+            <PaymentNotice initialStatus={params.get('payment')} reference={params.get('reference')} />
             <GiveForm dark projectId={params.get('project')} />
           </div>
         </div>

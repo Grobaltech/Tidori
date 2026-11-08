@@ -37,6 +37,7 @@ export default function Bursaries() {
   const [parishes,setParishes] = useState([]);
   const [villages,setVillages] = useState([]);
   const [locBusy,setLocBusy] = useState(false);
+  const [locationError,setLocationError] = useState('');
   const [results,setResults] = useState([]);
   const [nationalIdFile,setNationalIdFile] = useState(null);
   const [passportFile,setPassportFile] = useState(null);
@@ -71,10 +72,19 @@ export default function Bursaries() {
         const {data:account}=await supabase.from('profiles').select('full_name,email,phone').eq('id',data.user.id).maybeSingle();
         setProfile(account || {});
         setForm(f=>({...f,applicant_name:account?.full_name || data.user.user_metadata?.full_name || ''}));
-        const regionsResponse=await fetch(LOCATION_API+'/regions');
-        if(!regionsResponse.ok) throw new Error('Uganda location directory is temporarily unavailable.');
-        setRegions(unwrap(await regionsResponse.json()));
+        // Load the applicant's own records independently of the optional location directory.
+        // A third-party location API outage must never prevent the bursary portal from opening.
         await loadApplications();
+        try {
+          const regionsResponse=await fetch(LOCATION_API+'/regions');
+          if(!regionsResponse.ok) throw new Error('Uganda location directory returned HTTP '+regionsResponse.status+'.');
+          const regionData=unwrap(await regionsResponse.json());
+          if(!regionData.length) throw new Error('The Uganda location directory returned no regions.');
+          if(active) setRegions(regionData);
+        } catch(locationFailure) {
+          if(active) setLocationError('Uganda location dropdowns are temporarily unavailable. You can still view your bursary account and payment status. Please try again later.');
+          console.warn('Bursary location directory unavailable:', locationFailure?.message || locationFailure);
+        }
       } catch(e){if(active)setError(e.message);}
       finally{if(active)setBusy(false);}
     })();
@@ -167,7 +177,7 @@ export default function Bursaries() {
             <label className="block text-sm font-semibold text-navy">Passport-size applicant photograph<input className="field mt-2" type="file" accept="image/jpeg,image/png,image/webp" required onChange={e=>setPassportFile(e.target.files?.[0]||null)}/><span className="mt-1 block text-xs font-normal text-gray-500">JPG, PNG or WebP, maximum 10 MB.</span></label>
           </div>
           <label className="mt-4 block text-sm font-semibold text-navy">Stipulated academic results<textarea className="field mt-2" rows="4" required value={form.stipulated_results} onChange={e=>set('stipulated_results',e.target.value)}/></label>
-          <div className="mt-7 border-t pt-5"><h3 className="mb-4 text-lg font-semibold">Applicant location — Uganda administrative areas</h3><div className="grid gap-4 sm:grid-cols-2">
+          <div className="mt-7 border-t pt-5"><h3 className="mb-4 text-lg font-semibold">Applicant location — Uganda administrative areas</h3>{locationError&&<p role="status" className="mb-3 rounded bg-amber-50 p-3 text-sm text-amber-800">{locationError}</p>}<div className="grid gap-4 sm:grid-cols-2">
             <LocationSelect label="Region" value={form.region} items={regions} onChange={v=>set('region',v)}/>
             <LocationSelect label="District / City" value={form.district} items={districts} disabled={!form.region||locBusy} onChange={v=>set('district',v)}/>
             <LocationSelect label="County / Municipality" value={form.county} items={counties} disabled={!form.district} onChange={v=>set('county',v)}/>

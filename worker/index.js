@@ -861,10 +861,25 @@ async function paymentStatus(request, env) {
   }
   if (!/^TIDORI-[0-9a-f-]{36}$/i.test(reference)) return json({ error: "Invalid reference." }, 400);
   const rows = await supabaseRequest(env,
-    `donation_pledges?select=status,currency,amount,paid_at&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`
+    `donation_pledges?select=status,currency,amount,paid_at,merchant_reference,pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`
   );
   if (!rows?.length) return json({ error: "Donation not found." }, 404);
-  return json(rows[0]);
+  const donation = rows[0];
+  // A donor may return before the Pesapal IPN has arrived. Re-check the
+  // transaction directly with Pesapal so the page can safely reconcile it.
+  if (donation.status !== "paid" && donation.pesapal_order_tracking_id) {
+    try {
+      const verified = await verifyPayment(env, donation.pesapal_order_tracking_id, reference);
+      const refreshed = await supabaseRequest(env,
+        `donation_pledges?select=status,currency,amount,paid_at&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`
+      );
+      return json({ ...(refreshed?.[0] || donation), verification: verified.paymentStatus });
+    } catch (error) {
+      console.error("Donor payment status refresh failed:", reference, error);
+      return json({ status: donation.status, currency: donation.currency, amount: donation.amount, paid_at: donation.paid_at, verification: "pending" });
+    }
+  }
+  return json({ status: donation.status, currency: donation.currency, amount: donation.amount, paid_at: donation.paid_at });
 }
 
 

@@ -808,6 +808,14 @@ async function handleNotification(request, env, isCallback) {
   try {
     if (trackingId && merchantReference) result = await verifyPayment(env, trackingId, merchantReference);
   } catch (error) {
+    // Keep the callback response user-friendly, but never hide the reason a
+    // payment could not be reconciled. Do not log donor names, email or phone.
+    console.error("Pesapal payment verification failed:", {
+      source: isCallback ? "callback" : "ipn",
+      trackingId,
+      merchantReference,
+      error: error?.message || String(error),
+    });
     if (!isCallback) return json({ orderNotificationType: "IPNCHANGE", orderTrackingId: trackingId, orderMerchantReference: merchantReference, status: 500 }, 500);
   }
   if (isCallback) {

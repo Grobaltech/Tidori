@@ -15,6 +15,13 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [profileChoices, setProfileChoices] = useState([]);
+  const [welcomeName, setWelcomeName] = useState('');
+
+  const chooseProfile = (profile) => {
+    if (profile === 'super_admin' || profile === 'admin') navigate('/admin', { replace: true });
+    else navigate('/profile', { replace: true });
+  };
 
   useEffect(() => {
     setMode(location.pathname === '/register' || params.get('mode') === 'signup' ? 'signup' : 'login');
@@ -46,7 +53,7 @@ export default function Login() {
         // The member profile remains the destination for ordinary members.
         const { data: accountProfile, error: roleError } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role,member_status,full_name')
           .eq('id', authData.user.id)
           .maybeSingle();
 
@@ -63,12 +70,27 @@ export default function Login() {
           throw new Error('Your account has an unrecognised role. Please contact a Tidori administrator.');
         }
 
+        const memberStatus = String(accountProfile.member_status || '').trim().toLowerCase();
+        const choices = [];
+        if (['super_admin', 'admin'].includes(accountRole)) choices.push(accountRole);
+        if (['leader', 'member'].includes(memberStatus) && !choices.includes(memberStatus)) choices.push(memberStatus);
+        if (['leader', 'member'].includes(accountRole) && !choices.includes(accountRole)) choices.push(accountRole);
+
         let hasPortalAccess = ['admin', 'super_admin'].includes(accountRole);
         if (!hasPortalAccess) {
           const { data: grants, error: grantsError } = await supabase.from('user_permissions').select('permission').eq('user_id', authData.user.id).limit(1);
           hasPortalAccess = !grantsError && Boolean(grants?.length);
         }
-        navigate(hasPortalAccess ? '/admin' : '/profile', { replace: true });
+        if (hasPortalAccess && !choices.includes('church_admin')) choices.push('church_admin');
+
+        setWelcomeName(accountProfile.full_name || authData.user.email || 'there');
+        if (choices.length > 1) {
+          setProfileChoices(choices);
+        } else if (choices.length === 1) {
+          chooseProfile(choices[0]);
+        } else {
+          navigate('/profile', { replace: true });
+        }
       }
     } catch (err) {
       console.error('Tidori authentication failed:', err);
@@ -96,6 +118,24 @@ export default function Login() {
     <PageHeader title={mode === 'signup' ? 'Create Account' : 'Member Login'} />
     <section className="container-page max-w-xl py-16">
       <div className="bg-mist p-6 sm:p-10">
+        {profileChoices.length > 1 ? <>
+          <p className="mb-2 text-center text-gold">Welcome to Tidori Ministries</p>
+          <h1 className="mb-3 text-center text-3xl">Welcome, {welcomeName}</h1>
+          <p className="mb-7 text-center text-sm text-gray-600">Your account has more than one profile. Which one would you like to use for this session?</p>
+          <div className="space-y-3">
+            {profileChoices.map(profile => {
+              const labels = { super_admin: 'Super Administrator', admin: 'Tidori Administrator', leader: 'Church Leader', member: 'Church Member', church_admin: 'Church Administration Portal' };
+              const descriptions = { super_admin: 'Manage the entire Tidori Ministries platform and its administration.', admin: 'Manage the church administration portal.', leader: 'Continue to your church leader and member profile.', member: 'Continue to your church member profile.', church_admin: 'Open the administration portal using your granted permissions.' };
+              return <button key={profile} type="button" onClick={() => chooseProfile(profile)} className="w-full rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-[#009cff] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#009cff]">
+                <span className="block font-semibold text-[#191c24]">{labels[profile]}</span>
+                <span className="mt-1 block text-sm text-gray-500">{descriptions[profile]}</span>
+                <span className="mt-3 block text-sm font-semibold text-[#009cff]">Continue with this profile →</span>
+              </button>;
+            })}
+          </div>
+          <button type="button" onClick={async () => { await supabase.auth.signOut(); setProfileChoices([]); }} className="mt-6 w-full text-sm text-gray-500 underline">Not you? Sign out</button>
+        </> : <>
+
         <p className="mb-2 text-center text-gold">{mode === 'signup' ? 'Join the Tidori community' : 'Welcome back'}</p>
         <h1 className="mb-8 text-center text-3xl">{mode === 'signup' ? 'Create your account' : 'Sign in to your account'}</h1>
         {!supabaseReady && <p role="alert" className="mb-5 bg-yellow-100 p-3 text-sm text-yellow-900">{supabaseConfigError}</p>}
@@ -144,6 +184,7 @@ export default function Login() {
         <div className="mt-6 border-t border-gray-300 pt-5 text-center text-sm">
           {mode === 'login' ? <>Don't have an account? <Link className="font-semibold text-navy underline" to="/register">Register here</Link></> : <>Already registered? <Link className="font-semibold text-navy underline" to="/login">Sign in</Link></>}
         </div>
+        </>}
       </div>
     </section>
   </>;

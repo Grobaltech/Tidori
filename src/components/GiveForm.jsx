@@ -78,8 +78,9 @@ export default function GiveForm({ projectId = null, dark = false }) {
       <input className={`${cls} mb-4`} type="tel" placeholder="Phone (optional, include country code)" value={phone} onChange={(e) => setPhone(e.target.value)} />
       <div className="mb-4 flex flex-wrap gap-2">
         {presets.map((p) => (
-          <button type="button" key={p} onClick={() => { setAmount(p); setCustom(''); }}
-            className={`btn-custom !px-4 ${dark ? 'btn-light' : ''} ${!custom && amount === p ? 'is-active' : ''}`}>
+          <button type="button" key={p} aria-pressed={!custom && amount === p}
+            onClick={() => { setAmount(p); setCustom(''); }}
+            className={`btn-custom !px-4 !border-2 !border-[#d99b16] !font-semibold !transition-colors !duration-200 ${!custom && amount === p ? '!bg-[#fdbe33] !text-[#17202a] shadow-md' : '!bg-[#fff1c9] !text-[#49370d] hover:!bg-[#fdbe33]'}`}>
             UGX {p.toLocaleString('en-UG')}
           </button>
         ))}

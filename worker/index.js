@@ -717,6 +717,33 @@ async function handleNotification(request, env, isCallback) {
   }, result ? 200 : 500);
 }
 
+
+async function reconcilePesapalPayment(request, env) {
+  const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "PESAPAL_CONSUMER_KEY", "PESAPAL_CONSUMER_SECRET"].filter(key => !env[key]);
+  if (missing.length) return json({ error: "Payment verification is not configured.", missing }, 503);
+  const access = await requireSuperAdmin(request, env);
+  if (access.error) return access.error;
+  const input = await request.json().catch(() => ({}));
+  const reference = clean(input.reference, 120);
+  if (!/^TIDORI-(?:APPT-)?[0-9a-f-]{36}$/i.test(reference)) return json({ error: "Invalid Tidori payment reference." }, 400);
+  try {
+    let trackingId = "";
+    if (reference.startsWith("TIDORI-APPT-")) {
+      const rows = await supabaseRequest(env, `appointments?select=pesapal_order_tracking_id&pesapal_merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`);
+      trackingId = rows?.[0]?.pesapal_order_tracking_id || "";
+    } else {
+      const rows = await supabaseRequest(env, `donation_pledges?select=pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`);
+      trackingId = rows?.[0]?.pesapal_order_tracking_id || "";
+    }
+    if (!trackingId) return json({ error: "No Pesapal tracking ID is saved for this payment. It cannot yet be reconciled automatically." }, 404);
+    const result = await verifyPayment(env, trackingId, reference);
+    return json({ success: true, reference, ...result });
+  } catch (error) {
+    console.error("Admin Pesapal reconciliation failed:", reference, error);
+    return json({ error: error.message || "Pesapal could not verify this payment." }, 502);
+  }
+}
+
 async function paymentStatus(request, env) {
   const reference = clean(new URL(request.url).searchParams.get("reference"), 120);
   if (reference.startsWith("TIDORI-APPT-")) {
@@ -1062,7 +1089,7 @@ export default {
       if (url.pathname === "/api/payments/pesapal/callback" && request.method === "GET") {
         return await handleNotification(request, env, true);
       }
-      if (url.pathname === "/api/payments/status" && request.method === "GET") {
+      if (url.pathname === "/api/admin/payments/reconcile" && request.method === "POST") {\n        return await reconcilePesapalPayment(request, env);\n      }\n      if (url.pathname === "/api/payments/status" && request.method === "GET") {
         return await paymentStatus(request, env);
       }
       if (url.pathname.startsWith("/api/")) return json({ error: "Not found." }, 404);

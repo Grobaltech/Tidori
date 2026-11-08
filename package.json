@@ -11,7 +11,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy --config ./wrangler.toml",
     "android:sync": "cap sync android",
     "android:open": "cap open android"
   },

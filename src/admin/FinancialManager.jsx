@@ -26,8 +26,9 @@ export default function FinancialManager() {
   const load = useCallback(async () => {
     if (!supabase) return;
     setLoading(true); setError('');
-    const [d, a, e] = await Promise.all([
+    const [d, p, a, e] = await Promise.all([
       supabase.from('donation_pledges').select('id,name,amount,currency,status,paid_at,created_at,payment_method,confirmation_code').eq('status','paid').order('paid_at',{ascending:false}).limit(1000),
+      supabase.from('donation_pledges').select('id,name,amount,currency,status,created_at,merchant_reference').eq('status','pending').order('created_at',{ascending:false}).limit(100),
       supabase.from('appointments').select('id,full_name,appointment_type,fee_amount,currency,payment_status,paid_at,created_at,payment_method,payment_reference').eq('payment_status','paid').order('paid_at',{ascending:false}).limit(1000),
       supabase.from('finance_expenses').select('*').order('expense_date',{ascending:false}).limit(1000),
     ]);

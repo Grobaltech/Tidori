@@ -563,6 +563,8 @@ async function createBursaryPayment(request, env) {
   const email = clean(input.email || user.email, 200).toLowerCase();
   const phone = clean(input.phone, 40);
   if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Enter the applicant's full name and a valid email." }, 400);
+  const existingPending = await supabaseRequest(env, `bursary_applications?select=merchant_reference&applicant_id=eq.${encodeURIComponent(user.id)}&payment_status=eq.pending&limit=1`);
+  if (existingPending?.length) return json({ error: "You already have a bursary payment awaiting Pesapal confirmation. Please refresh your application status instead of paying again.", reference: existingPending[0].merchant_reference }, 409);
   const reference = `TIDORI-BURSARY-${crypto.randomUUID()}`;
   const rows = await supabaseRequest(env, "bursary_applications", {
     method: "POST", headers: { prefer: "return=representation" },

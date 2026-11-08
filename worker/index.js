@@ -608,7 +608,7 @@ async function bursaryApplicantApi(request, env) {
     // verification is being repaired. Drafts remain payment_status=pending so
     // they are never mistaken for verified/paid applications.
     const hasOpenApplication = (rows || []).some((row) =>
-      row.application_status === "draft" || row.application_status === "submitted"
+      row.payment_status === "paid" || row.application_status === "draft" || row.application_status === "submitted"
     );
     if (!hasOpenApplication) {
       const draftReference = `TIDORI-BURSARY-DRAFT-${crypto.randomUUID()}`;

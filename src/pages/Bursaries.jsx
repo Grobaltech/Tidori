@@ -29,6 +29,7 @@ export default function Bursaries() {
   const [error,setError] = useState('');
   const [notice,setNotice] = useState('');
   const [checkout,setCheckout] = useState('');
+  const [checkoutReference,setCheckoutReference] = useState('');
   const [regions,setRegions] = useState([]);
   const [districts,setDistricts] = useState([]);
   const [counties,setCounties] = useState([]);
@@ -121,7 +122,7 @@ export default function Bursaries() {
   };
   const pay=async()=>{
     setError('');setNotice('');
-    try{const data=await api('/api/bursary/payment',{method:'POST',body:JSON.stringify({name:form.applicant_name,email:profile?.email||user?.email,phone:profile?.phone||''})});setCheckout(data.redirect_url);window.location.href=data.redirect_url;}
+    try{const data=await api('/api/bursary/payment',{method:'POST',body:JSON.stringify({name:form.applicant_name,email:profile?.email||user?.email,phone:profile?.phone||''})});setCheckout(data.redirect_url);setCheckoutReference(data.reference||'');}
     catch(e){setError(e.message);}
   };
   const photoQr=application?.application_serial ? 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent('https://tidori-ministries.grobaltechtechnologies.workers.dev/bursaries/verify/'+application.application_serial) : '';
@@ -134,7 +135,11 @@ export default function Bursaries() {
       {error&&<p role="alert" className="mb-5 rounded bg-red-50 p-3 text-red-700">{error}</p>}
       {notice&&<p role="status" className="mb-5 rounded bg-green-50 p-3 text-green-800">{notice}</p>}
       {params.get('payment')==='cancelled'&&<p className="mb-5 rounded bg-yellow-50 p-3 text-yellow-900">Checkout was cancelled. Your application remains locked until payment is completed.</p>}
-      {!paidRows.length ? <div className="rounded-xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Unlock your application form</h2><p className="mt-2 text-gray-600">Sign in with your Tidori account, then pay the fixed application fee. The form unlocks only after Pesapal confirms payment.</p>{pendingRows.length ? <button type="button" className="btn-custom mt-5" onClick={loadApplications}>Refresh payment status</button> : <button type="button" className="btn-custom mt-5" onClick={pay}>Pay UGX 11,000 with Pesapal</button>}{pendingRows.length>0&&<p className="mt-3 text-sm text-amber-700">You have a payment awaiting confirmation. A second checkout is blocked while this payment is pending.</p>}</div> : <>
+      {!paidRows.length ? <div className="rounded-xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Unlock your application form</h2><p className="mt-2 text-gray-600">Sign in with your Tidori account, then pay the fixed application fee. The form unlocks only after Pesapal confirms payment.</p>{checkout ? <div className="mt-6 rounded-xl bg-mist p-4 sm:p-6" aria-label="Secure Pesapal checkout">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-semibold text-ink">Complete your bursary application payment</h3><p className="text-sm text-ink/70">Secure payment powered by Pesapal. You are still on Tidori Ministries.</p></div><button type="button" className="btn-custom !px-4" onClick={()=>setCheckout('')}>Back</button></div>
+          <iframe title="Pesapal secure payment" src={checkout} className="block w-full rounded-lg bg-white" style={{height:'min(780px, 78vh)',minHeight:'560px',border:0}} allow="payment *" referrerPolicy="strict-origin-when-cross-origin"/>
+          <p className="mt-3 text-xs text-ink/65">If the payment window does not load, <a className="underline" href={checkout} target="_blank" rel="noopener noreferrer">open secure checkout in a new tab</a>.{checkoutReference ? ' Reference: '+checkoutReference : ''}</p>
+        </div> : pendingRows.length ? <button type="button" className="btn-custom mt-5" onClick={loadApplications}>Refresh payment status</button> : <button type="button" className="btn-custom mt-5" onClick={pay}>Pay UGX 11,000 with Pesapal</button>}{!checkout&&pendingRows.length>0&&<p className="mt-3 text-sm text-amber-700">You have a payment awaiting confirmation. A second checkout is blocked while this payment is pending.</p>}</div> : <>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold">Your application</h2><span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">Payment verified</span></div>
         {paidRows.length>1&&<label className="mb-5 block text-sm font-semibold">Choose application<select className="field mt-2" value={selected||paidRows[0].id} onChange={e=>setSelected(e.target.value)}>{paidRows.map(r=><option key={r.id} value={r.id}>{r.application_serial||r.merchant_reference} — {r.application_status}</option>)}</select></label>}
         {application?.application_status==='submitted' ? <div className="rounded-xl border bg-white p-6" id="bursary-print">

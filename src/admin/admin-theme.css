@@ -57,4 +57,12 @@
 .tidori-admin .admin-profile-summary strong{color:#191c24;font-size:13px}
 .tidori-admin .admin-profile-summary small{margin-top:3px;color:#8b91a3;font-size:11px}
 .tidori-admin .admin-dropdown-link{display:flex;width:100%;align-items:center;gap:10px;padding:12px 16px;border:0;background:#fff;color:#52576d;text-align:left;font-size:13px;cursor:pointer}
+/* Keep message and notification panels inside the viewport instead of anchoring
+   their wide panels to the small icon wrapper. */
+.tidori-admin .admin-message-dropdown,
+.tidori-admin .admin-notification-dropdown{position:fixed;top:86px;right:28px;left:auto;width:min(390px,calc(100vw - 28px));max-width:calc(100vw - 28px)}
+@media(max-width:640px){
+  .tidori-admin .admin-message-dropdown,
+  .tidori-admin .admin-notification-dropdown{top:76px;right:14px;width:calc(100vw - 28px);max-width:calc(100vw - 28px)}
+}
 @media(max-width:420px){.tidori-admin .admin-dropdown-item>small{display:none}.tidori-admin .admin-dropdown-item span small{max-width:185px}}

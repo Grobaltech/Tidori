@@ -147,7 +147,7 @@ export default function Login() {
         <form onSubmit={submit} className="space-y-4">
           {mode === 'signup' && <>
             <input className="field" required maxLength={120} autoComplete="name" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} />
-            <IdentityOcrScanner nin={registrationNin} onNinChange={setRegistrationNin} title="Membership identity document checks" description="Complete the ID details and capture the front, angled security-feature views and microprint close-up as part of membership registration. Images and OCR stay on this device." />
+            <IdentityOcrScanner nin={registrationNin} onNinChange={setRegistrationNin} title="Membership identity document checks" description="Complete the ID details and capture the front, angled security-feature views and microprint close-up as part of membership registration. Images and OCR stay on this device." showIntro={false} />
           </>}
           <input className="field" type="email" required autoComplete="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} />
           <div className="relative">

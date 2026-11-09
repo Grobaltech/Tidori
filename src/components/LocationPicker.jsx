@@ -19,8 +19,8 @@ const countries = countryCodes
   .sort((a, b) => a.label.localeCompare(b.label))
   .map(country => ({ ...country, value: country.label }))
 
-export default function LocationPicker({ value = {}, onChange }) {
-  const country = value.country || 'Uganda'
+export default function LocationPicker({ value = {}, onChange, allowInternational = false }) {
+  const country = allowInternational ? (value.country || 'Uganda') : 'Uganda'
   const isUganda = country === 'Uganda'
   const districtNode = useMemo(
     () => isUganda ? uganda.districts.find(([name]) => name === value.district) : null,

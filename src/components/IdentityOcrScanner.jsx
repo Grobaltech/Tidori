@@ -40,7 +40,7 @@ async function inspectCardImage(file) {
       cv.approxPolyDP(contour,approx,0.02*cv.arcLength(contour,true),true);
       if(approx.rows===4){
         const area=Math.abs(cv.contourArea(approx)), pts=[];
-        for(let j=0;j<4;j++) pts.push({x:approx.intAt(j,0),y:approx.intAt(j,1)});
+        for(let j=0;j<4;j++) pts.push({x:approx.data32S[j*2],y:approx.data32S[j*2+1]});
         const corners=sortCorners(pts);
         const width=(Math.hypot(corners[1].x-corners[0].x,corners[1].y-corners[0].y)+Math.hypot(corners[2].x-corners[3].x,corners[2].y-corners[3].y))/2;
         const height=(Math.hypot(corners[3].x-corners[0].x,corners[3].y-corners[0].y)+Math.hypot(corners[2].x-corners[1].x,corners[2].y-corners[1].y))/2;
@@ -161,8 +161,9 @@ export default function IdentityOcrScanner() {
     const frameWidth = video.videoWidth;
     const frameHeight = video.videoHeight;
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(cropWidth);
-    canvas.height = Math.round(cropHeight);
+    const scale = Math.min(1, 1920 / Math.max(frameWidth, frameHeight));
+    canvas.width = Math.round(frameWidth * scale);
+    canvas.height = Math.round(frameHeight * scale);
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       setCameraError('Could not prepare the camera image. Please try again.');
@@ -197,7 +198,13 @@ export default function IdentityOcrScanner() {
     setBusy(true); setError(''); setNotice(''); setQuality(null);
     let worker;
     try {
-      const inspected = await inspectCardImage(file);
+      let inspected;
+      try {
+        inspected = await inspectCardImage(file);
+      } catch (analysisError) {
+        console.warn('OpenCV quality analysis unavailable; continuing with local OCR:', analysisError);
+        inspected = { file, quality: { detected:false, boundaryScore:0, brightness:0, sharpness:0, glarePercent:0, warnings:['Automatic boundary and quality analysis was unavailable in this browser. OCR can still be attempted; please review the image manually.'] } };
+      }
       setQuality(inspected.quality);
       worker = await createWorker('eng');
       const result = await worker.recognize(inspected.file);

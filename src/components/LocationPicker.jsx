@@ -105,8 +105,17 @@ export default function LocationPicker({ value = {}, onChange, allowInternationa
 
   return <div className="grid gap-4 sm:grid-cols-2">
     {allowInternational && <label className="block text-sm font-semibold text-navy">Country *
-      <select className="field mt-2" value={countryCode || countries.find(item => item.label === country)?.code || 'UG'}
-        onChange={e => chooseCountry(e.target.value)}>
+      <select
+        className="field mt-2"
+        value={countryCode || countries.find(item => item.label === country)?.code || 'UG'}
+        autoComplete="country-name"
+        onChange={event => {
+          // Keep country selection local to the picker; it must never bubble into
+          // any surrounding profile/form-level change handlers.
+          event.stopPropagation()
+          chooseCountry(event.currentTarget.value)
+        }}
+      >
         {countries.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
       </select>
     </label>}

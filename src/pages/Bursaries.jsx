@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import LocationPicker from '../components/LocationPicker';
+import IdentityOcrScanner from '../components/IdentityOcrScanner';
 import { supabase, supabaseReady } from '../lib/supabase';
 
 const empty = { applicant_name:'', class_applied_for:'', level_applied_for:'', guardian_name:'', guardian_contact:'', guardian_email:'', region:'', district:'', county:'', subcounty:'', parish:'', village:'', former_school:'', stipulated_results:'', first_choice:'', option_one:'', option_two:'', national_id_number:'' };
@@ -123,6 +124,7 @@ export default function Bursaries() {
           <div className="grid gap-4 sm:grid-cols-2">
             {['applicant_name','class_applied_for','level_applied_for','guardian_name','guardian_contact','guardian_email','former_school','first_choice','option_one','option_two','national_id_number'].map(key=><label key={key} className="block text-sm font-semibold text-navy">{({applicant_name:'Applicant full name',class_applied_for:'Class applied for',level_applied_for:'Level applied for',guardian_name:'Guardian name',guardian_contact:'Guardian contact',guardian_email:'Guardian email',former_school:'Former school',first_choice:'First school choice',option_one:'School option one',option_two:'School option two',national_id_number:'National Identification Number (NIN)'})[key]}<input className="field mt-2" required value={form[key]} onChange={e=>set(key,e.target.value)} maxLength={key==='national_id_number'?20:160}/></label>)}
           </div>
+          <div className="my-6"><IdentityOcrScanner nin={form.national_id_number} onNinChange={value=>set('national_id_number',value)} title="Applicant identity document checks" description="Enter the applicant’s NIN and card number, then capture the ID front, angled security-feature views and microprint close-up. Images and OCR stay on this device; upload the required document copy below separately." /></div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-navy">National ID copy (front or PDF)<input className="field mt-2" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required onChange={e=>setNationalIdFile(e.target.files?.[0]||null)}/><span className="mt-1 block text-xs font-normal text-gray-500">Private upload, maximum 10 MB.</span></label>
             <label className="block text-sm font-semibold text-navy">Passport-size applicant photograph<input className="field mt-2" type="file" accept="image/jpeg,image/png,image/webp" required onChange={e=>setPassportFile(e.target.files?.[0]||null)}/><span className="mt-1 block text-xs font-normal text-gray-500">JPG, PNG or WebP, maximum 10 MB.</span></label>

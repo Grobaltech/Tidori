@@ -23,7 +23,8 @@
     "react-router-dom": "^6.26.0",
     "@capacitor/core": "^6.2.1",
     "@capacitor/android": "^6.2.1",
-    "@capacitor/push-notifications": "^6.0.3"
+    "@capacitor/push-notifications": "^6.0.3",
+    "@tansuasici/country-state-city": "^3.0.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

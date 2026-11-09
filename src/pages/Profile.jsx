@@ -305,12 +305,12 @@ export default function Profile() {
               <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
                 <h3 className="mb-2 text-lg font-semibold text-navy">Place of Origin</h3>
                 <p className="mb-4 text-sm font-normal text-gray-600">Where you come from or your home area.</p>
-                <LocationPicker value={profile.place_of_origin || {}} onChange={value => change('place_of_origin', value)} />
+                <LocationPicker allowInternational value={profile.place_of_origin || {}} onChange={value => change('place_of_origin', value)} />
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
                 <h3 className="mb-2 text-lg font-semibold text-navy">Current Address</h3>
                 <p className="mb-4 text-sm font-normal text-gray-600">Where you currently live.</p>
-                <LocationPicker value={profile.current_address || {}} onChange={value => change('current_address', value)} />
+                <LocationPicker allowInternational value={profile.current_address || {}} onChange={value => change('current_address', value)} />
                 <label className="mt-4 block text-sm font-semibold text-navy">Additional address details (optional)
                   <input className="field mt-2" maxLength={300} value={profile.address || ''} onChange={e => change('address', e.target.value)} placeholder="House, plot, street, landmark..." />
                 </label>

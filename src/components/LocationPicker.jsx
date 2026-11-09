@@ -156,7 +156,6 @@ export default function LocationPicker({ value = {}, onChange, allowInternationa
           : <input className="field mt-2" value={value.village || ''} disabled={!value.parish}
             placeholder="Enter village" onChange={e => update({ village: e.target.value })} />}
       </label>
-      <p className="sm:col-span-2 text-xs text-gray-500">{uganda.note} Source: {uganda.attribution}</p>
       <div className="sm:col-span-2 rounded-lg border border-gray-200 bg-white p-3">
         <p className="text-sm font-semibold text-navy">Map coordinates (optional)</p>
         <p className="mt-1 text-xs text-gray-600">Keep Uganda’s detailed district-to-village selection, and optionally match a nearby populated place to store its geographic coordinates.</p>

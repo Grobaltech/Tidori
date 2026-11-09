@@ -111,6 +111,8 @@ export default function IdentityOcrScanner() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [quality, setQuality] = useState(null);
+  const [captureType, setCaptureType] = useState('front');
+  const [securityEvidence, setSecurityEvidence] = useState({});
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -175,9 +177,15 @@ export default function IdentityOcrScanner() {
         setCameraError('Could not capture the image. Please try again.');
         return;
       }
-      setFile(new File([blob], 'tidori-id-capture.jpg', { type: 'image/jpeg' }));
-      setText(''); setFoundNin(''); setFoundCard(''); setError(''); setQuality(null); setNotice('Full camera frame captured locally. OpenCV will locate the card and assess image quality when you scan.');
-      stopCamera();
+      const labels = { front:'Front of card', tiltLeft:'Hologram / MLI tilted left', tiltRight:'Hologram / MLI tilted right', microprint:'Microprint close-up' };
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      setSecurityEvidence(previous => ({ ...previous, [captureType]: dataUrl }));
+      if (captureType === 'front') {
+        setFile(new File([blob], 'tidori-id-front.jpg', { type: 'image/jpeg' }));
+        setText(''); setFoundNin(''); setFoundCard(''); setError(''); setQuality(null);
+      }
+      setNotice(labels[captureType] + ' captured on this device. Keep the camera open and capture the other views.');
+
     }, 'image/jpeg', 0.92);
   };
 
@@ -238,7 +246,7 @@ export default function IdentityOcrScanner() {
     </div>
     <div className="mt-5 rounded-lg bg-mist p-4">
       <h3 className="font-semibold text-navy">Live card capture</h3>
-      <p className="mt-1 text-xs text-gray-600">Allow camera access and keep the whole card visible. OpenCV checks for a likely four-sided card outline and corrects perspective before OCR, then estimates focus, lighting and glare.</p>
+      <p className="mt-1 text-xs text-gray-600">Capture the front, then two angled views of the hologram/MLI, and finally a close-up of the microtext. For the close-up, move the phone closer while keeping the lettering in focus. These images stay in this page only.</p>
       {cameraBusy && <div className="relative mt-3 overflow-hidden rounded-lg bg-black">
         <video ref={videoRef} playsInline muted className="block max-h-[420px] w-full object-contain" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 w-[85%] -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-dashed border-yellow-300" style={{ aspectRatio: String(CARD_RATIO), boxShadow: '0 0 0 9999px rgba(0,0,0,.24)' }} />
@@ -246,11 +254,14 @@ export default function IdentityOcrScanner() {
       {cameraBusy && <p className="mt-2 text-xs text-gray-500">Keep the full card and a little background visible in the preview.</p>}
       <div className="mt-3 flex flex-wrap gap-2">
         {!cameraBusy ? <button type="button" onClick={startCamera} className="btn-custom">Open camera</button> : <>
-          <button type="button" onClick={capture} className="btn-custom">Capture card</button>
+          <label className="block text-sm font-medium text-navy">Capture view<select value={captureType} onChange={e=>setCaptureType(e.target.value)} className="field mt-1"><option value="front">Front of card (for OCR)</option><option value="tiltLeft">Hologram / MLI — tilt left</option><option value="tiltRight">Hologram / MLI — tilt right</option><option value="microprint">Microprint close-up</option></select></label>
+          <button type="button" onClick={capture} className="btn-custom self-end">Capture selected view</button>
           <button type="button" onClick={stopCamera} className="rounded-lg border border-gray-300 px-4 py-2 text-sm">Cancel camera</button>
         </>}
       </div>
       {cameraError && <p role="alert" className="mt-2 text-sm text-amber-800">{cameraError}</p>}
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[{key:'front',label:'Front'},{key:'tiltLeft',label:'Hologram left'},{key:'tiltRight',label:'Hologram right'},{key:'microprint',label:'Microprint close-up'}].map(item=><div key={item.key} className="rounded border border-gray-200 bg-white p-2"><p className="text-xs font-semibold text-navy">{item.label}</p>{securityEvidence[item.key] ? <img src={securityEvidence[item.key]} alt={item.label+' evidence'} className="mt-1 aspect-video w-full rounded object-contain" /> : <p className="mt-2 text-xs text-gray-400">Not captured</p>}</div>)}</div>
+      {Object.keys(securityEvidence).length>0 && <button type="button" onClick={()=>{setSecurityEvidence({});setFile(null);setNotice('Local security-feature captures cleared.');}} className="mt-2 text-xs font-semibold text-red-700">Clear all local captures</button>}
     </div>
     <div className="mt-4">
       <label className="block text-sm font-semibold text-navy">Or choose an existing photo (fallback)
@@ -282,6 +293,7 @@ export default function IdentityOcrScanner() {
       {ninMatch && cardMatch && <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Document details matched by OCR. This is not an official NIRA verification and does not prove the card is genuine or valid.</p>}
       <details><summary className="cursor-pointer text-sm font-semibold text-navy">Show all recognised text</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs text-gray-700">{text}</pre></details>
     </div>}
+    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><h3 className="font-semibold">Security-feature inspection guide</h3><ul className="mt-2 list-disc space-y-1 pl-5"><li><strong>Hologram / MLI:</strong> capture the same marked area at two different angles. Look for a genuine-looking image or pattern change, not just a bright reflection.</li><li><strong>Microprint:</strong> capture the printed microtext close-up in sharp focus. On applicable upgraded Ugandan IDs, NIRA describes microtext reading “REPUBLIC OF UGANDA”.</li><li><strong>Manual review:</strong> if the detail is unreadable, absent or looks like a flat printed copy, refer it for authorised review rather than automatically rejecting the member.</li></ul><p className="mt-2 text-xs">The app collects visual evidence only. It does not compare a hologram or microprint against a secure issuer template and cannot authenticate either feature.</p></div>
     <p className="mt-4 text-xs leading-relaxed text-gray-500">Privacy: the image and recognised text stay in this page's memory and are not saved to your profile. Your browser may download the OCR engine and English language model. OpenCV checks card-like boundaries, perspective, focus, brightness and possible glare only. It cannot verify genuine holograms or microprint, prove an ID is unaltered, or confirm NIRA records. This is not official identity verification.</p>
   </section>;
 }

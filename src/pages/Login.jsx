@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase, supabaseReady, supabaseConfigError } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
+import IdentityOcrScanner from '../components/IdentityOcrScanner';
 
 export default function Login() {
   const [params] = useSearchParams();
@@ -9,6 +10,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [mode, setMode] = useState(location.pathname === '/register' || params.get('mode') === 'signup' ? 'signup' : 'login');
   const [name, setName] = useState('');
+  const [registrationNin, setRegistrationNin] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -143,7 +145,10 @@ export default function Login() {
         <h1 className="mb-8 text-center text-3xl">{mode === 'signup' ? 'Create your account' : 'Sign in to your account'}</h1>
         {!supabaseReady && <p role="alert" className="mb-5 bg-yellow-100 p-3 text-sm text-yellow-900">{supabaseConfigError}</p>}
         <form onSubmit={submit} className="space-y-4">
-          {mode === 'signup' && <input className="field" required maxLength={120} autoComplete="name" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} />}
+          {mode === 'signup' && <>
+            <input className="field" required maxLength={120} autoComplete="name" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} />
+            <IdentityOcrScanner nin={registrationNin} onNinChange={setRegistrationNin} title="Membership identity document checks" description="Complete the ID details and capture the front, angled security-feature views and microprint close-up as part of membership registration. Images and OCR stay on this device." />
+          </>}
           <input className="field" type="email" required autoComplete="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} />
           <div className="relative">
             <input

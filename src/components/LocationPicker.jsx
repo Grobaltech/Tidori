@@ -29,16 +29,17 @@ export default function LocationPicker({ value = {}, onChange, allowInternationa
   const countryCode = value.country_code || countries.find(item => item.label === country)?.code || ''
   const [geo, setGeo] = useState(null)
   const [geoError, setGeoError] = useState('')
+  const [geoRequested, setGeoRequested] = useState(false)
   const [cityQuery, setCityQuery] = useState('')
 
   useEffect(() => {
     let active = true
-    if (!allowInternational || isUganda || geo) return undefined
+    if (geo || (!allowInternational && !geoRequested) || (isUganda && !geoRequested)) return undefined
     import('@tansuasici/country-state-city')
       .then(module => { if (active) { setGeo(module.CountryStateCity); setGeoError('') } })
       .catch(() => { if (active) setGeoError('Global location data could not be loaded. You can still enter your address manually.') })
     return () => { active = false }
-  }, [allowInternational, isUganda, geo])
+  }, [allowInternational, isUganda, geo, geoRequested])
 
   const districtNode = useMemo(
     () => isUganda ? uganda.districts.find(([name]) => name === value.district) : null,
@@ -147,6 +148,21 @@ export default function LocationPicker({ value = {}, onChange, allowInternationa
             placeholder="Enter village" onChange={e => update({ village: e.target.value })} />}
       </label>
       <p className="sm:col-span-2 text-xs text-gray-500">{uganda.note} Source: {uganda.attribution}</p>
+      <div className="sm:col-span-2 rounded-lg border border-gray-200 bg-white p-3">
+        <p className="text-sm font-semibold text-navy">Map coordinates (optional)</p>
+        <p className="mt-1 text-xs text-gray-600">Keep Uganda’s detailed district-to-village selection, and optionally match a nearby populated place to store its geographic coordinates.</p>
+        {!geo && <button type="button" className="mt-2 text-sm font-semibold text-navy underline" onClick={() => setGeoRequested(true)}>Load Uganda coordinate lookup</button>}
+        {geo && <>
+          <input className="field mt-3" value={cityQuery} maxLength={100} placeholder="Search town or populated place" onChange={e => setCityQuery(e.target.value)} />
+          {cityQuery.trim().length >= 2 && <SearchableSelect value={value.geodata_id || ''} placeholder="Choose a matching place…" options={globalCities.map(item => ({ value: 'csc:city:' + item.record.id, label: item.label }))}
+            onChange={id => {
+              const match = globalCities.find(item => 'csc:city:' + item.record.id === id)?.record
+              if (match) update({ latitude: asCoordinate(match.latitude), longitude: asCoordinate(match.longitude), geodata_id: id, geodata_source: 'CountryStateCity', geodata_version: '3.0.3' })
+            }} />}
+        </>}
+        {value.latitude != null && value.longitude != null && <p className="mt-2 text-xs text-gray-500">Coordinates saved: {value.latitude}, {value.longitude}</p>}
+        {geoError && <p className="mt-2 text-xs text-amber-700">{geoError}</p>}
+      </div>
     </> : <>
       <div className="sm:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
         Global location records include administrative areas and populated places with coordinates where published. The available levels vary by country; missing local areas can be entered manually.
@@ -172,7 +188,8 @@ export default function LocationPicker({ value = {}, onChange, allowInternationa
           onChange={e => update({ region: e.target.value, region_id: '', region_code: '' }, ['city', 'city_id', 'latitude', 'longitude'])} />
       </label>}
       <label className="block text-sm font-semibold text-navy">City / Town / Populated place
-        <SearchableSelect value={value.city_id || ''} placeholder={geo ? 'Type at least 2 letters to search cities…' : 'Global data loading…'}
+        <input className="field mt-2" value={cityQuery} maxLength={100} placeholder="Search populated places" onChange={e => setCityQuery(e.target.value)} />
+        <SearchableSelect value={value.city_id || ''} placeholder={geo ? 'Choose a matching place…' : 'Global data loading…'}
           disabled={!geo || (globalStates.length > 0 && !selectedState && !cityQuery)}
           options={globalCities}
           onChange={id => {
@@ -185,7 +202,6 @@ export default function LocationPicker({ value = {}, onChange, allowInternationa
               geodata_version: '3.0.3',
             }, ['parish', 'village'])
           }} />
-        <input className="field mt-2" value={cityQuery} maxLength={100} placeholder="Search populated places" onChange={e => setCityQuery(e.target.value)} />
         {cityQuery.trim().length >= 2 && geo && !globalCities.length && <span className="mt-1 block text-xs font-normal text-gray-500">No matching record. Enter your city or locality below.</span>}
       </label>
       <label className="block text-sm font-semibold text-navy">District / County / Municipality (optional)

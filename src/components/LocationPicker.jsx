@@ -202,7 +202,11 @@ export default function LocationPicker({ value = {}, onChange, allowInternationa
               geodata_version: '3.0.3',
             }, ['parish', 'village'])
           }} />
-        {cityQuery.trim().length >= 2 && geo && !globalCities.length && <span className="mt-1 block text-xs font-normal text-gray-500">No matching record. Enter your city or locality below.</span>}
+        {cityQuery.trim().length >= 2 && geo && !globalCities.length && <>
+          <span className="mt-1 block text-xs font-normal text-gray-500">No matching record. You can enter the locality manually.</span>
+          <input className="field mt-2" value={value.city || ''} maxLength={120} placeholder="Enter city or town manually"
+            onChange={e => update({ city: e.target.value, subcounty: e.target.value, city_id: '', latitude: null, longitude: null, geodata_id: '' })} />
+        </>}
       </label>
       <label className="block text-sm font-semibold text-navy">District / County / Municipality (optional)
         <input className="field mt-2" value={value.district || ''} maxLength={120} placeholder="Enter district, county or municipality"

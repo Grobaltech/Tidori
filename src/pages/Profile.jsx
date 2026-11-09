@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase, supabaseReady } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
+import LocationPicker from '../components/LocationPicker';
 
 const emptyProfile = {
   full_name: '', phone: '', photo_url: '', member_status: 'visitor', join_date: '',
   small_group: '', ministry: '', areas_served: [], newsletter_opt_in: false,
   prayer_request_visibility: 'leaders', directory_opt_in: false,
-  birthday_month: '', birthday_day: '', address: '',
+  birthday_month: '', birthday_day: '', address: '', place_of_origin: {}, current_address: {},
 };
 
 export default function Profile() {
@@ -53,6 +54,8 @@ export default function Profile() {
           birthday_month: data.birthday_month || '',
           birthday_day: data.birthday_day || '',
           areas_served: data.areas_served || [],
+          place_of_origin: data.place_of_origin || {},
+          current_address: data.current_address || {},
         });
       } else {
         setError('Your member profile has not been created yet. Please contact the church administrator.');
@@ -101,7 +104,9 @@ export default function Profile() {
         directory_opt_in: profile.directory_opt_in,
         birthday_month: profile.birthday_month ? Number(profile.birthday_month) : null,
         birthday_day: profile.birthday_day ? Number(profile.birthday_day) : null,
-        address: profile.address.trim() || null,
+        address: profile.address?.trim() || null,
+        place_of_origin: profile.place_of_origin || {},
+        current_address: profile.current_address || {},
         updated_at: new Date().toISOString(),
       };
       const { error: saveError } = await supabase.from('profiles').update(updates).eq('id', user.id);
@@ -260,7 +265,8 @@ export default function Profile() {
             <div><dt className="text-xs font-semibold uppercase text-gray-500">Small group</dt><dd className="mt-1 text-sm text-gray-900">{profile.small_group || 'Not provided'}</dd></div>
             <div><dt className="text-xs font-semibold uppercase text-gray-500">Ministry</dt><dd className="mt-1 text-sm text-gray-900">{profile.ministry || 'Not provided'}</dd></div>
             <div><dt className="text-xs font-semibold uppercase text-gray-500">Areas served</dt><dd className="mt-1 text-sm text-gray-900">{profile.areas_served?.length ? profile.areas_served.join(', ') : 'Not provided'}</dd></div>
-            <div><dt className="text-xs font-semibold uppercase text-gray-500">Address</dt><dd className="mt-1 text-sm text-gray-900">{profile.address || 'Not provided'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Place of origin</dt><dd className="mt-1 text-sm text-gray-900">{[profile.place_of_origin?.district, profile.place_of_origin?.county, profile.place_of_origin?.subcounty, profile.place_of_origin?.parish, profile.place_of_origin?.village].filter(v => v && v !== 'Not applicable').join(', ') || 'Not provided'}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase text-gray-500">Current address</dt><dd className="mt-1 text-sm text-gray-900">{[profile.current_address?.district, profile.current_address?.county, profile.current_address?.subcounty, profile.current_address?.parish, profile.current_address?.village].filter(v => v && v !== 'Not applicable').join(', ') || profile.address || 'Not provided'}</dd></div>
           </dl>
         </section> : <>
         <form onSubmit={save} className="space-y-8">
@@ -295,7 +301,21 @@ export default function Profile() {
               <label className="block text-sm font-semibold text-navy">Birthday month<select className="field mt-2" value={profile.birthday_month} onChange={e => change('birthday_month', e.target.value)}><option value="">Not shared</option>{['January','February','March','April','May','June','July','August','September','October','November','December'].map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select></label>
               <label className="block text-sm font-semibold text-navy">Birthday day<select className="field mt-2" value={profile.birthday_day} onChange={e => change('birthday_day', e.target.value)}><option value="">Not shared</option>{Array.from({length:31},(_,i)=>i+1).map(d=><option key={d} value={d}>{d}</option>)}</select></label>
             </div>
-            <label className="block text-sm font-semibold text-navy">Address<input className="field mt-2" maxLength={300} value={profile.address || ''} onChange={e => change('address', e.target.value)} /></label>
+            <div className="space-y-5">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
+                <h3 className="mb-2 text-lg font-semibold text-navy">Place of Origin</h3>
+                <p className="mb-4 text-sm font-normal text-gray-600">Where you come from or your home area.</p>
+                <LocationPicker value={profile.place_of_origin || {}} onChange={value => change('place_of_origin', value)} />
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
+                <h3 className="mb-2 text-lg font-semibold text-navy">Current Address</h3>
+                <p className="mb-4 text-sm font-normal text-gray-600">Where you currently live.</p>
+                <LocationPicker value={profile.current_address || {}} onChange={value => change('current_address', value)} />
+                <label className="mt-4 block text-sm font-semibold text-navy">Additional address details (optional)
+                  <input className="field mt-2" maxLength={300} value={profile.address || ''} onChange={e => change('address', e.target.value)} placeholder="House, plot, street, landmark..." />
+                </label>
+              </div>
+            </div>
           </section>
 
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}

@@ -39,6 +39,13 @@ export default function IdentityOcrScanner() {
     setCameraBusy(false);
   };
 
+  useEffect(() => {
+    if (cameraBusy && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(err => console.warn('Camera preview could not start:', err));
+    }
+  }, [cameraBusy]);
+
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach(track => track.stop());
   }, []);
@@ -56,10 +63,6 @@ export default function IdentityOcrScanner() {
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
       setCameraBusy(true);
     } catch (err) {
       console.warn('Unable to start identity camera:', err);

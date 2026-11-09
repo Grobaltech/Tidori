@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase, supabaseReady } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import LocationPicker from '../components/LocationPicker';
+import IdentityOcrScanner from '../components/IdentityOcrScanner';
 
 const emptyProfile = {
   full_name: '', phone: '', photo_url: '', member_status: 'visitor', join_date: '',
@@ -323,6 +324,8 @@ export default function Profile() {
           <button className="btn-custom w-full" disabled={saving}>{saving ? 'Saving...' : 'Save Member Profile'}</button>
         </form>
         </>}
+        <IdentityOcrScanner />
+
         <section className="mt-8 border-t border-gray-300 pt-6">
           <h2 className="mb-2 text-xl font-semibold">Audio and video call tests</h2>
           <p className="mb-4 text-sm text-gray-600">Create a private test room and check your microphone, camera (video test only), speaker, internet connection and two-device calling. Open the host link on this device and the guest link on another device.</p>

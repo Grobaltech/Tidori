@@ -729,7 +729,10 @@ async function verifyPayment(env, trackingId, merchantReference) {
       `appointments?id=eq.${encodeURIComponent(appointment.id)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}`,
       { method: "PATCH", headers: { prefer: "return=representation" },
         body: JSON.stringify({
-          payment_status: paymentStatus,
+          // Appointment payment_status uses the schema's unpaid/paid/waived values.
+          // Preserve the actual Pesapal result in the response, but keep non-paid
+          // transactions in the database's supported "unpaid" state.
+          payment_status: paymentStatus === "paid" ? "paid" : "unpaid",
           paid_at: paymentStatus === "paid" ? (data.created_date || new Date().toISOString()) : null,
           ...(data.payment_method ? { payment_method: clean(data.payment_method, 80) } : {}),
           ...(data.confirmation_code ? { payment_reference: clean(data.confirmation_code, 120) } : {}),

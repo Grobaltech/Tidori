@@ -13,6 +13,9 @@ export default function FinancialManager() {
   const [end, setEnd] = useState(today);
   const [donations, setDonations] = useState([]);
   const [pendingDonations, setPendingDonations] = useState([]);
+  const [pendingAppointments, setPendingAppointments] = useState([]);
+  const [pendingBursaries, setPendingBursaries] = useState([]);
+  const [bursaries, setBursaries] = useState([]);
   const [reconciling, setReconciling] = useState('');
   const [appointments, setAppointments] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -26,15 +29,21 @@ export default function FinancialManager() {
   const load = useCallback(async () => {
     if (!supabase) return;
     setLoading(true); setError('');
-    const [d, p, a, e] = await Promise.all([
+    const [d, p, a, ap, b, bp, e] = await Promise.all([
       supabase.from('donation_pledges').select('id,name,amount,currency,status,paid_at,created_at,payment_method,confirmation_code').eq('status','paid').order('paid_at',{ascending:false}).limit(1000),
       supabase.from('donation_pledges').select('id,name,amount,currency,status,created_at,merchant_reference').eq('status','pending').order('created_at',{ascending:false}).limit(100),
-      supabase.from('appointments').select('id,full_name,appointment_type,fee_amount,currency,payment_status,paid_at,created_at,payment_method,payment_reference').eq('payment_status','paid').order('paid_at',{ascending:false}).limit(1000),
+      supabase.from('appointments').select('id,full_name,appointment_type,fee_amount,currency,payment_status,paid_at,created_at,payment_method,payment_reference,pesapal_merchant_reference,pesapal_order_tracking_id').eq('payment_status','paid').order('paid_at',{ascending:false}).limit(1000),
+      supabase.from('appointments').select('id,full_name,appointment_type,fee_amount,currency,payment_status,created_at,pesapal_merchant_reference').eq('payment_status','pending').order('created_at',{ascending:false}).limit(100),
+      supabase.from('bursary_applications').select('id,applicant_name,application_fee,currency,payment_status,paid_at,created_at,merchant_reference').eq('payment_status','paid').order('paid_at',{ascending:false}).limit(1000),
+      supabase.from('bursary_applications').select('id,applicant_name,application_fee,currency,payment_status,created_at,merchant_reference').eq('payment_status','pending').eq('application_status','awaiting_payment').order('created_at',{ascending:false}).limit(100),
       supabase.from('finance_expenses').select('*').order('expense_date',{ascending:false}).limit(1000),
     ]);
-    const failures = [d.error,p.error,a.error,e.error].filter(Boolean);
+    const failures = [d.error,p.error,a.error,ap.error,b.error,bp.error,e.error].filter(Boolean);
     if (failures.length) setError(failures.map(x=>x.message).join(' · '));
-    setDonations(d.data || []); setPendingDonations(p.data || []); setAppointments(a.data || []); setExpenses(e.data || []);
+    setDonations(d.data || []); setPendingDonations(p.data || []);
+    setAppointments(a.data || []); setPendingAppointments(ap.data || []);
+    setBursaries(b.data || []); setPendingBursaries(bp.data || []);
+    setExpenses(e.data || []);
     setLoading(false);
   }, []);
 
@@ -46,11 +55,17 @@ export default function FinancialManager() {
   };
   const filteredDonations = donations.filter(r => inRange(r.paid_at || r.created_at));
   const filteredAppointments = appointments.filter(r => inRange(r.paid_at || r.created_at));
+  const filteredBursaries = bursaries.filter(r => inRange(r.paid_at || r.created_at));
   const filteredExpenses = expenses.filter(r => inRange(r.expense_date));
+  const pendingPayments = [
+    ...pendingDonations.map(r => ({ ...r, payment_type: 'Donation', payer: r.name || 'Donor', amount: r.amount, reference: r.merchant_reference })),
+    ...pendingAppointments.map(r => ({ ...r, payment_type: 'Appointment', payer: r.full_name, amount: r.fee_amount, reference: r.pesapal_merchant_reference })),
+    ...pendingBursaries.map(r => ({ ...r, payment_type: 'Bursary application', payer: r.applicant_name || 'Applicant', amount: r.application_fee, reference: r.merchant_reference })),
+  ].filter(r => r.reference);
   const totals = useMemo(() => {
     const sums = { income: {}, expenses: {}, net: {} };
     const add = (bucket, currency, amount) => { bucket[currency] = (bucket[currency] || 0) + Number(amount || 0); };
-    [...filteredDonations, ...filteredAppointments].forEach(r => add(sums.income, r.currency || 'UGX', r.amount ?? r.fee_amount));
+    [...filteredDonations, ...filteredAppointments, ...filteredBursaries].forEach(r => add(sums.income, r.currency || 'UGX', r.amount ?? r.fee_amount ?? r.application_fee));
     filteredExpenses.forEach(r => add(sums.expenses, r.currency || 'UGX', r.amount));
     new Set([...Object.keys(sums.income),...Object.keys(sums.expenses)]).forEach(c => { sums.net[c] = (sums.income[c] || 0) - (sums.expenses[c] || 0); });
     return sums;
@@ -106,6 +121,7 @@ export default function FinancialManager() {
       ['Date','Type','Description','Category','Currency','Amount','Reference'],
       ...filteredDonations.map(r=>[r.paid_at||r.created_at,'Donation',r.name||'Donation','Giving',r.currency||'UGX',r.amount,r.confirmation_code||'']),
       ...filteredAppointments.map(r=>[r.paid_at||r.created_at,'Appointment',r.full_name,r.appointment_type,r.currency||'UGX',r.fee_amount,r.payment_reference||'']),
+      ...filteredBursaries.map(r=>[r.paid_at||r.created_at,'Bursary application',r.applicant_name,'Application fee',r.currency||'UGX',r.application_fee,r.merchant_reference||'']),
       ...filteredExpenses.map(r=>[r.expense_date,'Expense',r.description,r.category,r.currency||'UGX',-Number(r.amount),r.reference||'']),
     ];
     const csv = rows.map(row=>row.map(v=>`"${String(v ?? '').replaceAll('"','""')}"`).join(',')).join('\n');
@@ -149,15 +165,16 @@ export default function FinancialManager() {
     <section className="admin-card overflow-hidden">
     <section className="admin-card overflow-hidden">
       <div className="border-b border-gray-100 px-5 py-4"><h2 className="admin-section-title">Pending Pesapal payments</h2><p className="admin-muted mt-1">Recheck payments against Pesapal when the merchant dashboard shows completion but Tidori remains pending. This action is restricted to the super administrator.</p></div>
-      <div className="overflow-x-auto"><table className="admin-table w-full min-w-[720px]"><thead><tr><th>Date</th><th>Payer</th><th>Amount</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead><tbody>
-        {pendingDonations.map(row=><tr key={row.id}><td>{dateLabel(row.created_at)}</td><td>{row.name || 'Donor'}</td><td>{money(row.amount,row.currency || 'UGX')}</td><td className="font-mono text-xs">{row.merchant_reference || '—'}</td><td><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Pending</span></td><td><button type="button" disabled={Boolean(reconciling)} onClick={()=>reconcilePayment(row)} className="rounded-lg bg-[#009cff] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{reconciling===row.merchant_reference?'Checking Pesapal…':'Recheck Pesapal'}</button></td></tr>)}
-      </tbody></table>{!loading&&!pendingDonations.length&&<div className="admin-empty">No pending donation payments.</div>}</div>
+      <div className="overflow-x-auto"><table className="admin-table w-full min-w-[720px]"><thead><tr><th>Date</th><th>Type</th><th>Payer</th><th>Amount</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead><tbody>
+        {pendingPayments.map(row=><tr key={row.payment_type+row.id}><td>{dateLabel(row.created_at)}</td><td>{row.payment_type}</td><td>{row.payer}</td><td>{money(row.amount,row.currency || 'UGX')}</td><td className="font-mono text-xs">{row.reference}</td><td><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Pending</span></td><td><button type="button" disabled={Boolean(reconciling)} onClick={()=>reconcilePayment({ ...row, merchant_reference: row.reference })} className="rounded-lg bg-[#009cff] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{reconciling===row.reference?'Checking Pesapal…':'Recheck Pesapal'}</button></td></tr>)}
+      </tbody></table>{!loading&&!pendingPayments.length&&<div className="admin-empty">No pending Pesapal payments.</div>}</div>
     </section>
       <div className="border-b border-gray-100 px-5 py-4"><h2 className="admin-section-title">Verified income transactions</h2><p className="admin-muted mt-1">Only payments confirmed as paid by the database are included.</p></div>
       <div className="overflow-x-auto"><table className="admin-table w-full min-w-[700px]"><thead><tr><th>Date</th><th>Source</th><th>Payer</th><th>Details</th><th>Amount</th><th>Method</th></tr></thead><tbody>
         {filteredDonations.map(row=><tr key={'d'+row.id}><td>{dateLabel(row.paid_at||row.created_at)}</td><td>Donation</td><td>{row.name||'Donor'}</td><td>Giving</td><td>{money(row.amount,row.currency||'UGX')}</td><td>{row.payment_method||'Pesapal'}</td></tr>)}
         {filteredAppointments.map(row=><tr key={'a'+row.id}><td>{dateLabel(row.paid_at||row.created_at)}</td><td>Appointment</td><td>{row.full_name}</td><td>{row.appointment_type}</td><td>{money(row.fee_amount,row.currency||'UGX')}</td><td>{row.payment_method||'Pesapal'}</td></tr>)}
-      </tbody></table>{!loading&&!filteredDonations.length&&!filteredAppointments.length&&<div className="admin-empty">No verified income transactions for this period.</div>}</div>
+        {filteredBursaries.map(row=><tr key={'b'+row.id}><td>{dateLabel(row.paid_at||row.created_at)}</td><td>Bursary application</td><td>{row.applicant_name||'Applicant'}</td><td>Application fee</td><td>{money(row.application_fee,row.currency||'UGX')}</td><td>Pesapal</td></tr>)}
+      </tbody></table>{!loading&&!filteredDonations.length&&!filteredAppointments.length&&!filteredBursaries.length&&<div className="admin-empty">No verified income transactions for this period.</div>}</div>
     </section>
     <p className="text-xs leading-5 text-gray-500">Financial totals are grouped by currency; UGX and USD are never added together. This module is an operational income-and-expense register, not a replacement for statutory accounting or bank reconciliation.</p>
   </div>;

@@ -704,10 +704,13 @@ async function verifyPayment(env, trackingId, merchantReference) {
     }
     const updated = await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(application.id)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}`, {
       method: "PATCH", headers: { prefer: "return=representation" },
-      body: JSON.stringify({ payment_status: paymentStatus, ...(paymentStatus === "paid" ? {
-        paid_at: data.created_date || new Date().toISOString(),
-        application_serial: `TMB-${new Date().getFullYear()}-${application.id.slice(0,8).toUpperCase()}`,
-      } : {}) }),
+      body: JSON.stringify({
+        payment_status: paymentStatus,
+        paid_at: paymentStatus === "paid" ? (data.created_date || new Date().toISOString()) : null,
+        application_serial: paymentStatus === "paid"
+          ? `TMB-${new Date().getFullYear()}-${application.id.slice(0,8).toUpperCase()}`
+          : null,
+      }),
     });
     return { paymentStatus, amount: data.amount, currency: data.currency, bursary: true, updated: Boolean(updated?.length) };
   }
@@ -726,7 +729,8 @@ async function verifyPayment(env, trackingId, merchantReference) {
       `appointments?id=eq.${encodeURIComponent(appointment.id)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}`,
       { method: "PATCH", headers: { prefer: "return=representation" },
         body: JSON.stringify({
-          ...(paymentStatus === "paid" ? { payment_status: "paid", paid_at: data.created_date || new Date().toISOString() } : {}),
+          payment_status: paymentStatus,
+          paid_at: paymentStatus === "paid" ? (data.created_date || new Date().toISOString()) : null,
           ...(data.payment_method ? { payment_method: clean(data.payment_method, 80) } : {}),
           ...(data.confirmation_code ? { payment_reference: clean(data.confirmation_code, 120) } : {}),
         }) }
@@ -886,11 +890,14 @@ async function reconcilePesapalPayment(request, env) {
   if (access.error) return access.error;
   const input = await request.json().catch(() => ({}));
   const reference = clean(input.reference, 120);
-  if (!/^TIDORI-(?:APPT-)?[0-9a-f-]{36}$/i.test(reference)) return json({ error: "Invalid Tidori payment reference." }, 400);
+  if (!/^TIDORI-(?:(?:APPT|BURSARY)-)?[0-9a-f-]{36}$/i.test(reference)) return json({ error: "Invalid Tidori payment reference." }, 400);
   try {
     let trackingId = "";
     if (reference.startsWith("TIDORI-APPT-")) {
       const rows = await supabaseRequest(env, `appointments?select=pesapal_order_tracking_id&pesapal_merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`);
+      trackingId = rows?.[0]?.pesapal_order_tracking_id || "";
+    } else if (reference.startsWith("TIDORI-BURSARY-")) {
+      const rows = await supabaseRequest(env, `bursary_applications?select=pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`);
       trackingId = rows?.[0]?.pesapal_order_tracking_id || "";
     } else {
       const rows = await supabaseRequest(env, `donation_pledges?select=pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`);
@@ -907,34 +914,37 @@ async function reconcilePesapalPayment(request, env) {
 
 async function paymentStatus(request, env) {
   const reference = clean(new URL(request.url).searchParams.get("reference"), 120);
+  let table, filter, select, statusField, trackingField, notFound;
   if (reference.startsWith("TIDORI-APPT-")) {
-    const rows = await supabaseRequest(env,
-      `appointments?select=payment_status,currency,fee_amount,paid_at,status&pesapal_merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`
-    );
-    if (!rows?.length) return json({ error: "Appointment payment not found." }, 404);
-    return json({ status: rows[0].payment_status, ...rows[0] });
-  }
-  if (!/^TIDORI-[0-9a-f-]{36}$/i.test(reference)) return json({ error: "Invalid reference." }, 400);
+    table = "appointments"; filter = "pesapal_merchant_reference"; statusField = "payment_status";
+    trackingField = "pesapal_order_tracking_id"; select = "payment_status,currency,fee_amount,paid_at,pesapal_order_tracking_id"; notFound = "Appointment payment not found.";
+  } else if (reference.startsWith("TIDORI-BURSARY-")) {
+    table = "bursary_applications"; filter = "merchant_reference"; statusField = "payment_status";
+    trackingField = "pesapal_order_tracking_id"; select = "payment_status,currency,application_fee,paid_at,pesapal_order_tracking_id"; notFound = "Bursary payment not found.";
+  } else if (/^TIDORI-[0-9a-f-]{36}$/i.test(reference)) {
+    table = "donation_pledges"; filter = "merchant_reference"; statusField = "status";
+    trackingField = "pesapal_order_tracking_id"; select = "status,currency,amount,paid_at,pesapal_order_tracking_id"; notFound = "Donation not found.";
+  } else return json({ error: "Invalid reference." }, 400);
+
   const rows = await supabaseRequest(env,
-    `donation_pledges?select=status,currency,amount,paid_at,merchant_reference,pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`
+    `${table}?select=${select}&${filter}=eq.${encodeURIComponent(reference)}&limit=1`
   );
-  if (!rows?.length) return json({ error: "Donation not found." }, 404);
-  const donation = rows[0];
-  // A donor may return before the Pesapal IPN has arrived. Re-check the
-  // transaction directly with Pesapal so the page can safely reconcile it.
-  if (donation.status !== "paid" && donation.pesapal_order_tracking_id) {
+  if (!rows?.length) return json({ error: notFound }, 404);
+  const record = rows[0];
+  const currentStatus = record[statusField];
+  if (currentStatus !== "paid" && record[trackingField]) {
     try {
-      const verified = await verifyPayment(env, donation.pesapal_order_tracking_id, reference);
+      const verified = await verifyPayment(env, record[trackingField], reference);
       const refreshed = await supabaseRequest(env,
-        `donation_pledges?select=status,currency,amount,paid_at&merchant_reference=eq.${encodeURIComponent(reference)}&limit=1`
+        `${table}?select=${select.replace("," + trackingField, "")}&${filter}=eq.${encodeURIComponent(reference)}&limit=1`
       );
-      return json({ ...(refreshed?.[0] || donation), verification: verified.paymentStatus });
+      return json({ ...(refreshed?.[0] || record), status: refreshed?.[0]?.[statusField] || verified.paymentStatus, verification: verified.paymentStatus });
     } catch (error) {
-      console.error("Donor payment status refresh failed:", reference, error);
-      return json({ status: donation.status, currency: donation.currency, amount: donation.amount, paid_at: donation.paid_at, verification: "pending" });
+      console.error("Payment status refresh failed:", reference, error);
+      return json({ status: currentStatus, ...record, verification: "pending" });
     }
   }
-  return json({ status: donation.status, currency: donation.currency, amount: donation.amount, paid_at: donation.paid_at });
+  return json({ status: currentStatus, ...record });
 }
 
 

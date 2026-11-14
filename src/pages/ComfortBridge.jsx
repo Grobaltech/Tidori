@@ -14,16 +14,14 @@ function SupportRequest(){
  const change=e=>setForm(v=>({...v,[e.target.name]:e.target.type==='checkbox'?e.target.checked:e.target.value}));
  const submit=async e=>{
   e.preventDefault();setBusy(true);setError('');setReference('');
-  if(!supabaseReady||!supabase){setError('The confidential request service is temporarily unavailable. Please contact the ministry office.');setBusy(false);return;}
-  const requestReference='CB-'+crypto.randomUUID().slice(0,8).toUpperCase();
-  const {error:saveError}=await supabase.from('comfort_bridge_applications').insert({
-   reference:requestReference,
-   full_name:form.full_name.trim(),email:form.email.trim().toLowerCase(),phone:form.phone.trim()||null,
+  const response=await fetch('/api/comfort-bridge/apply',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+   full_name:form.full_name.trim(),email:form.email.trim().toLowerCase(),phone:form.phone.trim(),
    preferred_contact:form.preferred_contact,support_type:form.support_type,loss_category:form.loss_category,
-   preferred_time:form.preferred_time||null,private_message:form.message.trim()||null,consent_at:new Date().toISOString()
-  });
-  if(saveError)setError('We could not submit your request securely. Please try again or contact the ministry office.');
-  else{setReference(requestReference);setForm({full_name:'',email:'',phone:'',preferred_contact:'Phone',support_type:'Both spiritual guidance and prayer',loss_category:'Prefer to discuss privately',preferred_time:'',message:'',consent:false});}
+   preferred_time:form.preferred_time,message:form.message
+  })});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok||!result.success)setError(result.error||'We could not submit your request securely. Please try again or contact the ministry office.');
+  else{setReference(result.reference);setForm({full_name:'',email:'',phone:'',preferred_contact:'Phone',support_type:'Both spiritual guidance and prayer',loss_category:'Prefer to discuss privately',preferred_time:'',message:'',consent:false});}
   setBusy(false);
  };
  return <form onSubmit={submit} className="rounded-xl bg-white p-6 shadow-lg sm:p-8">

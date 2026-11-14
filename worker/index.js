@@ -380,6 +380,83 @@ async function sendPushToAdmins(env, title, body, path = '/admin') {
   }
 }
 
+async function sendPushToComfortBridgeManagers(env, title, body, path = '/admin') {
+  try {
+    const [admins, grants] = await Promise.all([
+      supabaseRequest(env, "profiles?select=id&role=in.(admin,super_admin)"),
+      supabaseRequest(env, "user_permissions?select=user_id&permission=eq.comfort_bridge.manage"),
+    ]);
+    const ids = [...new Set([...(admins || []).map(row => row.id), ...(grants || []).map(row => row.user_id)])];
+    return await sendPushToUsers(env, ids, title, body, path);
+  } catch (error) {
+    console.error('Comfort Bridge notification lookup failed:', error);
+    return { sent: 0, configured: Boolean(env.FCM_SERVICE_ACCOUNT_JSON), error: error.message };
+  }
+}
+
+async function createComfortBridgeApplication(request, env) {
+  const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter(key => !env[key]);
+  if (missing.length) return json({ error: "The confidential request service is not configured.", missing }, 503);
+  const input = await request.json().catch(() => null);
+  if (!input || typeof input !== "object") return json({ error: "Invalid request." }, 400);
+  const name = clean(input.full_name, 120);
+  const email = clean(input.email, 200).toLowerCase();
+  const phone = clean(input.phone, 40);
+  const contact = clean(input.preferred_contact, 20);
+  const support = clean(input.support_type, 100);
+  const loss = clean(input.loss_category, 100) || "Prefer to discuss privately";
+  const preferredTime = clean(input.preferred_time, 120);
+  const message = clean(input.message, 2000);
+  if (name.length < 2 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    return json({ error: "Enter your name and a valid email address." }, 400);
+  }
+  if (!["Phone", "Email", "WhatsApp"].includes(contact)) return json({ error: "Choose a valid contact method." }, 400);
+  if (!["Both spiritual guidance and prayer", "One-on-one spiritual guidance", "14-day Prayer Altar covering"].includes(support)) {
+    return json({ error: "Choose a valid support option." }, 400);
+  }
+  const reference = "CB-" + crypto.randomUUID().slice(0, 8).toUpperCase();
+  try {
+    const rows = await supabaseRequest(env, "comfort_bridge_applications", {
+      method: "POST", headers: { prefer: "return=representation" },
+      body: JSON.stringify([{
+        reference, full_name: name, email, phone: phone || null, preferred_contact: contact,
+        support_type: support, loss_category: loss, preferred_time: preferredTime || null,
+        private_message: message || null, consent_at: new Date().toISOString(),
+      }]),
+    });
+    if (!rows?.[0]?.id) throw new Error("The request could not be saved.");
+    await sendPushToComfortBridgeManagers(env, "New confidential Comfort Bridge request", "A new person has requested pastoral grief support. Sign in to review the confidential application.", "/admin");
+    return json({ success: true, reference });
+  } catch (error) {
+    console.error("Comfort Bridge application submission failed:", error.message);
+    return json({ error: "We could not securely submit your request. Please try again or contact the ministry office." }, 500);
+  }
+}
+
+async function sendComfortBridgeReminders(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const now = new Date();
+  const until = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const from = encodeURIComponent(now.toISOString());
+  const to = encodeURIComponent(until.toISOString());
+  const [sessions, prayers] = await Promise.all([
+    supabaseRequest(env, `comfort_bridge_sessions?select=id,scheduled_at&status=eq.scheduled&scheduled_at=gte.${from}&scheduled_at=lte.${to}&reminder_sent_at=is.null`),
+    supabaseRequest(env, `comfort_bridge_prayer_assignments?select=id,ends_at&status=eq.active&ends_at=gte.${from}&ends_at=lte.${to}&end_reminder_sent_at=is.null`),
+  ]);
+  for (const session of sessions || []) {
+    const result = await sendPushToComfortBridgeManagers(env, "Pastoral session reminder", "A confidential Comfort Bridge session is scheduled within the next 24 hours.", "/admin");
+    if (result?.sent > 0) await supabaseRequest(env, `comfort_bridge_sessions?id=eq.${encodeURIComponent(session.id)}`, {
+      method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ reminder_sent_at: now.toISOString() }),
+    });
+  }
+  for (const assignment of prayers || []) {
+    const result = await sendPushToComfortBridgeManagers(env, "Prayer Altar reminder", "A 14-day Comfort Bridge prayer assignment is due to conclude within the next 24 hours.", "/admin");
+    if (result?.sent > 0) await supabaseRequest(env, `comfort_bridge_prayer_assignments?id=eq.${encodeURIComponent(assignment.id)}`, {
+      method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ end_reminder_sent_at: now.toISOString() }),
+    });
+  }
+}
+
 async function authenticatePushUser(request, env) {
   const authorization = request.headers.get('authorization') || '';
   const accessToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
@@ -1199,6 +1276,9 @@ async function cloudflareTurnIceServers(env) {
 }
 
 export default {
+  async scheduled(_controller, env, ctx) {
+    ctx.waitUntil(sendComfortBridgeReminders(env));
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
@@ -1265,6 +1345,7 @@ export default {
       if (url.pathname === "/api/admin/pesapal/ipn" && ["GET", "POST"].includes(request.method)) {
         return await adminPesapalIpn(request, env);
       }
+      if (url.pathname === "/api/comfort-bridge/apply" && request.method === "POST") return await createComfortBridgeApplication(request, env);
       if (url.pathname === "/api/appointments/fees" && request.method === "GET") {
         return await appointmentFees(request, env);
       }

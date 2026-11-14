@@ -29,7 +29,7 @@ export default function GiveForm({ projectId = null, dark = false, programme = n
   const [reference, setReference] = useState('');
   const final = custom ? Number(custom) : amount;
   const cls = dark ? 'field-dark' : 'field';
-  const currencyPresets = programme === 'comfort_bridge' && currency === 'UGX' ? [20000, 75000, 150000] : (presets[currency] || presets.UGX);
+  const currencyPresets = programme === 'comfort_bridge' ? (currency === 'UGX' ? [20000, 75000, 150000] : currency === 'USD' ? [10, 20, 40] : (presets[currency] || presets.UGX)) : (presets[currency] || presets.UGX);
   const formatter = useMemo(() => new Intl.NumberFormat(undefined, {
     style: 'currency', currency,
     maximumFractionDigits: ['UGX','KES','TZS','RWF','MWK','ZMW'].includes(currency) ? 0 : 2,
@@ -103,7 +103,7 @@ export default function GiveForm({ projectId = null, dark = false, programme = n
       <input className={`${cls} mb-4`} placeholder="Name" required value={name} onChange={(e) => setName(e.target.value)} />
       <input className={`${cls} mb-4`} type="email" placeholder="Email" required value={email} onChange={(e) => setEmail(e.target.value)} />
       <input className={`${cls} mb-4`} type="tel" placeholder="Phone (optional, include country code)" value={phone} onChange={(e) => setPhone(e.target.value)} />
-      {programme === 'comfort_bridge' && <><label htmlFor="comfort-dedication" className={`mb-2 block text-sm font-semibold ${dark ? 'text-white' : 'text-ink'}`}>Dedicate your contribution</label><select id="comfort-dedication" value={dedicationChoice} onChange={e => setDedicationChoice(e.target.value)} className={`${cls} mb-4 w-full rounded-lg border px-3 py-3`}><option>General Grace Pool</option><option>Widows</option><option>Grieving parents</option><option>Other bereavement</option></select><p className={`mb-3 text-sm ${dark ? 'text-white/75' : 'text-ink/70'}`}>UGX 20,000 seed gift · UGX 75,000 prayer covering · UGX 150,000 full comfort package.</p></>}<label htmlFor="giving-currency" className={`mb-2 block text-sm font-semibold ${dark ? 'text-white' : 'text-ink'}`}>Choose your giving currency</label>
+      {programme === 'comfort_bridge' && <><label htmlFor="comfort-dedication" className={`mb-2 block text-sm font-semibold ${dark ? 'text-white' : 'text-ink'}`}>Dedicate your contribution</label><select id="comfort-dedication" value={dedicationChoice} onChange={e => setDedicationChoice(e.target.value)} className={`${cls} mb-4 w-full rounded-lg border px-3 py-3`}><option>General Grace Pool</option><option>Widows</option><option>Grieving parents</option><option>Other bereavement</option></select><p className={`mb-3 text-sm ${dark ? 'text-white/75' : 'text-ink/70'}`}>UGX 20,000 / $10 seed gift · UGX 75,000 / $20 prayer covering · UGX 150,000 / $40 full comfort package.</p></>}<label htmlFor="giving-currency" className={`mb-2 block text-sm font-semibold ${dark ? 'text-white' : 'text-ink'}`}>Choose your giving currency</label>
       <select id="giving-currency" value={currency} onChange={onCurrencyChange} className={`${cls} mb-4 w-full rounded-lg border px-3 py-3`}>
         {currencyOptions.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
       </select>

@@ -407,6 +407,7 @@ async function createComfortBridgeApplication(request, env) {
   const loss = clean(input.loss_category, 100) || "Prefer to discuss privately";
   const preferredTime = clean(input.preferred_time, 120);
   const message = clean(input.message, 2000);
+  if (input.consent !== true) return json({ error: "Please confirm consent before submitting this confidential request." }, 400);
   if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: "Enter your name and a valid email address." }, 400);
   }

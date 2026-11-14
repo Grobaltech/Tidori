@@ -39,9 +39,9 @@ revoke all on function public.is_tidori_admin() from public;
 grant execute on function public.is_tidori_admin() to authenticated;
 create or replace function public.is_tidori_comfort_bridge_manager()
 returns boolean language sql stable security definer set search_path=public
-as $ select public.is_tidori_admin() or exists(
+as $$ select public.is_tidori_admin() or exists(
  select 1 from public.user_permissions up where up.user_id=auth.uid() and up.permission='comfort_bridge.manage'
-); $;
+); $$;
 revoke all on function public.is_tidori_comfort_bridge_manager() from public;
 grant execute on function public.is_tidori_comfort_bridge_manager() to authenticated;
 alter table public.comfort_bridge_applications enable row level security;

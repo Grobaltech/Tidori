@@ -50,6 +50,8 @@ drop policy if exists "comfort bridge admin application update" on public.comfor
 create policy "comfort bridge admin application update" on public.comfort_bridge_applications for update to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_admin());
 drop policy if exists "comfort bridge admin allocations" on public.comfort_bridge_allocations;
 create policy "comfort bridge admin allocations" on public.comfort_bridge_allocations for select to authenticated using(public.is_tidori_admin());
+drop policy if exists "comfort bridge admin allocation update" on public.comfort_bridge_allocations;
+create policy "comfort bridge admin allocation update" on public.comfort_bridge_allocations for update to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_admin());
 drop policy if exists "comfort bridge admin prayer" on public.comfort_bridge_prayer_assignments;
 create policy "comfort bridge admin prayer" on public.comfort_bridge_prayer_assignments for all to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_admin());
 drop policy if exists "comfort bridge admin sessions" on public.comfort_bridge_sessions;
@@ -69,7 +71,7 @@ $$;
 grant execute on function public.comfort_bridge_public_impact() to anon,authenticated;
 grant insert on public.comfort_bridge_applications to anon,authenticated;
 grant select,update on public.comfort_bridge_applications to authenticated;
-grant select on public.comfort_bridge_allocations to authenticated;
+grant select,update on public.comfort_bridge_allocations to authenticated;
 grant select,insert,update on public.comfort_bridge_prayer_assignments to authenticated;
 grant select,insert,update on public.comfort_bridge_sessions to authenticated;
 grant select on public.donation_pledges to authenticated;
@@ -86,7 +88,6 @@ begin
  if not found then raise exception 'Select an approved beneficiary'; end if;
  select coalesce(sum(amount),0) into already from public.comfort_bridge_allocations where donation_pledge_id=d.id and status<>'reversed';
  if already+p_amount>d.amount then raise exception 'Allocation exceeds the unallocated balance of this contribution'; end if;
- if upper(d.currency)<>'UGX' then raise exception 'This allocation form currently records UGX gifts only'; end if;
  if p_allocation_type not in ('seed_gift','prayer_altar','full_package') then raise exception 'Invalid allocation type'; end if;
  insert into public.comfort_bridge_allocations(donation_pledge_id,application_id,allocation_type,amount,currency)
  values(d.id,a.id,p_allocation_type,p_amount,d.currency) returning id into new_id;

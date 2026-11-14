@@ -18,7 +18,7 @@ function SupportRequest(){
    const response=await fetch('/api/comfort-bridge/apply',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
     full_name:form.full_name.trim(),email:form.email.trim().toLowerCase(),phone:form.phone.trim(),
     preferred_contact:form.preferred_contact,support_type:form.support_type,loss_category:form.loss_category,
-    preferred_time:form.preferred_time,message:form.message
+    preferred_time:form.preferred_time,message:form.message,consent:form.consent
    })});
    const result=await response.json().catch(()=>({}));
    if(!response.ok||!result.success)setError(result.error||'We could not submit your request securely. Please try again or contact the ministry office.');

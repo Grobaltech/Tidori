@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const modules = [
+  { key:'comfort_bridge', label:'The Comfort Bridge', description:'Confidential grief-support applications, sponsorship allocation, prayer assignments and pastoral sessions', actions:['manage'] },
   { key:'members', label:'Members', description:'Member directory and church profiles', actions:['view','add','edit','delete','approve','export'] },
   { key:'events', label:'Events', description:'Church events and registrations', actions:['view','add','edit','delete','approve','publish','export'] },
   { key:'ministries', label:'Ministries', description:'Ministry records and assignments', actions:['view','add','edit','delete','approve'] },

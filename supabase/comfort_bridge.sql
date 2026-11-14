@@ -54,17 +54,17 @@ create policy "comfort bridge public application insert" on public.comfort_bridg
 drop policy if exists "comfort bridge admin applications" on public.comfort_bridge_applications;
 create policy "comfort bridge admin applications" on public.comfort_bridge_applications for select to authenticated using(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin application update" on public.comfort_bridge_applications;
-create policy "comfort bridge admin application update" on public.comfort_bridge_applications for update to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_comfort_bridge_manager());
+create policy "comfort bridge admin application update" on public.comfort_bridge_applications for update to authenticated using(public.is_tidori_comfort_bridge_manager()) with check(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin allocations" on public.comfort_bridge_allocations;
-create policy "comfort bridge admin allocations" on public.comfort_bridge_allocations for select to authenticated using(public.is_tidori_admin());
+create policy "comfort bridge admin allocations" on public.comfort_bridge_allocations for select to authenticated using(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin allocation update" on public.comfort_bridge_allocations;
-create policy "comfort bridge admin allocation update" on public.comfort_bridge_allocations for update to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_admin());
+create policy "comfort bridge admin allocation update" on public.comfort_bridge_allocations for update to authenticated using(public.is_tidori_comfort_bridge_manager()) with check(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin prayer" on public.comfort_bridge_prayer_assignments;
-create policy "comfort bridge admin prayer" on public.comfort_bridge_prayer_assignments for all to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_admin());
+create policy "comfort bridge admin prayer" on public.comfort_bridge_prayer_assignments for all to authenticated using(public.is_tidori_comfort_bridge_manager()) with check(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin sessions" on public.comfort_bridge_sessions;
-create policy "comfort bridge admin sessions" on public.comfort_bridge_sessions for all to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_admin());
+create policy "comfort bridge admin sessions" on public.comfort_bridge_sessions for all to authenticated using(public.is_tidori_comfort_bridge_manager()) with check(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin donation read" on public.donation_pledges;
-create policy "comfort bridge admin donation read" on public.donation_pledges for select to authenticated using(public.is_tidori_admin());
+create policy "comfort bridge admin donation read" on public.donation_pledges for select to authenticated using(public.is_tidori_comfort_bridge_manager());
 create or replace function public.comfort_bridge_public_impact()
 returns json language sql stable security definer set search_path=public
 as $$

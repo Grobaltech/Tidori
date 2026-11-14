@@ -36,6 +36,7 @@ export const site = {
         { to: '/ministries', label: 'Our Ministries' },
         { to: '/team', label: 'Meet Our Leaders' },
         { to: '/give', label: 'Give' },
+        { to: '/comfort-bridge', label: 'The Comfort Bridge' },
         { to: '/volunteer', label: 'Serve With Us' },
       ],
     },

@@ -76,4 +76,4 @@ The public programme page is available at `/comfort-bridge`. It uses the existin
 
 Before using the module against the live Supabase project, run `supabase/comfort_bridge.sql` once in the connected project's SQL Editor. The migration adds the programme metadata, private application and ministry operations tables, RLS policies, public aggregate-only impact function, and an administrator-only allocation function. Do not expose beneficiary records or donor details publicly.
 
-The programme page and administration UI are part of the normal Vite build. Existing Pesapal credentials, IPN configuration and payment routes are retained.
+The programme page and administration UI are part of the normal Vite build. The Worker also sends new-application, upcoming-session and prayer-cycle reminders to Comfort Bridge managers through the existing push-notification service. A daily Cloudflare Cron trigger runs at 06:00 UTC (09:00 Uganda time); push delivery requires the existing Firebase/FCM Worker configuration. Existing Pesapal credentials, IPN configuration and payment routes are retained.

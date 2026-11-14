@@ -148,7 +148,7 @@ function Footer() {
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Get Involved</h2>
-          {links([['/give', 'Give'], ['/bursaries', 'Bursaries & Scholarships'], ['/volunteer', 'Serve With Us'], ['/ministries', 'Our Ministries'], ['/team', 'Our Leaders']])}
+          {links([['/give', 'Give'], ['/comfort-bridge', 'The Comfort Bridge'], ['/bursaries', 'Bursaries & Scholarships'], ['/volunteer', 'Serve With Us'], ['/ministries', 'Our Ministries'], ['/team', 'Our Leaders']])}
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Newsletter</h2>

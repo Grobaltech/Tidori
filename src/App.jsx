@@ -21,6 +21,7 @@ import Meeting from './pages/Meeting';
 import Community from './pages/Community';
 import Notifications from './pages/Notifications';
 import Bursaries from './pages/Bursaries';
+import ComfortBridge from './pages/ComfortBridge';
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/ministries" element={<Ministries />} />
         <Route path="/team" element={<Team />} />
         <Route path="/give" element={<Give />} />
+        <Route path="/comfort-bridge" element={<ComfortBridge />} />
         <Route path="/bursaries" element={<Bursaries />} />
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/contact" element={<Contact />} />

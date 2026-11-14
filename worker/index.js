@@ -742,7 +742,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
   }
 
   const records = await supabaseRequest(env,
-    `donation_pledges?select=amount,currency&merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}&limit=1`
+    `donation_pledges?select=amount,currency,programme,dedication&merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}&limit=1`
   );
   const donation = records?.[0];
   if (!donation) throw new Error("No matching donation record exists for this Pesapal transaction.");
@@ -767,7 +767,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
   if (paymentStatus === "paid" && updated?.length) {
     await sendPushToAdmins(env, 'Successful Tidori payment', `${data.currency} ${Number(data.amount).toLocaleString()} donation received and verified.`, '/admin');
   }
-  return { paymentStatus, amount: data.amount, currency: data.currency, paymentMethod: data.payment_method };
+  return { paymentStatus, amount: data.amount, currency: data.currency, paymentMethod: data.payment_method, programme: donation.programme || null };
 }
 
 async function createPayment(request, env) {
@@ -802,6 +802,8 @@ async function createPayment(request, env) {
     body: JSON.stringify([{
       name, email, amount: Number(amount.toFixed(2)), project_id: projectId,
       status: "pending", currency, merchant_reference: merchantReference, phone: phone || null,
+      programme: clean(input.programme, 40) === "comfort_bridge" ? "comfort_bridge" : null,
+      dedication: clean(input.dedication, 80) || null,
     }]),
   });
   if (!rows?.[0]?.id) throw new Error("Could not save your donation record.");
@@ -815,7 +817,7 @@ async function createPayment(request, env) {
       id: merchantReference,
       currency,
       amount: Number(amount.toFixed(2)),
-      description: "Donation to Tidori Ministries",
+      description: clean(input.programme, 40) === "comfort_bridge" ? "The Comfort Bridge Grace Pool" : "Donation to Tidori Ministries",
       callback_url: `${origin}/api/payments/pesapal/callback`,
       redirect_mode: "PARENT_WINDOW",
       cancellation_url: `${origin}/give?payment=cancelled&reference=${encodeURIComponent(merchantReference)}`,
@@ -874,7 +876,7 @@ async function handleNotification(request, env, isCallback) {
   }
   if (isCallback) {
     const status = result?.paymentStatus || "processing";
-    const destination = merchantReference.startsWith("TIDORI-APPT-") ? "/appointments" : merchantReference.startsWith("TIDORI-BURSARY-") ? "/bursaries" : "/give";
+    const destination = merchantReference.startsWith("TIDORI-APPT-") ? "/appointments" : merchantReference.startsWith("TIDORI-BURSARY-") ? "/bursaries" : result?.programme === "comfort_bridge" ? "/comfort-bridge" : "/give";
     return Response.redirect(`${url.origin}${destination}?payment=${encodeURIComponent(status)}&reference=${encodeURIComponent(merchantReference)}`, 302);
   }
   return json({

@@ -49,8 +49,6 @@ alter table public.comfort_bridge_allocations enable row level security;
 alter table public.comfort_bridge_prayer_assignments enable row level security;
 alter table public.comfort_bridge_sessions enable row level security;
 alter table public.donation_pledges enable row level security;
-drop policy if exists "comfort bridge public application insert" on public.comfort_bridge_applications;
-create policy "comfort bridge public application insert" on public.comfort_bridge_applications for insert to anon,authenticated with check(status='new' and reviewed_at is null and consent_at is not null);
 drop policy if exists "comfort bridge admin applications" on public.comfort_bridge_applications;
 create policy "comfort bridge admin applications" on public.comfort_bridge_applications for select to authenticated using(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin application update" on public.comfort_bridge_applications;
@@ -76,7 +74,6 @@ as $$
  ) from public.donation_pledges where programme='comfort_bridge';
 $$;
 grant execute on function public.comfort_bridge_public_impact() to anon,authenticated;
-grant insert on public.comfort_bridge_applications to anon,authenticated;
 grant select,update on public.comfort_bridge_applications to authenticated;
 grant select,update on public.comfort_bridge_allocations to authenticated;
 grant select,insert,update on public.comfort_bridge_prayer_assignments to authenticated;

@@ -820,7 +820,7 @@ async function createPayment(request, env) {
       description: clean(input.programme, 40) === "comfort_bridge" ? "The Comfort Bridge Grace Pool" : "Donation to Tidori Ministries",
       callback_url: `${origin}/api/payments/pesapal/callback`,
       redirect_mode: "PARENT_WINDOW",
-      cancellation_url: `${origin}/give?payment=cancelled&reference=${encodeURIComponent(merchantReference)}`,
+      cancellation_url: `${origin}${clean(input.programme, 40) === "comfort_bridge" ? "/comfort-bridge" : "/give"}?payment=cancelled&reference=${encodeURIComponent(merchantReference)}`,
       notification_id: notificationId,
       billing_address: {
         email_address: email,

@@ -68,3 +68,12 @@ The Cloudflare Worker in `worker/index.js` handles Pesapal checkout, callback an
 ## Licence note
 The template's CC BY 4.0 licence requires keeping the "Designed by HTML Codex"
 link in the footer (see `LICENSE-TEMPLATE.txt`). Removing it needs their credit-removal licence.
+
+
+## The Comfort Bridge / Grace Pool
+
+The public programme page is available at `/comfort-bridge`. It uses the existing Pesapal donation endpoint and tags verified contributions with `programme=comfort_bridge`. Confidential beneficiary requests, sponsorship allocations, Prayer Altar assignments and pastoral sessions are managed in the administrator portal under **Comfort Bridge**.
+
+Before using the module against the live Supabase project, run `supabase/comfort_bridge.sql` once in the connected project's SQL Editor. The migration adds the programme metadata, private application and ministry operations tables, RLS policies, public aggregate-only impact function, and an administrator-only allocation function. Do not expose beneficiary records or donor details publicly.
+
+The programme page and administration UI are part of the normal Vite build. Existing Pesapal credentials, IPN configuration and payment routes are retained.

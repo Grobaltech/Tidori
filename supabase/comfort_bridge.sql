@@ -5,7 +5,7 @@ alter table public.donation_pledges add column if not exists programme text;
 alter table public.donation_pledges add column if not exists dedication text;
 create index if not exists donation_pledges_programme_status_idx on public.donation_pledges(programme,status,created_at desc);
 create table if not exists public.comfort_bridge_applications (
- id uuid primary key default gen_random_uuid(), full_name text not null check(char_length(full_name) between 2 and 120),
+ id uuid primary key default gen_random_uuid(), reference text not null unique check(char_length(reference) between 6 and 32), full_name text not null check(char_length(full_name) between 2 and 120),
  email text not null check(char_length(email) between 3 and 200), phone text,
  preferred_contact text not null default 'Phone' check(preferred_contact in ('Phone','Email','WhatsApp')),
  support_type text not null, loss_category text not null default 'Prefer to discuss privately', preferred_time text,
@@ -67,6 +67,12 @@ as $$
  ) from public.donation_pledges where programme='comfort_bridge';
 $$;
 grant execute on function public.comfort_bridge_public_impact() to anon,authenticated;
+grant insert on public.comfort_bridge_applications to anon,authenticated;
+grant select,update on public.comfort_bridge_applications to authenticated;
+grant select on public.comfort_bridge_allocations to authenticated;
+grant select,insert,update on public.comfort_bridge_prayer_assignments to authenticated;
+grant select,insert,update on public.comfort_bridge_sessions to authenticated;
+grant select on public.donation_pledges to authenticated;
 create or replace function public.comfort_bridge_allocate(p_donation_id uuid,p_application_id uuid,p_amount numeric,p_allocation_type text)
 returns uuid language plpgsql security definer set search_path=public
 as $$

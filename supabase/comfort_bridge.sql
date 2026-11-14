@@ -37,6 +37,13 @@ returns boolean language sql stable security definer set search_path=public
 as $$ select exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('admin','super_admin')); $$;
 revoke all on function public.is_tidori_admin() from public;
 grant execute on function public.is_tidori_admin() to authenticated;
+create or replace function public.is_tidori_comfort_bridge_manager()
+returns boolean language sql stable security definer set search_path=public
+as $ select public.is_tidori_admin() or exists(
+ select 1 from public.user_permissions up where up.user_id=auth.uid() and up.permission='comfort_bridge.manage'
+); $;
+revoke all on function public.is_tidori_comfort_bridge_manager() from public;
+grant execute on function public.is_tidori_comfort_bridge_manager() to authenticated;
 alter table public.comfort_bridge_applications enable row level security;
 alter table public.comfort_bridge_allocations enable row level security;
 alter table public.comfort_bridge_prayer_assignments enable row level security;
@@ -45,9 +52,9 @@ alter table public.donation_pledges enable row level security;
 drop policy if exists "comfort bridge public application insert" on public.comfort_bridge_applications;
 create policy "comfort bridge public application insert" on public.comfort_bridge_applications for insert to anon,authenticated with check(status='new' and reviewed_at is null and consent_at is not null);
 drop policy if exists "comfort bridge admin applications" on public.comfort_bridge_applications;
-create policy "comfort bridge admin applications" on public.comfort_bridge_applications for select to authenticated using(public.is_tidori_admin());
+create policy "comfort bridge admin applications" on public.comfort_bridge_applications for select to authenticated using(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin application update" on public.comfort_bridge_applications;
-create policy "comfort bridge admin application update" on public.comfort_bridge_applications for update to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_admin());
+create policy "comfort bridge admin application update" on public.comfort_bridge_applications for update to authenticated using(public.is_tidori_admin()) with check(public.is_tidori_comfort_bridge_manager());
 drop policy if exists "comfort bridge admin allocations" on public.comfort_bridge_allocations;
 create policy "comfort bridge admin allocations" on public.comfort_bridge_allocations for select to authenticated using(public.is_tidori_admin());
 drop policy if exists "comfort bridge admin allocation update" on public.comfort_bridge_allocations;
@@ -80,7 +87,7 @@ returns uuid language plpgsql security definer set search_path=public
 as $$
 declare d public.donation_pledges%rowtype; a public.comfort_bridge_applications%rowtype; already numeric; new_id uuid;
 begin
- if not public.is_tidori_admin() then raise exception 'Administrator access required'; end if;
+ if not public.is_tidori_comfort_bridge_manager() then raise exception 'Comfort Bridge manager access required'; end if;
  if p_amount is null or p_amount<=0 then raise exception 'Enter a valid allocation amount'; end if;
  select * into d from public.donation_pledges where id=p_donation_id and programme='comfort_bridge' and status='paid' for update;
  if not found then raise exception 'Only verified paid Grace Pool contributions can be allocated'; end if;

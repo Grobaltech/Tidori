@@ -23,12 +23,12 @@ create table if not exists public.comfort_bridge_allocations (
 );
 create table if not exists public.comfort_bridge_prayer_assignments (
  id uuid primary key default gen_random_uuid(), application_id uuid not null references public.comfort_bridge_applications(id),
- assigned_to text not null check(char_length(assigned_to) between 2 and 120), starts_at timestamptz not null, ends_at timestamptz not null,
+ assigned_to text not null check(char_length(assigned_to) between 2 and 120), starts_at timestamptz not null, ends_at timestamptz not null, end_reminder_sent_at timestamptz,
  status text not null default 'active' check(status in ('active','completed','cancelled')), private_notes text, created_at timestamptz not null default now(), check(ends_at>starts_at)
 );
 create table if not exists public.comfort_bridge_sessions (
  id uuid primary key default gen_random_uuid(), application_id uuid not null references public.comfort_bridge_applications(id),
- scheduled_at timestamptz not null, session_type text not null default 'one_on_one' check(session_type in ('one_on_one','follow_up')),
+ scheduled_at timestamptz not null, reminder_sent_at timestamptz, session_type text not null default 'one_on_one' check(session_type in ('one_on_one','follow_up')),
  meeting_mode text not null default 'phone' check(meeting_mode in ('phone','in_person','video','audio')),
  status text not null default 'scheduled' check(status in ('scheduled','completed','cancelled','no_show')), private_notes text, created_at timestamptz not null default now()
 );

@@ -157,8 +157,7 @@ function Footer() {
       </div>
       <div className="container-page mt-4 flex flex-col justify-between gap-2 border-t border-white/10 py-6 text-sm md:flex-row">
         <p>&copy; {new Date().getFullYear()} <Link to="/" className="text-gold">{activeSite.name}</Link>. All rights reserved.</p>
-        {/* Attribution required by the template's CC BY 4.0 license - do not remove */}
-        <p>Designed by <a href="https://htmlcodex.com" target="_blank" rel="noreferrer" className="text-gold">HTML Codex</a></p>
+        <p>Designed by <a href="https://wa.me/256707836076" target="_blank" rel="noopener noreferrer" aria-label="Contact Grobaltech Technologies on WhatsApp" className="text-gold transition-colors hover:text-white">Grobaltech Technologies</a></p>
       </div>
     </footer>
   );

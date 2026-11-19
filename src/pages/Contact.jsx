@@ -1,4 +1,5 @@
-import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope } from 'react-icons/fa';
+import { useState } from 'react';
+import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaExternalLinkAlt } from 'react-icons/fa';
 import PageHeader from '../components/PageHeader';
 import SectionHeader from '../components/SectionHeader';
 import ContactForm from '../components/ContactForm';
@@ -7,14 +8,30 @@ import { site } from '../config/site';
 import { useAsync } from '../hooks/hooks';
 import { getSiteContent } from '../lib/api';
 
+const ministryLocations = [
+  {
+    name: 'Tidori Ministries Uganda',
+    plusCode: '9QC3+6V Kampala',
+    mapQuery: '9QC3+6V Kampala Uganda',
+  },
+  {
+    name: 'Prayer Chambers for Tidori Ministries',
+    plusCode: '7HRC+2C Kampala',
+    mapQuery: '7HRC+2C Kampala Uganda',
+  },
+];
+
 export default function Contact() {
   const { data: cmsSite } = useAsync(getSiteContent);
   const activeSite = cmsSite || site;
+  const [selectedLocation, setSelectedLocation] = useState(0);
+  const currentLocation = ministryLocations[selectedLocation];
   const info = [
     [FaMapMarkerAlt, 'Address', activeSite.address],
     [FaPhoneAlt, 'Phone', activeSite.phone],
     [FaEnvelope, 'Email', activeSite.email],
   ];
+
   return (
     <>
       <PageHeader title="Contact Us" />
@@ -34,6 +51,68 @@ export default function Contact() {
             </div>
             <ContactForm />
           </div>
+
+          <section className="mt-16" aria-labelledby="locations-heading">
+            <SectionHeader kicker="Find Us" title="Our Locations" />
+            <p className="mx-auto mb-8 max-w-2xl text-center text-gray-600">
+              Visit Tidori Ministries at either of our Kampala locations. Select a location to view it on the map and get directions.
+            </p>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {ministryLocations.map((location, index) => (
+                <button
+                  key={location.name}
+                  type="button"
+                  onClick={() => setSelectedLocation(index)}
+                  aria-pressed={selectedLocation === index}
+                  className={`group flex h-full items-start gap-4 rounded-lg border p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 ${
+                    selectedLocation === index
+                      ? 'border-gold bg-gold/10 shadow-md'
+                      : 'border-gray-200 bg-white hover:border-gold/60'
+                  }`}
+                >
+                  <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy text-lg text-white transition-colors group-hover:bg-gold">
+                    <FaMapMarkerAlt />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-lg font-semibold text-navy">{location.name}</span>
+                    <span className="mt-1 block text-sm text-gray-600">{location.plusCode}</span>
+                    <span className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-gold">
+                      {selectedLocation === index ? 'Showing on map' : 'View on map'}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+              <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gold">Selected location</p>
+                  <h3 className="mt-1 text-lg font-semibold text-navy">{currentLocation.name}</h3>
+                  <p className="text-sm text-gray-600">{currentLocation.plusCode}</p>
+                </div>
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentLocation.mapQuery)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 self-start rounded bg-navy px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gold sm:self-center"
+                >
+                  Get Directions <FaExternalLinkAlt className="text-xs" />
+                </a>
+              </div>
+              <iframe
+                key={currentLocation.mapQuery}
+                title={`Map showing ${currentLocation.name}`}
+                src={`https://www.google.com/maps?q=${encodeURIComponent(currentLocation.mapQuery)}&output=embed`}
+                className="h-[360px] w-full border-0 sm:h-[440px]"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
+          </section>
+
           <div className="mt-12"><AppointmentForm /></div>
         </div>
       </section>

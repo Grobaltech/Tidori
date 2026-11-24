@@ -176,6 +176,7 @@ export default function AppointmentsManager({ canManage = false }) {
           <tbody>{filtered.map(row => <tr key={row.id}>
             <td><strong className="block text-[#191c24]">{row.full_name}</strong><span className="text-xs text-gray-500">{row.phone}</span>{row.email && <span className="block text-xs text-gray-500">{row.email}</span>}</td>
             <td>{row.appointment_type || 'Pastoral appointment'}{row.notes && <span className="mt-1 block max-w-[220px] text-xs text-gray-500">{row.notes}</span>}</td>
+            <td>{row.package_tier ? <span className={\`rounded-full px-2 py-1 text-xs font-bold uppercase \${row.package_tier==='gold'?'bg-amber-100 text-amber-800':row.package_tier==='silver'?'bg-gray-100 text-gray-700':'bg-orange-100 text-orange-800'}\`}>{label(row.package_tier)}</span> : <span className="text-xs text-gray-400">Support / legacy</span>}</td>
             <td><span className="rounded-full bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700">{label(row.meeting_mode || 'in_person')}</span></td>
             <td>{formatDate(row.requested_at)}</td>
             <td><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold capitalize text-blue-700">{label(row.status)}</span></td>

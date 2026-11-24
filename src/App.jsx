@@ -13,6 +13,7 @@ import Give from './pages/Give';
 import Volunteer from './pages/Volunteer';
 import Contact from './pages/Contact';
 import Appointments from './pages/Appointments';
+import AppointmentBooking from './pages/AppointmentBooking';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/appointments" element={<Appointments />} />
+        <Route path="/appointments/book" element={<AppointmentBooking />} />
         <Route path="/meeting/:roomCode" element={<Meeting />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Login />} />

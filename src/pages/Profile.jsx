@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { supabase, supabaseReady } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 import LocationPicker from '../components/LocationPicker';
@@ -21,7 +21,10 @@ const emptyProfile = {
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { username } = useParams();
+  const { pathname } = useLocation();
   const [user, setUser] = useState(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [profile, setProfile] = useState(emptyProfile);
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,43 +52,81 @@ export default function Profile() {
   }, [displayName, user]);
 
   useEffect(() => {
-    if (!supabaseReady) { setBusy(false); return; }
+    if (!supabaseReady || !supabase) { setBusy(false); return; }
     let active = true;
     const load = async () => {
+      setBusy(true);
+      setError('');
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (!active) return;
-      if (authError || !authData.user) { navigate('/login'); return; }
+      if (authError || !authData.user) { navigate('/login', { replace: true }); return; }
       setUser(authData.user);
-      const { data, error: profileError } = await supabase
+
+      const { data: ownData, error: ownError } = await supabase
         .from('profiles').select('*').eq('id', authData.user.id).maybeSingle();
       if (!active) return;
-      if (profileError) {
-        setError(profileError.message);
-      } else if (data) {
-        setProfile({
-          ...emptyProfile,
-          ...data,
-          join_date: data.join_date || '',
-          birthday_month: data.birthday_month || '',
-          birthday_day: data.birthday_day || '',
-          areas_served: data.areas_served || [],
-          place_of_origin: data.place_of_origin || {},
-          current_address: data.current_address || {},
-        });
+      if (ownError) { setError(ownError.message); setBusy(false); return; }
+
+      const ownSlug = toProfileSlug(ownData?.full_name || authData.user.email?.split('@')[0] || 'member');
+      const wantsOwnProfile = !username || username === ownSlug;
+      if (wantsOwnProfile) {
+        setIsOwnProfile(true);
+        if (ownData) {
+          setProfile({
+            ...emptyProfile, ...ownData,
+            join_date: ownData.join_date || '',
+            birthday_month: ownData.birthday_month || '',
+            birthday_day: ownData.birthday_day || '',
+            areas_served: ownData.areas_served || [],
+            place_of_origin: ownData.place_of_origin || {},
+            current_address: ownData.current_address || {},
+          });
+        } else {
+          setError('Your member profile has not been created yet. Please contact the church administrator.');
+        }
+        const canonicalPath = `/members/profiles/${ownSlug}`;
+        if (pathname === '/profile' || pathname === '/members/profiles' || pathname === '/members/profiles/') {
+          navigate(canonicalPath, { replace: true });
+        } else if (pathname !== canonicalPath) {
+          setError('This profile address does not match your saved profile name.');
+        }
       } else {
-        setError('Your member profile has not been created yet. Please contact the church administrator.');
+        setIsOwnProfile(false);
+        setEditingProfile(false);
+        const { data: directoryRows, error: directoryError } = await supabase
+          .from('member_directory')
+          .select('user_id,full_name,photo_url,ministry,small_group')
+          .order('full_name');
+        if (!active) return;
+        if (directoryError) {
+          setError(directoryError.message);
+        } else {
+          const matches = (directoryRows || []).filter(person => toProfileSlug(person.full_name) === username);
+          if (matches.length === 1) {
+            const person = matches[0];
+            setProfile({
+              ...emptyProfile,
+              full_name: person.full_name || 'Tidori member',
+              photo_url: person.photo_url || '',
+              ministry: person.ministry || '',
+              small_group: person.small_group || '',
+            });
+          } else if (matches.length > 1) {
+            setError('More than one member has this profile name. Please open the profile from the member directory.');
+          } else {
+            setError('This member profile is unavailable or the member has not enabled directory visibility.');
+          }
+        }
       }
-      const memberSlug = toProfileSlug(data?.full_name || authData.user.email?.split('@')[0] || 'member');
-      navigate(`/members/profiles/${memberSlug}`, { replace: true });
       setBusy(false);
     };
     load();
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') setRecovering(true);
-      if (!session) navigate('/login');
+      if (!session) navigate('/login', { replace: true });
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
-  }, [navigate]);
+  }, [navigate, username, pathname]);
 
   const change = (key, value) => setProfile(current => ({ ...current, [key]: value }));
 
@@ -235,6 +276,23 @@ export default function Profile() {
   if (busy) return <div className="container-page py-20 text-center">Loading your profile...</div>;
   if (!supabaseReady) return <div className="container-page py-20 text-center">Account services are not configured.</div>;
   if (!user) return null;
+
+  if (!isOwnProfile) {
+    return <>
+      <PageHeader title={profile.full_name || 'Member profile'} />
+      <section className="container-page max-w-3xl py-12">
+        {error ? <div role="alert" className="rounded-xl border border-gray-200 bg-white p-6 text-center text-gray-700">{error}<p className="mt-4"><Link to="/members" className="font-semibold text-navy underline">Return to members</Link></p></div> : <article className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">
+          <div className="flex flex-wrap items-center gap-5">
+            {profile.photo_url ? <img src={profile.photo_url} alt="" className="h-24 w-24 rounded-full object-cover" /> : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-ink text-3xl text-gold">{profile.full_name?.charAt(0) || 'T'}</div>}
+            <div><h1 className="text-2xl font-bold text-navy">{profile.full_name}</h1><p className="mt-1 text-sm text-gray-600">{profile.ministry || profile.small_group || 'Tidori member'}</p></div>
+          </div>
+          {profile.ministry && <div className="mt-6 border-t border-dotted border-gray-300 pt-4"><h2 className="text-xs font-semibold uppercase text-gray-500">Ministry</h2><p className="mt-1 text-gray-800">{profile.ministry}</p></div>}
+          {profile.small_group && <div className="mt-4 border-t border-dotted border-gray-300 pt-4"><h2 className="text-xs font-semibold uppercase text-gray-500">Small group</h2><p className="mt-1 text-gray-800">{profile.small_group}</p></div>}
+          <div className="mt-6 flex flex-wrap gap-3"><Link to="/members" className="btn-custom">Back to members</Link></div>
+        </article>}
+      </section>
+    </>;
+  }
 
   return <>
     <PageHeader title={displayName} />

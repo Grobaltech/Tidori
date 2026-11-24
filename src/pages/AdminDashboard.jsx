@@ -12,6 +12,8 @@ import UserAccessControl from './UserAccessControl';
 import AppointmentsManager from '../admin/AppointmentsManager';
 import TeamManager from '../admin/TeamManager';
 import FinancialManager from '../admin/FinancialManager';
+import AdminSidebar from '../admin/layout/AdminSidebar';
+import AdminPageHeader from '../admin/layout/AdminPageHeader';
 
 const sections = [
   { id: 'overview', label: 'Dashboard', icon: FaTachometerAlt },
@@ -266,30 +268,7 @@ export default function AdminDashboard() {
 
   return (
     <div className={`tidori-admin ${sidebarOpen ? 'sidebar-open' : ''}`}>
-      <aside className="admin-sidebar">
-        <Link to="/" className="admin-brand !gap-3">
-          <img src="/img/grok_1793864104245.jpg" alt="Tidori Ministries" className="h-12 w-12 rounded-lg bg-white object-contain p-1" />
-          <span>TIDORI <small className="block text-[10px] font-semibold tracking-[2px] text-gray-400">ADMINISTRATION</small></span>
-        </Link>
-        <div className="admin-nav-label">Main menu</div>
-        <nav className="admin-nav" aria-label="Administrator navigation">
-          {sectionGroups.map(group => {
-            const items = group.ids.map(id => visibleSections.find(item => item.id === id)).filter(Boolean);
-            if (!items.length) return null;
-            return <div key={group.label} className="admin-nav-group">
-              <div className="admin-nav-label">{group.label}</div>
-              {items.map(item => {
-                const ItemIcon = item.icon;
-                return <Link key={item.id} to={sectionPath(item.id)} className={activeSection === item.id ? 'active' : ''} onClick={() => { setSearch(''); setSelectedRecord(null); setSidebarOpen(false); }}>
-                  <span className="admin-nav-icon"><ItemIcon /></span>{item.label}
-                </Link>;
-              })}
-            </div>;
-          })}
-        </nav>
-        <div className="mx-5 mt-8 rounded-lg bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#191c24]"><FaUserShield className="text-[#009cff]" /> Secure administration</div><p className="m-0 text-xs leading-5 text-gray-400">Access is restricted to authorised Tidori administrators.</p></div>
-      </aside>
-      <button className="admin-mobile-overlay" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />
+      <AdminSidebar groups={sectionGroups} visibleSections={visibleSections} activeSection={activeSection} sectionPath={sectionPath} onNavigate={() => { setSearch(""); setSelectedRecord(null); setSidebarOpen(false); }} />      <button className="admin-mobile-overlay" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />
       <main className="admin-main">
         <header className="admin-topbar">
           <div className="flex items-center gap-3"><button className="admin-icon-button" aria-label="Toggle sidebar" onClick={() => setSidebarOpen(v => !v)}>{sidebarOpen ? <FaTimes /> : <FaBars />}</button><img src="/img/grok_1793864104245.jpg" alt="Tidori Ministries" className="h-10 w-10 rounded-md bg-white object-contain p-0.5 sm:hidden" /><div className="hidden sm:block"><div className="text-sm font-bold text-[#191c24]">Administration</div><div className="text-xs text-gray-400">Tidori Ministries</div></div></div>
@@ -322,7 +301,7 @@ export default function AdminDashboard() {
           </div>
         </header>
         <div className="admin-content">
-          <div className="mb-7 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-2 text-xs text-gray-400"><Link to="/admin/overview/" className="hover:text-[#009cff]">Admin</Link> <span className="px-1">/</span> {sectionGroups.find(group => group.ids.includes(activeSection))?.label || 'Administration'} <span className="px-1">/</span> <span className="text-[#009cff]">{current.label}</span></p><p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#009cff]">Tidori Ministries</p><h1 className="admin-page-title">{current.label}</h1><p className="admin-muted mt-1">Live records from the Tidori Supabase project.</p></div><div className="flex items-center gap-2"><span className="admin-pill">Administrator</span><button onClick={loadOverview} disabled={loadingData} className="admin-icon-button" title="Refresh live records"><FaSyncAlt className={loadingData ? 'animate-spin' : ''} /></button></div></div>
+          <AdminPageHeader group={sectionGroups.find(group => group.ids.includes(activeSection))?.label || "Administration"} title={current.label} loading={loadingData} onRefresh={loadOverview} />
           {dataError && <div role="alert" className="mb-5 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><strong>Some records could not be loaded.</strong> {dataError} <span className="block mt-1">Run the administrator access SQL file supplied with this update in the Tidori Supabase SQL Editor, then refresh.</span></div>}
           {activeSection === 'access' ? <UserAccessControl role={profile?.role} /> : activeSection === 'appointments' ? <AppointmentsManager canManage={isAdministrator} /> : activeSection === 'finance' ? <FinancialManager /> : activeSection === 'team' ? <TeamManager canManage={isAdministrator} /> : activeSection === 'content' ? <WebsiteCMS /> : activeSection === 'overview' ? <>
             <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

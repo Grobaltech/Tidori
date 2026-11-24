@@ -70,7 +70,7 @@ function Navbar() {
   }, []);
 
   const link = ({ isActive }) =>
-    `block px-4 py-2 text-white hover:text-gold ${isActive ? 'text-gold' : ''}`;
+    `block border-l-2 px-4 py-2 transition-colors hover:border-gold hover:bg-gold/10 hover:text-gold ${isActive ? 'border-gold bg-gold/15 !text-gold font-semibold' : 'border-transparent text-white'}`;
 
   const aboutMenu = [
     { to: '/about', label: 'Overview' },
@@ -105,7 +105,11 @@ function Navbar() {
             {navItems.map((item) =>
               item.children ? (
                 <li key={item.label} className="group relative">
-                  <button className="flex w-full items-center px-4 py-2 text-white hover:text-gold" onClick={() => setSub(!sub)}>
+                  <button
+                    aria-expanded={sub}
+                    className={`flex w-full items-center border-b-2 px-4 py-2 transition-colors hover:border-gold hover:text-gold ${item.children.some(child => pathname === child.to || pathname.startsWith(child.to + '/')) ? 'border-gold bg-gold/10 !text-gold font-semibold' : 'border-transparent text-white'}`}
+                    onClick={() => setSub(!sub)}
+                  >
                     {item.label} <FaChevronDown className="ml-2 text-xs" />
                   </button>
                   <ul className={`${sub ? 'block' : 'hidden'} lg:absolute lg:left-0 lg:top-full lg:hidden lg:min-w-[220px] lg:bg-ink lg:group-hover:block lg:shadow-lg`}>

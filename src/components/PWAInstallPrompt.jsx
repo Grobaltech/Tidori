@@ -153,7 +153,7 @@ export default function PWAInstallPrompt() {
               console.info('Tidori install prompt preference could not be saved:', error);
             }
             setDismissed(true);
-          }
+          }}
           aria-label="Dismiss install notification"
           style={{
             flex: '0 0 28px', width: 28, height: 28, padding: 0,

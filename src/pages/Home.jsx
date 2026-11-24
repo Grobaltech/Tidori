@@ -23,7 +23,7 @@ function AboutTabs() {
     { key: 'vision', label: 'Vision', title: 'Our Vision', preview: 'To see spiritually transformed individuals, strengthened families and empowered communities living with dignity, purpose and sustainable opportunities, guided by the teachings of Jesus Christ.', more: 'Explore the future we seek to build through faith, service and community transformation.' },
     { key: 'purpose', label: 'Purpose', title: 'Our Purpose', preview: 'We exist to serve God and humanity by bringing together spiritual ministry, compassionate service and practical community development.', more: 'Read about the needs we seek to address and the difference we aim to make.' },
     { key: 'objectives', label: 'Objectives', title: 'Our Objectives', preview: 'Our registered objectives encompass evangelism, Christian fellowship, counselling, charity, education, youth and women’s empowerment, poverty reduction, agriculture and institutional partnerships.', more: 'Explore the objectives set out in our Memorandum of Association.' },
-    { key: 'focus', label: 'Focus Areas', title: 'Our Areas of Focus', preview: 'Our work is expressed through spiritual ministry, pastoral care, community support, education and skills development, youth and women’s empowerment, agriculture and partnerships.', more: 'See the practical areas through which we seek to serve individuals and communities.' },
+    { key: 'focus-areas', label: 'Focus Areas', title: 'Our Areas of Focus', preview: 'Our work is expressed through spiritual ministry, pastoral care, community support, education and skills development, youth and women’s empowerment, agriculture and partnerships.', more: 'See the practical areas through which we seek to serve individuals and communities.' },
     { key: 'values', label: 'Values', title: 'Our Guiding Values', preview: 'Faith, compassion, integrity, service, empowerment, unity, responsibility and sustainability guide the way we serve and work with others.', more: 'Learn about the principles that shape our decisions, relationships and service.' },
     { key: 'commitment', label: 'Commitment', title: 'Our Commitment to Communities', preview: 'We are committed to serving communities with compassion, accountability and a holistic understanding of spiritual, family, social and economic needs.', more: 'Discover the commitments that guide our work with people and communities.' },
     { key: 'partnerships', label: 'Partnerships', title: 'Working Together', preview: 'We welcome collaboration with churches, community organisations, public institutions, non-governmental organisations, development partners and individuals whose objectives align with our mission.', more: 'Find out how partnership, shared knowledge and coordinated action can extend our impact.' },
@@ -37,10 +37,10 @@ function AboutTabs() {
         <div className="h-[420px] bg-cover bg-center lg:h-[560px]" style={{ backgroundImage: `url('${activeSite.about?.imageUrl || '/img/about.jpg'}')` }} role="img" aria-label="Tidori Ministries community" />
         <div>
           <SectionHeader center={false} kicker="Learn About Us" title="Faith in action. Transforming lives. Building communities." />
-          <div className="flex flex-wrap border-b border-gray-200" role="tablist" aria-label="About Tidori Ministries">
+          <div className="flex flex-nowrap gap-1 overflow-x-auto overscroll-x-contain border-b border-gray-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="About Tidori Ministries">
             {sections.map((item) => (
               <button key={item.key} type="button" role="tab" aria-selected={tab === item.key} onClick={() => setTab(item.key)}
-                className={`border-b-2 px-3 py-2 text-sm font-semibold transition-colors sm:px-4 sm:text-base ${tab === item.key ? 'border-gold bg-gold text-ink' : 'border-transparent text-navy hover:border-gold hover:text-gold'}`}>
+                className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold transition-colors sm:px-4 sm:text-base ${tab === item.key ? 'border-gold bg-gold text-ink' : 'border-transparent text-navy hover:border-gold hover:text-gold'}`}>
                 {item.label}
               </button>
             ))}

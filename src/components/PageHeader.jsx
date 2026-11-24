@@ -47,7 +47,7 @@ export default function PageHeader({ title }) {
     };
   }, [pathname]);
   const segments = pathname.split('/').filter(Boolean);
-  const isMemberProfile = /^\\/members\\/profiles\\/[^/]+\\/?$/.test(pathname);
+  const isMemberProfile = /^\/members\/profiles\/[^/]+\/?$/.test(pathname);
   const isProfileIndex = pathname === '/members/profiles' || pathname === '/members/profiles/';
   const isOwnProfile = pathname === '/profile' || pathname === '/profile/';
   const isMembersHome = pathname === '/members' || pathname === '/members/';

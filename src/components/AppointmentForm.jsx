@@ -17,7 +17,7 @@ const services = [
 ];
 const modeLabels = { audio:'Audio call', video:'Video call', in_person:'Physical meeting' };
 const money = (amount,currency='UGX') => new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'en-UG', { style:'currency', currency, maximumFractionDigits:currency === 'UGX' ? 0 : 2 }).format(Number(amount||0));
-const currencyLabel = currency => currency === 'USD' ? 'USD' : 'UGX';
+const currencyLabel = currency => currency === 'USD' ? '🇺🇸 USD · US Dollar' : '🇺🇬 UGX · Ugandan Shilling';
 const convertedAmount = (amount,from,to,usdToUgx) => {
   if (from === to) return Number(amount || 0);
   if (!usdToUgx) return null;
@@ -28,7 +28,6 @@ export default function AppointmentForm() {
   const [form,setForm] = useState({ full_name:'', email:'', phone:'', service:'Pastoral care', package_tier:'bronze', meeting_mode:'audio', date:'', time:'', notes:'' });
   const [packages,setPackages] = useState([]);
   const [displayCurrency,setDisplayCurrency] = useState('UGX');
-  const [billingPeriod,setBillingPeriod] = useState('monthly');
   const [usdToUgx,setUsdToUgx] = useState(null);
   const [rateLoading,setRateLoading] = useState(true);
   const [busy,setBusy] = useState(false);
@@ -39,8 +38,7 @@ export default function AppointmentForm() {
   const selectedTier = tiers.find(t=>t.code===form.package_tier) || tiers[0];
   const universal = universalServices.includes(form.service);
   const availableModes = universal ? ['audio','video','in_person'] : selectedTier.modes;
-  const monthlyFee = universal ? 0 : Number(selectedPackage?.amount ?? 0);
-  const fee = billingPeriod === 'annual' ? monthlyFee * 12 : monthlyFee;
+  const fee = universal ? 0 : Number(selectedPackage?.amount ?? 0);
 
   useEffect(()=>{
     let active=true;
@@ -83,7 +81,7 @@ export default function AppointmentForm() {
         headers:{'content-type':'application/json',...(sessionData?.session?.access_token?{authorization:`Bearer ${sessionData.session.access_token}`}:{})},
         body:JSON.stringify({
           full_name:form.full_name.trim(),email:form.email.trim(),phone:form.phone.trim(),
-          appointment_type:form.service,service:form.service,package_tier:universal?null:form.package_tier,billing_period:billingPeriod,
+          appointment_type:form.service,service:form.service,package_tier:universal?null:form.package_tier,
           meeting_mode:form.meeting_mode,requested_at:requestedAt.toISOString(),notes:form.notes.trim(),
         }),
       });
@@ -100,9 +98,8 @@ export default function AppointmentForm() {
     <div className="mb-6"><p className="mb-2 text-gold">Pastoral appointments</p><h2 className="text-2xl sm:text-3xl">Choose your appointment package</h2><p className="mt-2 text-sm leading-6 text-gray-600">Each package includes the benefits of the tier below it. Crisis support, emergency pastoral intervention, therapist referrals and needs-based benevolence remain available regardless of package.</p></div>
     <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
       <div><p className="text-sm font-bold text-[#191c24]">Display prices in</p><p className="text-xs text-gray-500">Choose the currency you are most comfortable with</p></div>
-      <select aria-label="Display currency" className="field w-full sm:max-w-[230px]" value={displayCurrency} onChange={event=>setDisplayCurrency(event.target.value)}><option value="UGX">UGX</option><option value="USD">USD</option></select>
+      <select aria-label="Display currency" className="field w-full sm:max-w-[230px]" value={displayCurrency} onChange={event=>setDisplayCurrency(event.target.value)}><option value="UGX">🇺🇬 UGX · Ugandan Shilling</option><option value="USD">🇺🇸 USD · US Dollar</option></select>
     </div>
-    <div className="mb-5 flex justify-center"><div className="inline-flex rounded-full border border-[#d8c58f] bg-[#fffdf6] p-1 shadow-inner" role="group" aria-label="Billing period">{['monthly','annual'].map(period=><button key={period} type="button" onClick={()=>setBillingPeriod(period)} aria-pressed={billingPeriod===period} className={`rounded-full px-5 py-2 text-xs font-extrabold capitalize transition ${billingPeriod===period?'bg-[#25252a] text-[#f1d98d] shadow':'text-[#80652b] hover:bg-[#f3ead2]'}`}>{period}</button>)}</div></div>
     <div className="mb-7 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {tiers.map((tier,index)=>{
         const pkg=packages.find(p=>p.tier_code===tier.code&&p.is_active);
@@ -111,7 +108,6 @@ export default function AppointmentForm() {
           className={`group relative flex h-full flex-col rounded-[34px] border-[3px] p-[7px] text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${active?'shadow-xl ring-2 ring-offset-2':'shadow-lg'} ${index===1?'md:-translate-y-3 md:hover:-translate-y-4':''}`}
           style={{borderColor:tier.color,background:index===1?'linear-gradient(145deg,#e8d38b 0%,#c9a84e 48%,#f5e7b2 100%)':'linear-gradient(145deg,#fffdf7 0%,#f1e6c7 100%)','--tw-ring-color':tier.color}}>
           <span className={`relative flex h-full flex-col overflow-hidden rounded-[27px] border ${index===1?'border-[#d8bd69] bg-[#202126] text-white':'border-[#eadfbf] bg-gradient-to-b from-[#fffefa] via-[#fffdf6] to-[#f7edcf] text-[#24242a]'}`}>
-            <span aria-hidden="true" className={`pointer-events-none absolute inset-[5px] z-0 rounded-[23px] border ${index===1?'border-[#d8bd69]/55':'border-[#d9c58c]/70'}`}/>
             {index===1&&<span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>}
             {index===1&&<span className="absolute -right-10 top-7 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">Popular</span>}
             <span className="flex items-center justify-between px-5 pb-2 pt-6 sm:px-6">
@@ -123,13 +119,13 @@ export default function AppointmentForm() {
               <span className={`mt-1 block text-xs leading-5 ${index===1?'text-white/60':'text-gray-500'}`}>{tier.subtitle}</span>
             </span>
             <span className={`mx-4 rounded-[22px] border px-4 py-4 sm:mx-5 sm:px-5 ${index===1?'border-[#75643a] bg-[#17181c]':'border-[#e8dbb7] bg-white/75 shadow-inner'}`}>
-              <span className={`block text-[9px] font-bold uppercase tracking-[.16em] ${index===1?'text-[#d8c27f]':'text-[#9b7b35]'}`}>{displayCurrency}</span>
-              <span className={`mt-1 block break-words text-[27px] font-extrabold leading-tight tracking-tight sm:text-[32px] ${index===1?'text-[#f1d98d]':'text-[#24242a]'}`}>{pkg?(convertedAmount(fee,pkg.currency || 'UGX',displayCurrency,usdToUgx)===null?(rateLoading?'Loading exchange rate…':money(fee,pkg.currency || 'UGX')):money(convertedAmount(fee,pkg.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):loading?'Loading…':'Price set by ministry'}</span>
-              <span className={`mt-1 block text-[10px] ${index===1?'text-white/55':'text-gray-500'}`}>{billingPeriod === 'annual' ? 'Annual contribution · 12 months' : 'Monthly contribution'}</span>
+              <span className={`block text-[9px] font-bold uppercase tracking-[.16em] ${index===1?'text-[#d8c27f]':'text-[#9b7b35]'}`}>{currencyLabel(displayCurrency)}</span>
+              <span className={`mt-1 block break-words text-[27px] font-extrabold leading-tight tracking-tight sm:text-[32px] ${index===1?'text-[#f1d98d]':'text-[#24242a]'}`}>{pkg?(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx)===null?(rateLoading?'Loading exchange rate…':money(pkg.amount,pkg.currency || 'UGX')):money(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):loading?'Loading…':'Price set by ministry'}</span>
+              <span className={`mt-1 block text-[10px] ${index===1?'text-white/55':'text-gray-500'}`}>Contribution to the Ministry</span>
             </span>
             <span className="mx-5 my-4 h-px sm:mx-6" style={{background:index===1?'linear-gradient(90deg,transparent,#8f7942,transparent)':'linear-gradient(90deg,transparent,#d9c58c,transparent)'}}/>
             <span className={`px-5 pb-2 text-[10px] font-extrabold uppercase tracking-[.16em] sm:px-6 ${index===1?'text-[#d8c27f]':'text-[#8c7136]'}`}>Included benefits</span>
-            <ul className={`flex-1 px-5 pb-5 text-xs leading-5 sm:px-6 ${index===1?'text-white/85':'text-gray-700'}`}>{tier.benefits.map((item,i)=><li key={item} className={`flex items-start gap-2.5 py-2.5 ${i?'border-t border-dotted '+(index===1?'border-white/25':'border-[#cdbb91]'):''}`}><span className="mt-0.5 inline-flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-[#62a91d] text-[10px] font-black text-white shadow-sm">✓</span><span>{item}</span></li>)}</ul>
+            <ul className={`flex-1 space-y-3 px-5 pb-5 text-xs leading-5 sm:px-6 ${index===1?'text-white/85':'text-gray-700'}`}>{tier.benefits.map(item=><li key={item} className="flex items-start gap-2.5"><span className="mt-0.5 inline-flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-[#62a91d] text-[10px] font-black text-white shadow-sm">✓</span><span>{item}</span></li>)}</ul>
             <span className={`mx-4 mb-4 rounded-full border py-3 text-center text-[11px] font-extrabold tracking-wide transition sm:mx-5 ${active?(index===1?'border-[#e6d18e] bg-[#e6d18e] text-[#242126]':'border-[#9b7b35] bg-[#9b7b35] text-white'):(index===1?'border-white/25 bg-white/5 text-white':'border-[#d8c58f] bg-white/60 text-[#705a2b]')}`}>{active?'Selected package':'Choose package'}</span>
           </span>
         </button>;
@@ -144,9 +140,9 @@ export default function AppointmentForm() {
       <label className="text-sm font-semibold">Preferred date<input className="field mt-1" type="date" name="date" min={new Date().toISOString().slice(0,10)} value={form.date} onChange={update} required/></label>
       <label className="text-sm font-semibold">Preferred time<input className="field mt-1" type="time" name="time" value={form.time} onChange={update} required/></label>
       <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm sm:col-span-2">
-        <span className="text-gray-500">{universal?'Support request':`Selected ${billingPeriod} package fee`}</span>
-        <strong className="ml-2 text-lg text-[#191c24]">{universal?'No package fee':selectedPackage?(convertedAmount(fee,selectedPackage.currency || 'UGX',displayCurrency,usdToUgx)===null?money(fee,selectedPackage.currency || 'UGX'):money(convertedAmount(fee,selectedPackage.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):'Not yet configured'}</strong>
-        {!universal && selectedPackage && <span className="ml-2 inline-flex rounded-full bg-[#f4f1e8] px-2 py-1 text-[10px] font-bold text-[#6b5520]">{displayCurrency}</span>}
+        <span className="text-gray-500">{universal?'Support request':'Selected package fee'}</span>
+        <strong className="ml-2 text-lg text-[#191c24]">{universal?'No package fee':selectedPackage?(convertedAmount(fee,selectedPackage.currency || 'UGX',displayCurrency,usdToUgx)===null?money(fee,selectedPackage.currency):money(convertedAmount(fee,selectedPackage.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):'Not yet configured'}</strong>
+        {!universal && selectedPackage && <span className="ml-2 inline-flex rounded-full bg-[#f4f1e8] px-2 py-1 text-[10px] font-bold text-[#6b5520]">{currencyLabel(displayCurrency)}</span>}
         <p className="mt-1 text-xs text-gray-500">{universal?'This support is not restricted by paid package. The ministry will assess and coordinate the appropriate help.':selectedPackage?(fee>0?'Payment will be processed in the package currency configured by the ministry through Pesapal. The selector changes the displayed equivalent only.':'This package has been configured as free.'):'The ministry administrator must configure this package before booking.'}</p>
       </div>
       <label className="text-sm font-semibold sm:col-span-2">Additional details<textarea className="field mt-1 min-h-24" name="notes" value={form.notes} onChange={update} maxLength={2000} placeholder="Tell us briefly how the ministry can support you."/></label>

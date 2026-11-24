@@ -34,19 +34,26 @@ export default function PageHeader({ title }) {
   const { pathname } = useLocation();
   const segments = pathname.split('/').filter(Boolean);
   const isBlogArticle = segments[0] === 'blog' && segments.length > 1;
+  const isOwnProfile = pathname === '/profile' || pathname === '/profile/';
   const crumbs = [];
 
-  if (segments.length) {
+  if (isOwnProfile) {
+    // Presentation-only hierarchy; keep the existing /profile route and database unchanged.
+    crumbs.push(
+      { label: 'Members', current: false, link: false },
+      { label: 'Profiles', current: false, link: false },
+      { label: title || 'My Profile', current: true, link: false },
+    );
+  } else if (segments.length) {
     let path = '';
     segments.forEach((segment, index) => {
       path += `/${segment}`;
       const isLast = index === segments.length - 1;
       const label = isLast
         ? title
-        : (routeLabels[segment] || segment.replace(/-/g, ' ').replace(/\b\w/g, char => char.toUpperCase()));
-      // Dynamic article slugs are represented by the supplied page title, not a raw URL slug.
-      if (isLast || routeLabels[segment] || !/^\d+$/.test(segment)) {
-        crumbs.push({ to: path, label, current: isLast });
+        : (routeLabels[segment] || segment.replace(/-/g, ' ').replace(/\\b\\w/g, char => char.toUpperCase()));
+      if (isLast || routeLabels[segment] || !/^\\d+$/.test(segment)) {
+        crumbs.push({ to: path, label, current: isLast, link: true });
       }
     });
   }
@@ -63,8 +70,10 @@ export default function PageHeader({ title }) {
             <span aria-hidden="true" className="text-gold/80">/</span>
             {crumb.current ? (
               <span aria-current="page" className="rounded-sm bg-gold/15 px-2 py-1 text-gold">{crumb.label}</span>
-            ) : (
+            ) : crumb.link ? (
               <Link to={crumb.to} className="text-white/85 transition-colors hover:text-gold">{crumb.label}</Link>
+            ) : (
+              <span className="text-white/85">{crumb.label}</span>
             )}
           </span>
         ))}

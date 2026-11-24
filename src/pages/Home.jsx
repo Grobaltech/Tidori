@@ -49,7 +49,7 @@ function AboutTabs() {
             <h3 className="mb-3 text-2xl font-semibold text-navy">{selected.title}</h3>
             <p className="leading-7">{preview}</p>
             <p className="mt-3 text-sm leading-6 text-gray-600">{selected.more}</p>
-            <Link to={`/about#${selected.key}`} className="btn-custom mt-5 inline-flex">View More <span className="ml-2" aria-hidden="true">→</span></Link>
+            <Link to={`/about/${selected.key}`} className="btn-custom mt-5 inline-flex">View More <span className="ml-2" aria-hidden="true">→</span></Link>
           </div>
         </div>
       </div>

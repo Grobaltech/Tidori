@@ -29,21 +29,29 @@ export default function FinancialManager() {
   const load = useCallback(async () => {
     if (!supabase) return;
     setLoading(true); setError('');
-    const [d, p, a, ap, b, bp, e] = await Promise.all([
-      supabase.from('donation_pledges').select('id,name,amount,currency,status,paid_at,created_at,payment_method,confirmation_code').eq('status','paid').order('paid_at',{ascending:false}).limit(1000),
-      supabase.from('donation_pledges').select('id,name,amount,currency,status,created_at,merchant_reference').eq('status','pending').order('created_at',{ascending:false}).limit(100),
-      supabase.from('appointments').select('id,full_name,appointment_type,fee_amount,currency,payment_status,paid_at,created_at,payment_method,payment_reference,pesapal_merchant_reference,pesapal_order_tracking_id').eq('payment_status','paid').order('paid_at',{ascending:false}).limit(1000),
-      supabase.from('appointments').select('id,full_name,appointment_type,fee_amount,currency,payment_status,created_at,pesapal_merchant_reference').in('payment_status',['unpaid','pending']).order('created_at',{ascending:false}).limit(100),
-      supabase.from('bursary_applications').select('id,applicant_name,application_fee,currency,payment_status,paid_at,created_at,merchant_reference').eq('payment_status','paid').order('paid_at',{ascending:false}).limit(1000),
-      supabase.from('bursary_applications').select('id,applicant_name,application_fee,currency,payment_status,created_at,merchant_reference').eq('payment_status','pending').eq('application_status','awaiting_payment').order('created_at',{ascending:false}).limit(100),
-      supabase.from('finance_expenses').select('*').order('expense_date',{ascending:false}).limit(1000),
-    ]);
-    const failures = [d.error,p.error,a.error,ap.error,b.error,bp.error,e.error].filter(Boolean);
-    if (failures.length) setError(failures.map(x=>x.message).join(' · '));
-    setDonations(d.data || []); setPendingDonations(p.data || []);
-    setAppointments(a.data || []); setPendingAppointments(ap.data || []);
-    setBursaries(b.data || []); setPendingBursaries(bp.data || []);
-    setExpenses(e.data || []);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Your administrator session has expired. Please sign in again.');
+      const [d, p, a, ap, financeResponse, e] = await Promise.all([
+        supabase.from('donation_pledges').select('id,name,amount,currency,status,paid_at,created_at,payment_method,confirmation_code').eq('status','paid').order('paid_at',{ascending:false}).limit(1000),
+        supabase.from('donation_pledges').select('id,name,amount,currency,status,created_at,merchant_reference').eq('status','pending').order('created_at',{ascending:false}).limit(100),
+        supabase.from('appointments').select('id,full_name,appointment_type,fee_amount,currency,payment_status,paid_at,created_at,payment_method,payment_reference,pesapal_merchant_reference,pesapal_order_tracking_id').eq('payment_status','paid').order('paid_at',{ascending:false}).limit(1000),
+        supabase.from('appointments').select('id,full_name,appointment_type,fee_amount,currency,payment_status,created_at,pesapal_merchant_reference').in('payment_status',['unpaid','pending']).order('created_at',{ascending:false}).limit(100),
+        fetch('/api/admin/finance/bursaries', { headers: { authorization: `Bearer ${token}` } }),
+        supabase.from('finance_expenses').select('*').order('expense_date',{ascending:false}).limit(1000),
+      ]);
+      const financeData = await financeResponse.json().catch(() => ({}));
+      if (!financeResponse.ok) throw new Error(financeData.error || 'Could not load bursary finance records.');
+      const failures = [d.error,p.error,a.error,ap.error,e.error].filter(Boolean);
+      if (failures.length) setError(failures.map(x=>x.message).join(' · '));
+      setDonations(d.data || []); setPendingDonations(p.data || []);
+      setAppointments(a.data || []); setPendingAppointments(ap.data || []);
+      setBursaries(financeData.bursaries || []); setPendingBursaries(financeData.pendingBursaries || []);
+      setExpenses(e.data || []);
+    } catch (err) {
+      setError(err.message || 'Could not load financial records.');
+    }
     setLoading(false);
   }, []);
 
@@ -69,7 +77,7 @@ export default function FinancialManager() {
     filteredExpenses.forEach(r => add(sums.expenses, r.currency || 'UGX', r.amount));
     new Set([...Object.keys(sums.income),...Object.keys(sums.expenses)]).forEach(c => { sums.net[c] = (sums.income[c] || 0) - (sums.expenses[c] || 0); });
     return sums;
-  }, [filteredDonations, filteredAppointments, filteredExpenses]);
+  }, [filteredDonations, filteredAppointments, filteredBursaries, filteredExpenses]);
 
   const saveExpense = async event => {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');

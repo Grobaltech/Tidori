@@ -18,7 +18,7 @@ export default function AppointmentFeeManager(){
   const load=async()=>{
     setLoading(true);setError('');
     const {data,error:queryError}=await supabase.from('pastor_appointment_packages').select('*').order('tier_code');
-    if(queryError)setError(queryError.message);else setPackages(data||[]);
+    if(queryError)setError(queryError.message);else setPackages(tiers.map(tier=>data?.find(row=>row.tier_code===tier.tier_code)||{tier_code:tier.tier_code,package_name:tier.package_name,amount:'',currency:'UGX',is_active:true}));
     setLoading(false);
   };
   useEffect(()=>{load();},[]);

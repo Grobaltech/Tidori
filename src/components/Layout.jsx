@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaTwitter, FaFacebookF, FaYoutube,
-  FaInstagram, FaLinkedinIn, FaChevronUp, FaChevronDown, FaBars, FaTimes, FaAngleRight, FaSearch, FaUserCircle, FaComments,
+  FaInstagram, FaLinkedinIn, FaChevronUp, FaChevronDown, FaBars, FaTimes, FaAngleRight, FaSearch, FaUserCircle, FaComments, FaSignOutAlt,
 } from 'react-icons/fa';
 import { site } from '../config/site';
 import { useScrollY, useAsync } from '../hooks/hooks';
@@ -60,14 +60,21 @@ function Navbar() {
   const [sub, setSub] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const { pathname } = useLocation();
-  useEffect(() => { setOpen(false); setSub(false); setSearchOpen(false); }, [pathname]);
+  useEffect(() => { setOpen(false); setSub(false); setSearchOpen(false); setAccountOpen(false); }, [pathname]);
   useEffect(() => {
     if (!supabaseReady) return;
     supabase.auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session)));
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setSignedIn(Boolean(session)));
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  const closeAccount = () => setAccountOpen(false);
+  const signOut = async () => {
+    closeAccount();
+    await supabase.auth.signOut();
+  };
 
   const link = ({ isActive }) =>
     `block border-l-2 px-4 py-2 transition-colors hover:border-gold hover:bg-gold/10 hover:text-gold ${isActive ? 'border-gold bg-gold/15 !text-gold font-semibold' : 'border-transparent text-white'}`;
@@ -132,9 +139,37 @@ function Navbar() {
           </button>
           {signedIn && <Link to="/members?tab=messages" aria-label="Messages" title="Messages" className="p-2 text-xl text-white transition-colors hover:text-gold"><FaComments /></Link>}
           {signedIn && <NotificationBell />}
-          <Link to={signedIn ? "/profile" : "/login"} aria-label={signedIn ? "My account" : "Login or register"} title={signedIn ? "My account" : "Login / Register"} className="p-2 text-xl text-white transition-colors hover:text-gold">
-            <FaUserCircle />
-          </Link>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setAccountOpen(value => !value)}
+              aria-label="Account menu"
+              aria-haspopup="menu"
+              aria-expanded={accountOpen}
+              title="Account"
+              className={`p-2 text-xl transition-colors hover:text-gold ${accountOpen ? 'text-gold' : 'text-white'}`}
+            >
+              <FaUserCircle />
+            </button>
+            {accountOpen && (
+              <div role="menu" aria-label="Account options" className="absolute right-0 top-full z-[60] mt-2 w-56 overflow-hidden rounded-lg border border-white/10 bg-ink py-2 shadow-xl">
+                {signedIn ? (
+                  <>
+                    <Link role="menuitem" to="/profile" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">My Profile</Link>
+                    <Link role="menuitem" to="/members" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Tidori Connect</Link>
+                    <Link role="menuitem" to="/members?tab=messages" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Messages</Link>
+                    <Link role="menuitem" to="/notifications" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Notifications</Link>
+                    <button role="menuitem" type="button" onClick={signOut} className="flex w-full items-center gap-2 border-t border-white/10 px-4 py-3 text-left text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold"><FaSignOutAlt /> Sign out</button>
+                  </>
+                ) : (
+                  <>
+                    <Link role="menuitem" to="/login" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Sign in / Login</Link>
+                    <Link role="menuitem" to="/register" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Sign up / Register</Link>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           <button className="p-2 text-2xl text-white lg:hidden" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? <FaTimes /> : <FaBars />}
           </button>

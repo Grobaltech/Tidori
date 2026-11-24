@@ -116,7 +116,7 @@ export default function AppointmentForm() {
               </defs>
               <path d="M 12 2 H 69 C 77 2 78 10 78 16 C 78 22 83 23 90 23 H 96 V 90 Q 96 98 88 98 H 12 Q 4 98 4 90 V 10 Q 4 2 12 2 Z" fill={`url(#card-fill-${tier.code})`} stroke={index===1?"#a58c50":"#d8c99f"} strokeWidth="0.65" vectorEffect="non-scaling-stroke" opacity={index===1?"1":"1"}/>
             </svg>
-            {index===1&&<span className="relative z-10 inset-x-0 top-0 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>}
+            {index===1&&<span className="absolute z-10 inset-x-0 top-0 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>}
             {index===1&&<span className="absolute -right-10 top-7 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">Popular</span>}
             <span className="relative z-10 flex items-center justify-between px-5 pb-2 pt-6 sm:px-6">
               <span className={`text-[10px] font-bold uppercase tracking-[.2em] ${index===1?'text-[#d9c17c]':'text-[#9b7b35]'}`}>Tidori Ministries</span>

@@ -33,6 +33,16 @@
   .page-header-bg {
     background: linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,.5)), url('/img/page-header.jpg') center/cover fixed no-repeat;
   }
+
+  .blog-article-content {
+    @apply text-[17px] leading-[1.95] text-[#555] sm:text-[18px];
+    overflow-wrap: anywhere;
+  }
+  .blog-article-content p { @apply mb-7; }
+  .blog-article-content p:last-child { @apply mb-0; }
+  .blog-article-content .blog-lead {
+    @apply border-l-4 border-gold pl-5 text-[20px] font-medium leading-[1.8] text-navy sm:pl-7 sm:text-[22px];
+  }
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

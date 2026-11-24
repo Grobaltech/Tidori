@@ -883,19 +883,51 @@ async function handleNotification(request, env, isCallback) {
   }
   const trackingId = clean(payload.OrderTrackingId || payload.orderTrackingId, 100);
   const merchantReference = clean(payload.OrderMerchantReference || payload.orderMerchantReference, 100);
+  const notificationType = clean(payload.OrderNotificationType || payload.orderNotificationType, 40) || (isCallback ? "CALLBACKURL" : "IPNCHANGE");
+  const source = isCallback ? "callback" : "ipn";
+
+  // Record delivery separately from verification so we can distinguish a
+  // missing Pesapal notification from a status-query or database failure.
+  console.info("Pesapal notification received:", {
+    source,
+    method: request.method,
+    notificationType,
+    hasTrackingId: Boolean(trackingId),
+    hasMerchantReference: Boolean(merchantReference),
+    trackingId: trackingId || null,
+    merchantReference: merchantReference || null,
+  });
+
   let result = null;
   try {
-    if (trackingId && merchantReference) result = await verifyPayment(env, trackingId, merchantReference);
-  } catch (error) {
-    // Keep the callback response user-friendly, but never hide the reason a
-    // payment could not be reconciled. Do not log donor names, email or phone.
-    console.error("Pesapal payment verification failed:", {
-      source: isCallback ? "callback" : "ipn",
+    if (!trackingId || !merchantReference) {
+      throw new Error("Pesapal notification is missing OrderTrackingId or OrderMerchantReference.");
+    }
+    result = await verifyPayment(env, trackingId, merchantReference);
+    console.info("Pesapal notification processed:", {
+      source,
+      notificationType,
       trackingId,
       merchantReference,
+      paymentStatus: result.paymentStatus,
+      updated: result.updated ?? null,
+      category: result.bursary ? "bursary" : result.appointment ? "appointment" : "donation",
+    });
+  } catch (error) {
+    // Never log donor names, email addresses or phone numbers.
+    console.error("Pesapal payment verification failed:", {
+      source,
+      notificationType,
+      trackingId: trackingId || null,
+      merchantReference: merchantReference || null,
       error: error?.message || String(error),
     });
-    if (!isCallback) return json({ orderNotificationType: "IPNCHANGE", orderTrackingId: trackingId, orderMerchantReference: merchantReference, status: 500 }, 500);
+    if (!isCallback) return json({
+      orderNotificationType: notificationType,
+      orderTrackingId: trackingId,
+      orderMerchantReference: merchantReference,
+      status: 500,
+    }, 500);
   }
   if (isCallback) {
     const status = result?.paymentStatus || "processing";
@@ -903,7 +935,7 @@ async function handleNotification(request, env, isCallback) {
     return Response.redirect(`${url.origin}${destination}?payment=${encodeURIComponent(status)}&reference=${encodeURIComponent(merchantReference)}`, 302);
   }
   return json({
-    orderNotificationType: payload.OrderNotificationType || "IPNCHANGE",
+    orderNotificationType: notificationType,
     orderTrackingId: trackingId,
     orderMerchantReference: merchantReference,
     status: result ? 200 : 500,

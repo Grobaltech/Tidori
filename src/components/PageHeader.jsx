@@ -8,10 +8,11 @@ export default function PageHeader({ title }) {
       <h2 className="relative mb-5 inline-block pb-2 text-[40px] font-bold !text-gold sm:text-[60px] after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-24 after:-translate-x-1/2 after:bg-gold">
         {title}
       </h2>
-      <div className="text-xl text-white">
-        <Link to="/" className="px-3 hover:text-gold">Home</Link>
-        <span className="px-3 text-gold">{title}</span>
-      </div>
+      <nav aria-label="Breadcrumb" className="flex items-center justify-center gap-2 text-xl text-white">
+        <Link to="/" className="hover:text-gold">Home</Link>
+        <span aria-hidden="true" className="text-gold">/</span>
+        <span aria-current="page" className="text-gold">{title}</span>
+      </nav>
     </section>
   );
 }

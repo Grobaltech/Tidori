@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
+import AboutDetail from './pages/AboutDetail';
 import Outreach from './pages/Outreach';
 import Events from './pages/Events';
 import Blog from './pages/Blog';
@@ -31,6 +32,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
+        <Route path="/about/:section" element={<AboutDetail />} />
         <Route path="/outreach" element={<Outreach />} />
         <Route path="/events" element={<Events />} />
         <Route path="/blog" element={<Blog />} />

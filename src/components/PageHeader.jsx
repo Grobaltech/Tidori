@@ -34,15 +34,21 @@ export default function PageHeader({ title }) {
   useDocTitle(title);
   const { pathname } = useLocation();
   const segments = pathname.split('/').filter(Boolean);
+  const isMemberProfile = /^\\/members\\/profiles\\/[^/]+\\/?$/.test(pathname);
+  const isProfileIndex = pathname === '/members/profiles' || pathname === '/members/profiles/';
   const isOwnProfile = pathname === '/profile' || pathname === '/profile/';
   const crumbs = [];
 
-  if (isOwnProfile) {
-    // Presentation-only hierarchy; keep the existing /profile route and database unchanged.
+  if (isMemberProfile || isOwnProfile) {
     crumbs.push(
-      { label: 'Members', to: '/community', current: false, link: true },
-      { label: 'Profiles', to: '/profile', current: false, link: true },
+      { label: 'Members', to: '/members', current: false, link: true },
+      { label: 'Profiles', to: '/members/profiles', current: false, link: true },
       { label: title || 'My Profile', current: true, link: false },
+    );
+  } else if (isProfileIndex) {
+    crumbs.push(
+      { label: 'Members', to: '/members', current: false, link: true },
+      { label: 'Profiles', current: true, link: false },
     );
   } else if (segments.length) {
     let path = '';

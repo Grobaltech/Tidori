@@ -22,7 +22,8 @@ const emptyProfile = {
 export default function Profile() {
   const navigate = useNavigate();
   const { username } = useParams();
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
+  const memberUserId = state?.memberUserId || null;
   const [user, setUser] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [profile, setProfile] = useState(emptyProfile);
@@ -67,8 +68,7 @@ export default function Profile() {
       if (!active) return;
       if (ownError) { setError(ownError.message); setBusy(false); return; }
 
-      const ownSlug = toProfileSlug(ownData?.full_name || authData.user.email?.split('@')[0] || 'member');
-      const wantsOwnProfile = !username || username === ownSlug;
+      const wantsOwnProfile = !memberUserId || memberUserId === authData.user.id;
       if (wantsOwnProfile) {
         setIsOwnProfile(true);
         if (ownData) {
@@ -84,7 +84,7 @@ export default function Profile() {
         } else {
           setError('Your member profile has not been created yet. Please contact the church administrator.');
         }
-        const canonicalPath = `/members/profiles/${ownSlug}`;
+        const canonicalPath = '/members/profiles/user';
         if (pathname === '/profile' || pathname === '/members/profiles' || pathname === '/members/profiles/') {
           navigate(canonicalPath, { replace: true });
         } else if (pathname !== canonicalPath) {
@@ -101,7 +101,7 @@ export default function Profile() {
         if (directoryError) {
           setError(directoryError.message);
         } else {
-          const matches = (directoryRows || []).filter(person => toProfileSlug(person.full_name) === username);
+          const matches = (directoryRows || []).filter(person => person.user_id === memberUserId);
           if (matches.length === 1) {
             const person = matches[0];
             setProfile({
@@ -171,7 +171,7 @@ export default function Profile() {
       if (saveError) throw saveError;
       setMessage('Your member profile has been saved.');
       setEditingProfile(false);
-      navigate(`/members/profiles/${toProfileSlug(updates.full_name || user.email?.split('@')[0] || 'member')}`, { replace: true });
+      navigate('/members/profiles/user', { replace: true });
     } catch (err) { setError(err.message || 'Could not save your profile.'); }
     finally { setSaving(false); }
   };

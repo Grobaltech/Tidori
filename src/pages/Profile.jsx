@@ -5,6 +5,13 @@ import PageHeader from '../components/PageHeader';
 import LocationPicker from '../components/LocationPicker';
 import IdentityOcrScanner from '../components/IdentityOcrScanner';
 
+const toProfileSlug = value => value
+  .normalize('NFKD')
+  .replace(/[\\u0300-\\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-|-$/g, '') || 'member';
+
 const emptyProfile = {
   full_name: '', phone: '', photo_url: '', member_status: 'visitor', join_date: '',
   small_group: '', ministry: '', areas_served: [], newsletter_opt_in: false,
@@ -65,6 +72,8 @@ export default function Profile() {
           place_of_origin: data.place_of_origin || {},
           current_address: data.current_address || {},
         });
+        const memberSlug = toProfileSlug(data.full_name || authData.user.email?.split('@')[0] || 'member');
+        navigate(`/members/profiles/${memberSlug}`, { replace: true });
       } else {
         setError('Your member profile has not been created yet. Please contact the church administrator.');
       }
@@ -121,6 +130,7 @@ export default function Profile() {
       if (saveError) throw saveError;
       setMessage('Your member profile has been saved.');
       setEditingProfile(false);
+      navigate(`/members/profiles/${toProfileSlug(updates.full_name || user.email?.split('@')[0] || 'member')}`, { replace: true });
     } catch (err) { setError(err.message || 'Could not save your profile.'); }
     finally { setSaving(false); }
   };

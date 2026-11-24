@@ -33,19 +33,21 @@ function AboutTabs() {
   const preview = typeof cmsPreview === 'string' && cmsPreview.trim() ? cmsPreview : selected.preview;
   return (
     <section className="py-11">
-      <div className="container-page grid items-center gap-10 lg:grid-cols-2">
+      <div className="container-page grid min-w-0 items-center gap-10 lg:grid-cols-2">
         <div className="h-[420px] bg-cover bg-center lg:h-[560px]" style={{ backgroundImage: `url('${activeSite.about?.imageUrl || '/img/about.jpg'}')` }} role="img" aria-label="Tidori Ministries community" />
-        <div>
+        <div className="min-w-0 w-full">
           <SectionHeader center={false} kicker="Learn About Us" title="Faith in action. Transforming lives. Building communities." />
-          <div className="flex flex-nowrap gap-1 overflow-x-auto overscroll-x-contain border-b border-gray-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="About Tidori Ministries">
+          <div className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden overscroll-x-contain border-b border-gray-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="About Tidori Ministries">
+            <div className="flex w-max min-w-full flex-nowrap gap-1">
             {sections.map((item) => (
               <button key={item.key} type="button" role="tab" aria-selected={tab === item.key} onClick={() => setTab(item.key)}
                 className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold transition-colors sm:px-4 sm:text-base ${tab === item.key ? 'border-gold bg-gold text-ink' : 'border-transparent text-navy hover:border-gold hover:text-gold'}`}>
                 {item.label}
               </button>
             ))}
+            </div>
           </div>
-          <div className="pt-5" role="tabpanel">
+          <div className="min-w-0 pt-5" role="tabpanel">
             <h3 className="mb-3 text-2xl font-semibold text-navy">{selected.title}</h3>
             <p className="leading-7">{preview}</p>
             <p className="mt-3 text-sm leading-6 text-gray-600">{selected.more}</p>

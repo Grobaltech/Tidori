@@ -825,8 +825,10 @@ async function createPayment(request, env) {
   if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: "Enter your name and a valid email address." }, 400);
   }
-  if (!Number.isFinite(amount) || amount < 1 || amount > 1000000) {
-    return json({ error: "Enter a valid donation amount." }, 400);
+  // Donors choose their own giving amount; presets in the form are suggestions,
+  // not fixed tiers. Enforce only a positive, finite amount here.
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return json({ error: "Enter a valid donation amount greater than zero." }, 400);
   }
 
   const allowedCurrencies = new Set(["UGX","USD","EUR","GBP","KES","TZS","RWF","MWK","ZMW"]);

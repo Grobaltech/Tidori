@@ -72,9 +72,25 @@ function Navbar() {
   const link = ({ isActive }) =>
     `block px-4 py-2 text-white hover:text-gold ${isActive ? 'text-gold' : ''}`;
 
-  const navItems = activeSite.nav.some(item => item.to === '/appointments')
-    ? [...activeSite.nav, { to: '/bursaries', label: 'Bursaries' }]
-    : activeSite.nav.flatMap(item => item.to === '/contact'
+  const aboutMenu = [
+    { to: '/about', label: 'Overview' },
+    { to: '/about/mission', label: 'Our Mission' },
+    { to: '/about/vision', label: 'Our Vision' },
+    { to: '/about/purpose', label: 'Our Purpose' },
+    { to: '/about/objectives', label: 'Our Objectives' },
+    { to: '/about/focus-areas', label: 'Focus Areas' },
+    { to: '/about/values', label: 'Our Values' },
+    { to: '/about/commitment', label: 'Our Commitment' },
+    { to: '/about/partnerships', label: 'Our Partnerships' },
+  ];
+  const configuredNav = activeSite.nav.map(item =>
+    item.to === '/about'
+      ? { label: 'About Us', children: aboutMenu }
+      : item
+  );
+  const navItems = configuredNav.some(item => item.to === '/appointments')
+    ? [...configuredNav, { to: '/bursaries', label: 'Bursaries' }]
+    : configuredNav.flatMap(item => item.to === '/contact'
       ? [{ to: '/bursaries', label: 'Bursaries' }, { to: '/appointments', label: 'Appointments' }, item]
       : [item]);
 

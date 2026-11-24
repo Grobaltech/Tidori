@@ -48,7 +48,8 @@ export default function App() {
         <Route path="/appointments/book" element={<AppointmentBooking />} />
         <Route path="/meeting/:roomCode" element={<Meeting />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Login />} />
+        <Route path="/members/register" element={<Login />} />
+        <Route path="/register" element={<Navigate to="/members/register" replace />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/members" element={<Community />} />
         <Route path="/members/profiles" element={<Profile />} />

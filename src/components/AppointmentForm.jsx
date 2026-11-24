@@ -94,195 +94,243 @@ export default function AppointmentForm() {
     finally{setBusy(false);}
   };
 
-  return <section className="bg-mist p-5 sm:p-8">
-    <div className="mb-6"><p className="mb-2 text-gold">Pastoral appointments</p><h2 className="text-2xl sm:text-3xl">Choose your appointment package</h2><p className="mt-2 text-sm leading-6 text-gray-600">Each package includes the benefits of the tier below it. Crisis support, emergency pastoral intervention, therapist referrals and needs-based benevolence remain available regardless of package.</p></div>
-    <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div><p className="text-sm font-bold text-[#191c24]">Display prices in</p><p className="text-xs text-gray-500">Choose the currency you are most comfortable with</p></div>
-      <select aria-label="Display currency" className="field w-full sm:max-w-[230px]" value={displayCurrency} onChange={event=>setDisplayCurrency(event.target.value)}><option value="UGX">🇺🇬 UGX · Ugandan Shilling</option><option value="USD">🇺🇸 USD · US Dollar</option></select>
-    </div>
-    <div className="mb-7 -mx-4 grid grid-cols-1 items-stretch gap-4 sm:mx-0 sm:grid-cols-2 xl:grid-cols-3">
-      {tiers.map((tier,index)=>{
-        const pkg=packages.find(p=>p.tier_code===tier.code&&p.is_active);
-        const active=form.package_tier===tier.code;
-        return (
-          <button
-            key={tier.code}
-            type="button"
-            onClick={()=>setForm(v=>({
-              ...v,
-              package_tier:tier.code,
-              meeting_mode:tier.modes.includes(v.meeting_mode)?v.meeting_mode:tier.modes[0]
-            }))}
-            className={`group relative flex h-full flex-col rounded-[28px] border-[3px] p-[6px] text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${active?'shadow-xl ring-2 ring-offset-2':'shadow-lg'} ${index===1?'md:-translate-y-2 md:hover:-translate-y-3':''}`}
-            style={{
-              borderColor:tier.color,
-              background:index===1
-                ?'linear-gradient(145deg,#e8d38b 0%,#c9a84e 48%,#f5e7b2 100%)'
-                :'linear-gradient(145deg,#fffdf7 0%,#f1e6c7 100%)',
-              '--tw-ring-color':tier.color
-            }}
-          >
-            <span className={`relative isolate flex h-full min-h-[520px] flex-col overflow-hidden rounded-[22px] ${index===1?'text-white':'text-[#24242a]'`}>
-              {/* SVG background – soft modern notch matching the reference design */}
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 100 140"
-                preserveAspectRatio="none"
-                className="pointer-events-none absolute inset-0 z-0 h-full w-full"
-              >
-                <defs>
-                  <linearGradient id={`card-fill-${tier.code}`} x1="0" y1="0" x2="0" y2="1">
-                    {index===1 ? (
-                      <>
-                        <stop offset="0%" stopColor="#202126"/>
-                        <stop offset="100%" stopColor="#202126"/>
-                      </>
-                    ) : (
-                      <>
-                        <stop offset="0%" stopColor="#fffefa"/>
-                        <stop offset="55%" stopColor="#fffdf6"/>
-                        <stop offset="100%" stopColor="#f7edcf"/>
-                      </>
-                    )}
-                  </linearGradient>
-                </defs>
-                {/* Soft modern curve (matches the enhanced reference cards) */}
-                <path
-                  d="M 6 0
-                     H 68
-                     C 78 0, 84 3, 86 9
-                     C 88 15, 93 18, 100 18
-                     V 132
-                     Q 100 140 92 140
-                     H 8
-                     Q 0 140 0 132
-                     V 8
-                     Q 0 0 6 0
-                     Z"
-                  fill={`url(#card-fill-${tier.code})`}
-                  stroke={index===1 ? '#a58c50' : '#d8c99f'}
-                  strokeWidth="0.55"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-
-              {index===1 && (
-                <>
-                  <span className="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>
-                  <span className="absolute -right-10 top-6 z-10 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">
-                    Popular
-                  </span>
-                </>
-              )}
-
-              {/* Header */}
-              <span className="relative z-10 flex items-center justify-between px-5 pb-1 pt-6 sm:px-6">
-                <span className={`text-[10px] font-bold uppercase tracking-[.2em] ${index===1?'text-[#d9c17c]':'text-[#9b7b35]'`}>
-                  Tidori Ministries
-                </span>
-                <span className={`rounded-full border px-3 py-1 text-[9px] font-extrabold uppercase tracking-[.14em] ${index===1?'border-[#c9ad5c] text-[#ead79c]':'border-[#d9c58c] text-[#80652b]'}`}>
-                  {tier.name}
-                </span>
-              </span>
-
-              {/* Title + subtitle */}
-              <span className="relative z-10 px-5 pb-3 sm:px-6">
-                <span className="block text-[24px] font-semibold leading-tight tracking-tight sm:text-[26px]">
-                  {tier.name}
-                </span>
-                <span className={`mt-1 block text-xs leading-5 ${index===1?'text-white/60':'text-gray-500'}`}>
-                  {tier.subtitle}
-                </span>
-              </span>
-
-              {/* Price box */}
-              <span className={`relative z-10 mx-4 rounded-[18px] border px-4 py-3.5 sm:mx-5 sm:px-5 ${index===1?'border-[#75643a] bg-[#17181c]':'border-[#e8dbb7] bg-white/80 shadow-inner'}`}>
-                <span className={`block text-[9px] font-bold uppercase tracking-[.16em] ${index===1?'text-[#d8c27f]':'text-[#9b7b35]'`}>
-                  {currencyLabel(displayCurrency)}
-                </span>
-                <span className={`mt-1 block break-words text-[26px] font-extrabold leading-tight tracking-tight sm:text-[30px] ${index===1?'text-[#f1d98d]':'text-[#24242a]'`}>
-                  {pkg
-                    ? (convertedAmount(pkg.amount, pkg.currency || 'UGX', displayCurrency, usdToUgx) === null
-                        ? (rateLoading ? 'Loading…' : money(pkg.amount, pkg.currency || 'UGX'))
-                        : money(convertedAmount(pkg.amount, pkg.currency || 'UGX', displayCurrency, usdToUgx), displayCurrency))
-                    : (loading ? 'Loading…' : 'Price set by ministry')}
-                </span>
-                <span className={`mt-1 block text-[10px] ${index===1?'text-white/55':'text-gray-500'}`}>
-                  Contribution to the Ministry
-                </span>
-              </span>
-
-              {/* Divider */}
-              <span
-                className="relative z-10 mx-5 my-3.5 h-px sm:mx-6"
-                style={{
-                  background: index===1
-                    ? 'linear-gradient(90deg,transparent,#8f7942,transparent)'
-                    : 'linear-gradient(90deg,transparent,#d9c58c,transparent)'
-                }}
-              />
-
-              {/* Benefits label */}
-              <span className={`relative z-10 px-5 pb-1 text-[10px] font-extrabold uppercase tracking-[.16em] sm:px-6 ${index===1?'text-[#d8c27f]':'text-[#8c7136]'`}>
-                Included benefits
-              </span>
-
-              {/* Benefits list */}
-              <ul className={`relative z-10 flex-1 px-5 pb-4 text-xs leading-5 sm:px-6 ${index===1?'text-white/85':'text-gray-700'}`}>
-                {tier.benefits.map((item, benefitIndex) => (
-                  <li
-                    key={item}
-                    className={`flex items-start gap-2.5 border-t border-dotted py-2.5 ${
-                      benefitIndex === 0
-                        ? 'border-transparent'
-                        : index === 1
-                        ? 'border-white/25'
-                        : 'border-[#d9c58c]'
-                    }`}
-                  >
-                    <span className="mt-0.5 inline-flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full bg-[#62a91d] text-[9px] font-black text-white shadow-sm">
-                      ✓
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Select button */}
-              <span className={`relative z-10 mx-4 mb-4 rounded-full border py-2.5 text-center text-[11px] font-extrabold tracking-wide transition sm:mx-5 ${
-                active
-                  ? (index === 1
-                      ? 'border-[#e6d18e] bg-[#e6d18e] text-[#242126]'
-                      : 'border-[#9b7b35] bg-[#9b7b35] text-white')
-                  : (index === 1
-                      ? 'border-white/25 bg-white/5 text-white'
-                      : 'border-[#d8c58f] bg-white/60 text-[#705a2b]')
-              }`}>
-                {active ? 'Selected package' : 'Choose package'}
-              </span>
-            </span>
-          </button>
-        );
-      })}
-    </div>
-    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-      <label className="text-sm font-semibold">Full name<input className="field mt-1" name="full_name" value={form.full_name} onChange={update} required maxLength={120}/></label>
-      <label className="text-sm font-semibold">Phone number<input className="field mt-1" name="phone" type="tel" value={form.phone} onChange={update} maxLength={40} required/></label>
-      <label className="text-sm font-semibold">Email address<input className="field mt-1" name="email" type="email" value={form.email} onChange={update} maxLength={200} required={!universal&&fee>0}/></label>
-      <label className="text-sm font-semibold">Ministry service<select className="field mt-1" name="service" value={form.service} onChange={update}>{services.map(s=><option key={s}>{s}</option>)}</select></label>
-      <label className="text-sm font-semibold">Appointment mode<select className="field mt-1" name="meeting_mode" value={form.meeting_mode} onChange={update}>{availableModes.map(mode=><option key={mode} value={mode}>{modeLabels[mode]}</option>)}</select></label>
-      <label className="text-sm font-semibold">Preferred date<input className="field mt-1" type="date" name="date" min={new Date().toISOString().slice(0,10)} value={form.date} onChange={update} required/></label>
-      <label className="text-sm font-semibold">Preferred time<input className="field mt-1" type="time" name="time" value={form.time} onChange={update} required/></label>
-      <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm sm:col-span-2">
-        <span className="text-gray-500">{universal?'Support request':'Selected package fee'}</span>
-        <strong className="ml-2 text-lg text-[#191c24]">{universal?'No package fee':selectedPackage?(convertedAmount(fee,selectedPackage.currency || 'UGX',displayCurrency,usdToUgx)===null?money(fee,selectedPackage.currency):money(convertedAmount(fee,selectedPackage.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):'Not yet configured'}</strong>
-        {!universal && selectedPackage && <span className="ml-2 inline-flex rounded-full bg-[#f4f1e8] px-2 py-1 text-[10px] font-bold text-[#6b5520]">{currencyLabel(displayCurrency)}</span>}
-        <p className="mt-1 text-xs text-gray-500">{universal?'This support is not restricted by paid package. The ministry will assess and coordinate the appropriate help.':selectedPackage?(fee>0?'Payment will be processed in the package currency configured by the ministry through Pesapal. The selector changes the displayed equivalent only.':'This package has been configured as free.'):'The ministry administrator must configure this package before booking.'}</p>
+  return (
+    <section className="bg-mist p-5 sm:p-8">
+      <div className="mb-6">
+        <p className="mb-2 text-gold">Pastoral appointments</p>
+        <h2 className="text-2xl sm:text-3xl">Choose your appointment package</h2>
+        <p className="mt-2 text-sm leading-6 text-gray-600">Each package includes the benefits of the tier below it. Crisis support, emergency pastoral intervention, therapist referrals and needs-based benevolence remain available regardless of package.</p>
       </div>
-      <label className="text-sm font-semibold sm:col-span-2">Additional details<textarea className="field mt-1 min-h-24" name="notes" value={form.notes} onChange={update} maxLength={2000} placeholder="Tell us briefly how the ministry can support you."/></label>
-      {error&&<p role="alert" className="text-sm text-red-600 sm:col-span-2">{error}</p>}
-      {message&&<p role="status" className="text-sm text-green-700 sm:col-span-2">{message}</p>}
-      <div className="sm:col-span-2"><button className="btn-custom" type="submit" disabled={busy||loading||(!universal&&!selectedPackage)}>{busy?'Processing…':!universal&&fee>0?'Request & pay securely':'Request appointment'}</button></div>
-    </form>
-  </section>;
+
+      <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-bold text-[#191c24]">Display prices in</p>
+          <p className="text-xs text-gray-500">Choose the currency you are most comfortable with</p>
+        </div>
+        <select
+          aria-label="Display currency"
+          className="field w-full sm:max-w-[230px]"
+          value={displayCurrency}
+          onChange={event => setDisplayCurrency(event.target.value)}
+        >
+          <option value="UGX">🇺🇬 UGX · Ugandan Shilling</option>
+          <option value="USD">🇺🇸 USD · US Dollar</option>
+        </select>
+      </div>
+
+      <div className="mb-7 -mx-4 grid grid-cols-1 items-stretch gap-4 sm:mx-0 sm:grid-cols-2 xl:grid-cols-3">
+        {tiers.map((tier, index) => {
+          const pkg = packages.find(p => p.tier_code === tier.code && p.is_active);
+          const active = form.package_tier === tier.code;
+          const gradientId = 'card-fill-' + tier.code;
+
+          return (
+            <button
+              key={tier.code}
+              type="button"
+              onClick={() => setForm(v => ({
+                ...v,
+                package_tier: tier.code,
+                meeting_mode: tier.modes.includes(v.meeting_mode) ? v.meeting_mode : tier.modes[0]
+              }))}
+              className={
+                'group relative flex h-full flex-col rounded-[28px] border-[3px] p-[6px] text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ' +
+                (active ? 'shadow-xl ring-2 ring-offset-2 ' : 'shadow-lg ') +
+                (index === 1 ? 'md:-translate-y-2 md:hover:-translate-y-3' : '')
+              }
+              style={{
+                borderColor: tier.color,
+                background: index === 1
+                  ? 'linear-gradient(145deg,#e8d38b 0%,#c9a84e 48%,#f5e7b2 100%)'
+                  : 'linear-gradient(145deg,#fffdf7 0%,#f1e6c7 100%)',
+                '--tw-ring-color': tier.color
+              }}
+            >
+              <span className={
+                'relative isolate flex h-full min-h-[520px] flex-col overflow-hidden rounded-[22px] ' +
+                (index === 1 ? 'text-white' : 'text-[#24242a]')
+              }>
+                {/* SVG background – soft modern notch matching the reference design */}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 100 140"
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+                >
+                  <defs>
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                      {index === 1 ? (
+                        <>
+                          <stop offset="0%" stopColor="#202126" />
+                          <stop offset="100%" stopColor="#202126" />
+                        </>
+                      ) : (
+                        <>
+                          <stop offset="0%" stopColor="#fffefa" />
+                          <stop offset="55%" stopColor="#fffdf6" />
+                          <stop offset="100%" stopColor="#f7edcf" />
+                        </>
+                      )}
+                    </linearGradient>
+                  </defs>
+                  {/* Soft modern curve (matches the enhanced reference cards) */}
+                  <path
+                    d="M 6 0 H 68 C 78 0, 84 3, 86 9 C 88 15, 93 18, 100 18 V 132 Q 100 140 92 140 H 8 Q 0 140 0 132 V 8 Q 0 0 6 0 Z"
+                    fill={'url(#' + gradientId + ')'}
+                    stroke={index === 1 ? '#a58c50' : '#d8c99f'}
+                    strokeWidth="0.55"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+
+                {index === 1 && (
+                  <>
+                    <span className="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]" />
+                    <span className="absolute -right-10 top-6 z-10 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">
+                      Popular
+                    </span>
+                  </>
+                )}
+
+                {/* Header */}
+                <span className="relative z-10 flex items-center justify-between px-5 pb-1 pt-6 sm:px-6">
+                  <span className={'text-[10px] font-bold uppercase tracking-[.2em] ' + (index === 1 ? 'text-[#d9c17c]' : 'text-[#9b7b35]')}>
+                    Tidori Ministries
+                  </span>
+                  <span className={'rounded-full border px-3 py-1 text-[9px] font-extrabold uppercase tracking-[.14em] ' + (index === 1 ? 'border-[#c9ad5c] text-[#ead79c]' : 'border-[#d9c58c] text-[#80652b]')}>
+                    {tier.name}
+                  </span>
+                </span>
+
+                {/* Title + subtitle */}
+                <span className="relative z-10 px-5 pb-3 sm:px-6">
+                  <span className="block text-[24px] font-semibold leading-tight tracking-tight sm:text-[26px]">
+                    {tier.name}
+                  </span>
+                  <span className={'mt-1 block text-xs leading-5 ' + (index === 1 ? 'text-white/60' : 'text-gray-500')}>
+                    {tier.subtitle}
+                  </span>
+                </span>
+
+                {/* Price box */}
+                <span className={'relative z-10 mx-4 rounded-[18px] border px-4 py-3.5 sm:mx-5 sm:px-5 ' + (index === 1 ? 'border-[#75643a] bg-[#17181c]' : 'border-[#e8dbb7] bg-white/80 shadow-inner')}>
+                  <span className={'block text-[9px] font-bold uppercase tracking-[.16em] ' + (index === 1 ? 'text-[#d8c27f]' : 'text-[#9b7b35]')}>
+                    {currencyLabel(displayCurrency)}
+                  </span>
+                  <span className={'mt-1 block break-words text-[26px] font-extrabold leading-tight tracking-tight sm:text-[30px] ' + (index === 1 ? 'text-[#f1d98d]' : 'text-[#24242a]')}>
+                    {pkg
+                      ? (convertedAmount(pkg.amount, pkg.currency || 'UGX', displayCurrency, usdToUgx) === null
+                          ? (rateLoading ? 'Loading…' : money(pkg.amount, pkg.currency || 'UGX'))
+                          : money(convertedAmount(pkg.amount, pkg.currency || 'UGX', displayCurrency, usdToUgx), displayCurrency))
+                      : (loading ? 'Loading…' : 'Price set by ministry')}
+                  </span>
+                  <span className={'mt-1 block text-[10px] ' + (index === 1 ? 'text-white/55' : 'text-gray-500')}>
+                    Contribution to the Ministry
+                  </span>
+                </span>
+
+                {/* Divider */}
+                <span
+                  className="relative z-10 mx-5 my-3.5 h-px sm:mx-6"
+                  style={{
+                    background: index === 1
+                      ? 'linear-gradient(90deg,transparent,#8f7942,transparent)'
+                      : 'linear-gradient(90deg,transparent,#d9c58c,transparent)'
+                  }}
+                />
+
+                {/* Benefits label */}
+                <span className={'relative z-10 px-5 pb-1 text-[10px] font-extrabold uppercase tracking-[.16em] sm:px-6 ' + (index === 1 ? 'text-[#d8c27f]' : 'text-[#8c7136]')}>
+                  Included benefits
+                </span>
+
+                {/* Benefits list */}
+                <ul className={'relative z-10 flex-1 px-5 pb-4 text-xs leading-5 sm:px-6 ' + (index === 1 ? 'text-white/85' : 'text-gray-700')}>
+                  {tier.benefits.map((item, benefitIndex) => (
+                    <li
+                      key={item}
+                      className={
+                        'flex items-start gap-2.5 border-t border-dotted py-2.5 ' +
+                        (benefitIndex === 0
+                          ? 'border-transparent'
+                          : index === 1
+                          ? 'border-white/25'
+                          : 'border-[#d9c58c]')
+                      }
+                    >
+                      <span className="mt-0.5 inline-flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full bg-[#62a91d] text-[9px] font-black text-white shadow-sm">
+                        ✓
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Select button */}
+                <span className={
+                  'relative z-10 mx-4 mb-4 rounded-full border py-2.5 text-center text-[11px] font-extrabold tracking-wide transition sm:mx-5 ' +
+                  (active
+                    ? (index === 1
+                        ? 'border-[#e6d18e] bg-[#e6d18e] text-[#242126]'
+                        : 'border-[#9b7b35] bg-[#9b7b35] text-white')
+                    : (index === 1
+                        ? 'border-white/25 bg-white/5 text-white'
+                        : 'border-[#d8c58f] bg-white/60 text-[#705a2b]'))
+                }>
+                  {active ? 'Selected package' : 'Choose package'}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+        <label className="text-sm font-semibold">Full name<input className="field mt-1" name="full_name" value={form.full_name} onChange={update} required maxLength={120} /></label>
+        <label className="text-sm font-semibold">Phone number<input className="field mt-1" name="phone" type="tel" value={form.phone} onChange={update} maxLength={40} required /></label>
+        <label className="text-sm font-semibold">Email address<input className="field mt-1" name="email" type="email" value={form.email} onChange={update} maxLength={200} required={!universal && fee > 0} /></label>
+        <label className="text-sm font-semibold">Ministry service<select className="field mt-1" name="service" value={form.service} onChange={update}>{services.map(s => <option key={s}>{s}</option>)}</select></label>
+        <label className="text-sm font-semibold">Appointment mode<select className="field mt-1" name="meeting_mode" value={form.meeting_mode} onChange={update}>{availableModes.map(mode => <option key={mode} value={mode}>{modeLabels[mode]}</option>)}</select></label>
+        <label className="text-sm font-semibold">Preferred date<input className="field mt-1" type="date" name="date" min={new Date().toISOString().slice(0,10)} value={form.date} onChange={update} required /></label>
+        <label className="text-sm font-semibold">Preferred time<input className="field mt-1" type="time" name="time" value={form.time} onChange={update} required /></label>
+        <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm sm:col-span-2">
+          <span className="text-gray-500">{universal ? 'Support request' : 'Selected package fee'}</span>
+          <strong className="ml-2 text-lg text-[#191c24]">
+            {universal
+              ? 'No package fee'
+              : selectedPackage
+                ? (convertedAmount(fee, selectedPackage.currency || 'UGX', displayCurrency, usdToUgx) === null
+                    ? money(fee, selectedPackage.currency)
+                    : money(convertedAmount(fee, selectedPackage.currency || 'UGX', displayCurrency, usdToUgx), displayCurrency))
+                : 'Not yet configured'}
+          </strong>
+          {!universal && selectedPackage && (
+            <span className="ml-2 inline-flex rounded-full bg-[#f4f1e8] px-2 py-1 text-[10px] font-bold text-[#6b5520]">
+              {currencyLabel(displayCurrency)}
+            </span>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            {universal
+              ? 'This support is not restricted by paid package. The ministry will assess and coordinate the appropriate help.'
+              : selectedPackage
+                ? (fee > 0
+                    ? 'Payment will be processed in the package currency configured by the ministry through Pesapal. The selector changes the displayed equivalent only.'
+                    : 'This package has been configured as free.')
+                : 'The ministry administrator must configure this package before booking.'}
+          </p>
+        </div>
+        <label className="text-sm font-semibold sm:col-span-2">
+          Additional details
+          <textarea className="field mt-1 min-h-24" name="notes" value={form.notes} onChange={update} maxLength={2000} placeholder="Tell us briefly how the ministry can support you." />
+        </label>
+        {error && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{error}</p>}
+        {message && <p role="status" className="text-sm text-green-700 sm:col-span-2">{message}</p>}
+        <div className="sm:col-span-2">
+          <button className="btn-custom" type="submit" disabled={busy || loading || (!universal && !selectedPackage)}>
+            {busy ? 'Processing…' : !universal && fee > 0 ? 'Request & pay securely' : 'Request appointment'}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
 }

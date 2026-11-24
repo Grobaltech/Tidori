@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 const STORAGE_KEY = 'tidori-cookie-consent-v1';
 
@@ -83,9 +82,6 @@ export default function CookieConsent() {
                 <h2 className="mt-1 text-xl font-bold text-ink">Your privacy matters</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">
                   We use essential storage to keep this website working. With your permission, optional analytics and marketing technologies may also be used to understand site use and improve communications. You can change your choice at any time in Cookie settings.
-                </p>
-                <p className="mt-2 text-xs text-gray-500">
-                  Read our <Link to="/privacy-policy" className="font-semibold text-ink underline decoration-gold underline-offset-2" onClick={() => setVisible(false)}>Privacy Policy</Link>.
                 </p>
               </div>
 

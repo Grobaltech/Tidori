@@ -138,7 +138,7 @@ export default function Bursaries() {
           </>}
         </form>}
       </>}
-      <p className="mt-8 text-sm text-gray-500">Need an account? <Link to="/register" className="underline">Register here</Link>. Already registered? <Link to="/login" className="underline">Sign in</Link>.</p>
+      <p className="mt-8 text-sm text-gray-500">Need an account? <Link to="/members/register" className="underline">Register here</Link>. Already registered? <Link to="/login" className="underline">Sign in</Link>.</p>
     </section>
   </>;
 }

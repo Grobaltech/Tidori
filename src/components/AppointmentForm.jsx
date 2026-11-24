@@ -100,7 +100,7 @@ export default function AppointmentForm() {
       <div><p className="text-sm font-bold text-[#191c24]">Display prices in</p><p className="text-xs text-gray-500">Choose the currency you are most comfortable with</p></div>
       <select aria-label="Display currency" className="field w-full sm:max-w-[230px]" value={displayCurrency} onChange={event=>setDisplayCurrency(event.target.value)}><option value="UGX">🇺🇬 UGX · Ugandan Shilling</option><option value="USD">🇺🇸 USD · US Dollar</option></select>
     </div>
-    <div className="mb-7 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="mb-7 -mx-4 grid grid-cols-1 items-stretch gap-4 sm:mx-0 sm:grid-cols-2 xl:grid-cols-3">
       {tiers.map((tier,index)=>{
         const pkg=packages.find(p=>p.tier_code===tier.code&&p.is_active);
         const active=form.package_tier===tier.code;

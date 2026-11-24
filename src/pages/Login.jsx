@@ -8,7 +8,7 @@ export default function Login() {
   const [params] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [mode, setMode] = useState(location.pathname === '/register' || params.get('mode') === 'signup' ? 'signup' : 'login');
+  const [mode, setMode] = useState(location.pathname === '/members/register' || params.get('mode') === 'signup' ? 'signup' : 'login');
   const [name, setName] = useState('');
   const [registrationNin, setRegistrationNin] = useState('');
   const [email, setEmail] = useState('');
@@ -28,7 +28,7 @@ export default function Login() {
   };
 
   useEffect(() => {
-    setMode(location.pathname === '/register' || params.get('mode') === 'signup' ? 'signup' : 'login');
+    setMode(location.pathname === '/members/register' || params.get('mode') === 'signup' ? 'signup' : 'login');
     setError('');
     setMessage('');
   }, [location.pathname, params]);
@@ -190,7 +190,7 @@ export default function Login() {
         </form>
         {mode === 'login' && <button type="button" onClick={resetPassword} disabled={busy || !supabaseReady} aria-busy={busy} className="mt-4 text-sm text-navy underline">{busy ? 'Please wait...' : 'Forgot your password?'}</button>}
         <div className="mt-6 border-t border-gray-300 pt-5 text-center text-sm">
-          {mode === 'login' ? <>Don't have an account? <Link className="font-semibold text-navy underline" to="/register">Register here</Link></> : <>Already registered? <Link className="font-semibold text-navy underline" to="/login">Sign in</Link></>}
+          {mode === 'login' ? <>Don't have an account? <Link className="font-semibold text-navy underline" to="/members/register">Register here</Link></> : <>Already registered? <Link className="font-semibold text-navy underline" to="/login">Sign in</Link></>}
         </div>
         </>}
       </div>

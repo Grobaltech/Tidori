@@ -107,14 +107,14 @@ export default function AppointmentForm() {
         return <button key={tier.code} type="button" onClick={()=>setForm(v=>({...v,package_tier:tier.code,meeting_mode:tier.modes.includes(v.meeting_mode)?v.meeting_mode:tier.modes[0]}))}
           className={`group relative flex h-full flex-col rounded-[34px] border-[3px] p-[7px] text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${active?'shadow-xl ring-2 ring-offset-2':'shadow-lg'} ${index===1?'md:-translate-y-3 md:hover:-translate-y-4':''}`}
           style={{borderColor:tier.color,background:index===1?'linear-gradient(145deg,#e8d38b 0%,#c9a84e 48%,#f5e7b2 100%)':'linear-gradient(145deg,#fffdf7 0%,#f1e6c7 100%)','--tw-ring-color':tier.color}}>
-          <span className={`relative isolate flex h-full flex-col overflow-hidden rounded-[27px] border bg-transparent ${index===1?'border-[#d8bd69] text-white':'border-[#eadfbf] text-[#24242a]'}`}>
-            <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-[7px] z-0 h-auto w-auto">
+          <span className={`relative isolate flex h-full flex-col overflow-hidden rounded-[27px] bg-transparent ${index===1?'text-white':'text-[#24242a]'}`}>
+            <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 z-0 h-full w-full">
               <defs>
                 <linearGradient id={`card-fill-${tier.code}`} x1="0" y1="0" x2="0" y2="1">
                   {index===1 ? <><stop offset="0%" stopColor="#202126"/><stop offset="100%" stopColor="#202126"/></> : <><stop offset="0%" stopColor="#fffefa"/><stop offset="52%" stopColor="#fffdf6"/><stop offset="100%" stopColor="#f7edcf"/></>}
                 </linearGradient>
               </defs>
-              <path d="M 12 2 H 69 C 77 2 78 10 78 16 C 78 22 83 23 90 23 H 96 V 90 Q 96 98 88 98 H 12 Q 4 98 4 90 V 10 Q 4 2 12 2 Z" fill={`url(#card-fill-${tier.code})`} stroke={index===1?"#a58c50":"#d8c99f"} strokeWidth="0.65" vectorEffect="non-scaling-stroke" opacity={index===1?"1":"1"}/>
+              <path d="M 10 0 H 69 C 77 0 78 8 78 14 C 78 20 84 22 91 22 H 100 V 90 Q 100 100 90 100 H 10 Q 0 100 0 90 V 10 Q 0 0 10 0 Z" fill={`url(#card-fill-${tier.code})`} stroke={index===1?"#a58c50":"#d8c99f"} strokeWidth="0.65" vectorEffect="non-scaling-stroke"/>
             </svg>
             {index===1&&<span className="absolute z-10 inset-x-0 top-0 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>}
             {index===1&&<span className="absolute -right-10 top-7 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">Popular</span>}

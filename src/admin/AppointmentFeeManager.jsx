@@ -42,7 +42,7 @@ export default function AppointmentFeeManager(){
     <div className="grid gap-4 p-5 md:grid-cols-3">{tiers.map(tier=>{
       const row=packages.find(p=>p.tier_code===tier.tier_code)||{tier_code:tier.tier_code,amount:'',currency:'UGX',is_active:true};
       return <div key={tier.tier_code} className="rounded-2xl border bg-white p-4" style={{borderTopWidth:4,borderTopColor:tier.color}}>
-        <p className="text-xs font-bold uppercase tracking-widest" style={{color:tier.color}}>{tier.package_name} ribbon</p><h3 className="mt-1 text-lg font-semibold">{tier.description}</h3>
+        <p className="text-xs font-bold uppercase tracking-widest" style={{color:tier.color}}>Contribution to the Ministry</p><h3 className="mt-1 text-lg font-semibold">{tier.description}</h3>
         <label className="mt-4 block text-xs font-semibold text-gray-600">Package price<input className={field+' mt-1'} type="number" min="0" max="1000000" step="1" value={row.amount??''} onChange={e=>update(tier.tier_code,{amount:e.target.value})} placeholder="Enter amount"/></label>
         <label className="mt-3 block text-xs font-semibold text-gray-600">Currency<select className={field+' mt-1'} value={row.currency||'UGX'} onChange={e=>update(tier.tier_code,{currency:e.target.value})}><option>UGX</option><option>USD</option></select></label>
         <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-gray-600"><input type="checkbox" checked={row.is_active??true} onChange={e=>update(tier.tier_code,{is_active:e.target.checked})}/> Available for booking</label>

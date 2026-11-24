@@ -98,7 +98,7 @@ function labelled(text, labels) {
   return '';
 }
 
-export default function IdentityOcrScanner({ nin: ninProp, onNinChange, cardNo: cardNoProp, onCardNoChange, title = 'National ID document scan', description = 'Enter the details printed on your card, then capture its front using your camera. Image processing and OCR run on this device; the photo is not uploaded to Tidori.', showIntro = true } = {}) {
+export default function IdentityOcrScanner({ nin: ninProp, onNinChange, cardNo: cardNoProp, onCardNoChange, title = 'National ID document scan' } = {}) {
   const [localNin, setLocalNin] = useState('');
   const [localCardNo, setLocalCardNo] = useState('');
   const nin = ninProp ?? localNin;
@@ -239,7 +239,6 @@ export default function IdentityOcrScanner({ nin: ninProp, onNinChange, cardNo: 
 
   return <section className="mt-8 rounded-xl border border-gold/50 bg-white p-5 sm:p-6">
     <h2 className="text-xl font-semibold text-navy">{title}</h2>
-    {showIntro && <p className="mt-2 text-sm text-gray-600">{description} OCR matching and image-quality checks are supporting checks only; they do not confirm identity or validate a document with a national registry.</p>}
     <div className="mt-5 grid gap-4 sm:grid-cols-2">
       <label className="block text-sm font-semibold text-navy">NIN (enter manually)
         <input className="field mt-2" autoComplete="off" spellCheck="false" maxLength={24} value={nin} onChange={e => setNin(e.target.value)} placeholder="Enter your NIN" />
@@ -297,6 +296,5 @@ export default function IdentityOcrScanner({ nin: ninProp, onNinChange, cardNo: 
       {ninMatch && cardMatch && <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Document details matched by OCR. This is not an official NIRA verification and does not prove the card is genuine or valid.</p>}
       <details><summary className="cursor-pointer text-sm font-semibold text-navy">Show all recognised text</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs text-gray-700">{text}</pre></details>
     </div>}
-    <p className="mt-4 text-xs leading-relaxed text-gray-500">Privacy: the image and recognised text stay in this page's memory and are not saved to your profile. Your browser may download the OCR engine and English language model. OpenCV checks card-like boundaries, perspective, focus, brightness and possible glare only. It cannot verify genuine holograms or microprint, prove an ID is unaltered, or confirm NIRA records. This is not official identity verification.</p>
   </section>;
 }

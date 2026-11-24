@@ -21,6 +21,7 @@ const routeLabels = {
   volunteer: 'Volunteer',
   contact: 'Contact Us',
   appointments: 'Appointments',
+  appointment: 'Appointments',
   community: 'Tidori Connect',
   profile: 'My Profile',
   notifications: 'Notifications',

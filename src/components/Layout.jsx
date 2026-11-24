@@ -88,9 +88,10 @@ function Navbar() {
       ? { label: 'About Us', children: aboutMenu }
       : item
   );
-  const navItems = configuredNav.some(item => item.to === '/appointments')
-    ? [...configuredNav, { to: '/bursaries', label: 'Bursaries' }]
-    : configuredNav.flatMap(item => item.to === '/contact'
+  const publicNav = configuredNav.filter(item => !['/community', '/members'].includes(item.to));
+  const navItems = publicNav.some(item => item.to === '/appointments')
+    ? [...publicNav, { to: '/bursaries', label: 'Bursaries' }]
+    : publicNav.flatMap(item => item.to === '/contact'
       ? [{ to: '/bursaries', label: 'Bursaries' }, { to: '/appointments', label: 'Appointments' }, item]
       : [item]);
 
@@ -122,13 +123,14 @@ function Navbar() {
                 <li key={item.to}><NavLink to={item.to} end={item.to === '/'} className={link}>{item.label}</NavLink></li>
               )
             )}
+            {signedIn && <li><NavLink to="/members" className={link}>Tidori Connect</NavLink></li>}
           </ul>
         </nav>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => setSearchOpen((value) => !value)} aria-label={searchOpen ? "Close search" : "Open search"} aria-expanded={searchOpen} className={`p-2 text-xl transition-colors hover:text-gold ${searchOpen ? "text-gold" : "text-white"}`}>
             {searchOpen ? <FaTimes /> : <FaSearch />}
           </button>
-          {signedIn && <Link to="/community?tab=messages" aria-label="Messages" title="Messages" className="p-2 text-xl text-white transition-colors hover:text-gold"><FaComments /></Link>}
+          {signedIn && <Link to="/members?tab=messages" aria-label="Messages" title="Messages" className="p-2 text-xl text-white transition-colors hover:text-gold"><FaComments /></Link>}
           {signedIn && <NotificationBell />}
           <Link to={signedIn ? "/profile" : "/login"} aria-label={signedIn ? "My account" : "Login or register"} title={signedIn ? "My account" : "Login / Register"} className="p-2 text-xl text-white transition-colors hover:text-gold">
             <FaUserCircle />
@@ -164,7 +166,7 @@ function Footer() {
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Quick Links</h2>
-          {links([['/about', 'About Us'], ['/community', 'Tidori Connect'], ['/contact', 'Contact Us'], ['/outreach', 'Outreach'], ['/events', 'Upcoming Events'], ['/blog', 'Latest Blog']])}
+          {links([['/about', 'About Us'], ['/contact', 'Contact Us'], ['/outreach', 'Outreach'], ['/events', 'Upcoming Events'], ['/blog', 'Latest Blog']])}
         </div>
         <div>
           <h2 className="mb-6 text-[22px] font-bold !text-gold">Get Involved</h2>

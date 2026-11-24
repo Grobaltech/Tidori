@@ -37,10 +37,16 @@ export default function PageHeader({ title }) {
   const isMemberProfile = /^\\/members\\/profiles\\/[^/]+\\/?$/.test(pathname);
   const isProfileIndex = pathname === '/members/profiles' || pathname === '/members/profiles/';
   const isOwnProfile = pathname === '/profile' || pathname === '/profile/';
+  const isMembersHome = pathname === '/members' || pathname === '/members/';
   const hideLargeTitle = pathname === '/members' || pathname.startsWith('/members/') || isOwnProfile;
   const crumbs = [];
 
-  if (isMemberProfile || isOwnProfile) {
+  if (isMembersHome) {
+    crumbs.push(
+      { label: 'Members', to: '/members', current: false, link: true },
+      { label: 'Tidori Connect', current: true, link: false },
+    );
+  } else if (isMemberProfile || isOwnProfile) {
     crumbs.push(
       { label: 'Members', to: '/members', current: false, link: true },
       { label: 'Profiles', to: '/members/profiles', current: false, link: true },

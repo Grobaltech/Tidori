@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDocTitle } from '../hooks/hooks';
 
@@ -23,7 +24,7 @@ const routeLabels = {
   appointments: 'Appointment',
   appointment: 'Appointments',
   community: 'Tidori Connect',
-  profile: 'Profiles',
+  profile: 'Profile',
   members: 'Members',
   notifications: 'Notifications',
   login: 'Login',
@@ -33,6 +34,18 @@ const routeLabels = {
 export default function PageHeader({ title }) {
   const { pathname } = useLocation();
   useDocTitle(pathname === '/members' || pathname === '/members/' ? 'Tidori Connect' : title);
+
+  useEffect(() => {
+    if (!pathname.startsWith('/members')) return undefined;
+    const canonical = document.querySelector('link[rel="canonical"]') || document.createElement('link');
+    const isNew = !canonical.isConnected;
+    canonical.setAttribute('rel', 'canonical');
+    canonical.setAttribute('href', `${window.location.origin}/members`);
+    if (isNew) document.head.appendChild(canonical);
+    return () => {
+      if (isNew && canonical.isConnected) canonical.remove();
+    };
+  }, [pathname]);
   const segments = pathname.split('/').filter(Boolean);
   const isMemberProfile = /^\\/members\\/profiles\\/[^/]+\\/?$/.test(pathname);
   const isProfileIndex = pathname === '/members/profiles' || pathname === '/members/profiles/';
@@ -49,8 +62,9 @@ export default function PageHeader({ title }) {
   } else if (isMemberProfile || isOwnProfile) {
     crumbs.push(
       { label: 'Members', to: '/members', current: false, link: true },
-      { label: 'Profiles', to: '/members/profiles', current: false, link: true },
-      { label: title || 'My Profile', current: true, link: false },
+      { label: 'Profile', to: '/members/profiles', current: false, link: true },
+      { label: title || 'Member', current: false, link: false },
+      { label: 'Tidori Connect', to: '/members', current: true, link: false },
     );
   } else if (isProfileIndex) {
     crumbs.push(

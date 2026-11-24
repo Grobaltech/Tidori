@@ -220,7 +220,7 @@ export default function Profile() {
   if (!user) return null;
 
   return <>
-    <PageHeader title="My Profile" />
+    <PageHeader title={profile.full_name?.trim() || user.email?.split('@')[0] || 'My Profile'} />
     <div className="container-page max-w-3xl pt-8">
       <Link to="/community" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/50 bg-ink px-5 py-4 text-white shadow-sm hover:bg-navy">
         <span><strong className="block text-lg text-gold">Open Tidori Connect</strong><span className="text-sm text-white/80">Find church members, send private messages and share prayer requests.</span></span>

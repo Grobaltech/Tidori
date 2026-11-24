@@ -104,39 +104,166 @@ export default function AppointmentForm() {
       {tiers.map((tier,index)=>{
         const pkg=packages.find(p=>p.tier_code===tier.code&&p.is_active);
         const active=form.package_tier===tier.code;
-        return <button key={tier.code} type="button" onClick={()=>setForm(v=>({...v,package_tier:tier.code,meeting_mode:tier.modes.includes(v.meeting_mode)?v.meeting_mode:tier.modes[0]}))}
-          className={`group relative flex h-full flex-col rounded-[34px] border-[3px] p-[7px] text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${active?'shadow-xl ring-2 ring-offset-2':'shadow-lg'} ${index===1?'md:-translate-y-3 md:hover:-translate-y-4':''}`}
-          style={{borderColor:tier.color,background:index===1?'linear-gradient(145deg,#e8d38b 0%,#c9a84e 48%,#f5e7b2 100%)':'linear-gradient(145deg,#fffdf7 0%,#f1e6c7 100%)','--tw-ring-color':tier.color}}>
-          <span className={`relative isolate flex h-full flex-col overflow-hidden rounded-[27px] bg-transparent ${index===1?'text-white':'text-[#24242a]'}`}>
-            <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 z-0 h-full w-full">
-              <defs>
-                <linearGradient id={`card-fill-${tier.code}`} x1="0" y1="0" x2="0" y2="1">
-                  {index===1 ? <><stop offset="0%" stopColor="#202126"/><stop offset="100%" stopColor="#202126"/></> : <><stop offset="0%" stopColor="#fffefa"/><stop offset="52%" stopColor="#fffdf6"/><stop offset="100%" stopColor="#f7edcf"/></>}
-                </linearGradient>
-              </defs>
-              <path d="M 10 0 H 78 C 84 0 85 5 85 9 C 85 13 89 15 95 15 H 100 V 90 Q 100 100 90 100 H 10 Q 0 100 0 90 V 10 Q 0 0 10 0 Z" fill={`url(#card-fill-${tier.code})`} stroke={index===1?"#a58c50":"#d8c99f"} strokeWidth="0.65" vectorEffect="non-scaling-stroke"/>
-            </svg>
-            {index===1&&<span className="absolute z-10 inset-x-0 top-0 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>}
-            {index===1&&<span className="absolute -right-10 top-7 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">Popular</span>}
-            <span className="relative z-10 flex items-center justify-between px-5 pb-2 pt-6 sm:px-6">
-              <span className={`text-[10px] font-bold uppercase tracking-[.2em] ${index===1?'text-[#d9c17c]':'text-[#9b7b35]'}`}>Tidori Ministries</span>
-              <span className={`rounded-full border px-3 py-1 text-[9px] font-extrabold uppercase tracking-[.14em] ${index===1?'border-[#c9ad5c] text-[#ead79c]':'border-[#d9c58c] text-[#80652b]'}`}>{tier.name}</span>
+        return (
+          <button
+            key={tier.code}
+            type="button"
+            onClick={()=>setForm(v=>({
+              ...v,
+              package_tier:tier.code,
+              meeting_mode:tier.modes.includes(v.meeting_mode)?v.meeting_mode:tier.modes[0]
+            }))}
+            className={`group relative flex h-full flex-col rounded-[28px] border-[3px] p-[6px] text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${active?'shadow-xl ring-2 ring-offset-2':'shadow-lg'} ${index===1?'md:-translate-y-2 md:hover:-translate-y-3':''}`}
+            style={{
+              borderColor:tier.color,
+              background:index===1
+                ?'linear-gradient(145deg,#e8d38b 0%,#c9a84e 48%,#f5e7b2 100%)'
+                :'linear-gradient(145deg,#fffdf7 0%,#f1e6c7 100%)',
+              '--tw-ring-color':tier.color
+            }}
+          >
+            <span className={`relative isolate flex h-full min-h-[520px] flex-col overflow-hidden rounded-[22px] ${index===1?'text-white':'text-[#24242a]'}`}>
+              {/* SVG background with improved proportions */}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 100 140"
+                preserveAspectRatio="none"
+                className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+              >
+                <defs>
+                  <linearGradient id={`card-fill-${tier.code}`} x1="0" y1="0" x2="0" y2="1">
+                    {index===1 ? (
+                      <>
+                        <stop offset="0%" stopColor="#202126"/>
+                        <stop offset="100%" stopColor="#202126"/>
+                      </>
+                    ) : (
+                      <>
+                        <stop offset="0%" stopColor="#fffefa"/>
+                        <stop offset="55%" stopColor="#fffdf6"/>
+                        <stop offset="100%" stopColor="#f7edcf"/>
+                      </>
+                    )}
+                  </linearGradient>
+                </defs>
+                {/* Softer, more balanced top-right curve */}
+                <path
+                  d="M 8 0
+                     H 72
+                     C 80 0, 82 4, 82 8
+                     C 82 14, 88 16, 96 16
+                     H 100
+                     V 128
+                     Q 100 140 88 140
+                     H 12
+                     Q 0 140 0 128
+                     V 12
+                     Q 0 0 8 0
+                     Z"
+                  fill={`url(#card-fill-${tier.code})`}
+                  stroke={index===1 ? '#a58c50' : '#d8c99f'}
+                  strokeWidth="0.6"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+
+              {index===1 && (
+                <>
+                  <span className="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>
+                  <span className="absolute -right-10 top-6 z-10 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">
+                    Popular
+                  </span>
+                </>
+              )}
+
+              {/* Header */}
+              <span className="relative z-10 flex items-center justify-between px-5 pb-1 pt-6 sm:px-6">
+                <span className={`text-[10px] font-bold uppercase tracking-[.2em] ${index===1?'text-[#d9c17c]':'text-[#9b7b35]'}`}>
+                  Tidori Ministries
+                </span>
+                <span className={`rounded-full border px-3 py-1 text-[9px] font-extrabold uppercase tracking-[.14em] ${index===1?'border-[#c9ad5c] text-[#ead79c]':'border-[#d9c58c] text-[#80652b]'}`}>
+                  {tier.name}
+                </span>
+              </span>
+
+              {/* Title + subtitle */}
+              <span className="relative z-10 px-5 pb-3 sm:px-6">
+                <span className="block text-[24px] font-semibold leading-tight tracking-tight sm:text-[26px]">
+                  {tier.name}
+                </span>
+                <span className={`mt-1 block text-xs leading-5 ${index===1?'text-white/60':'text-gray-500'}`}>
+                  {tier.subtitle}
+                </span>
+              </span>
+
+              {/* Price box */}
+              <span className={`relative z-10 mx-4 rounded-[18px] border px-4 py-3.5 sm:mx-5 sm:px-5 ${index===1?'border-[#75643a] bg-[#17181c]':'border-[#e8dbb7] bg-white/80 shadow-inner'}`}>
+                <span className={`block text-[9px] font-bold uppercase tracking-[.16em] ${index===1?'text-[#d8c27f]':'text-[#9b7b35]'}`}>
+                  {currencyLabel(displayCurrency)}
+                </span>
+                <span className={`mt-1 block break-words text-[26px] font-extrabold leading-tight tracking-tight sm:text-[30px] ${index===1?'text-[#f1d98d]':'text-[#24242a]'}`}>
+                  {pkg
+                    ? (convertedAmount(pkg.amount, pkg.currency || 'UGX', displayCurrency, usdToUgx) === null
+                        ? (rateLoading ? 'Loading…' : money(pkg.amount, pkg.currency || 'UGX'))
+                        : money(convertedAmount(pkg.amount, pkg.currency || 'UGX', displayCurrency, usdToUgx), displayCurrency))
+                    : (loading ? 'Loading…' : 'Price set by ministry')}
+                </span>
+                <span className={`mt-1 block text-[10px] ${index===1?'text-white/55':'text-gray-500'}`}>
+                  Contribution to the Ministry
+                </span>
+              </span>
+
+              {/* Divider */}
+              <span
+                className="relative z-10 mx-5 my-3.5 h-px sm:mx-6"
+                style={{
+                  background: index===1
+                    ? 'linear-gradient(90deg,transparent,#8f7942,transparent)'
+                    : 'linear-gradient(90deg,transparent,#d9c58c,transparent)'
+                }}
+              />
+
+              {/* Benefits label */}
+              <span className={`relative z-10 px-5 pb-1 text-[10px] font-extrabold uppercase tracking-[.16em] sm:px-6 ${index===1?'text-[#d8c27f]':'text-[#8c7136]'}`}>
+                Included benefits
+              </span>
+
+              {/* Benefits list */}
+              <ul className={`relative z-10 flex-1 px-5 pb-4 text-xs leading-5 sm:px-6 ${index===1?'text-white/85':'text-gray-700'}`}>
+                {tier.benefits.map((item, benefitIndex) => (
+                  <li
+                    key={item}
+                    className={`flex items-start gap-2.5 border-t border-dotted py-2.5 ${
+                      benefitIndex === 0
+                        ? 'border-transparent'
+                        : index === 1
+                        ? 'border-white/25'
+                        : 'border-[#d9c58c]'
+                    }`}
+                  >
+                    <span className="mt-0.5 inline-flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full bg-[#62a91d] text-[9px] font-black text-white shadow-sm">
+                      ✓
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Select button */}
+              <span className={`relative z-10 mx-4 mb-4 rounded-full border py-2.5 text-center text-[11px] font-extrabold tracking-wide transition sm:mx-5 ${
+                active
+                  ? (index === 1
+                      ? 'border-[#e6d18e] bg-[#e6d18e] text-[#242126]'
+                      : 'border-[#9b7b35] bg-[#9b7b35] text-white')
+                  : (index === 1
+                      ? 'border-white/25 bg-white/5 text-white'
+                      : 'border-[#d8c58f] bg-white/60 text-[#705a2b]')
+              }`}>
+                {active ? 'Selected package' : 'Choose package'}
+              </span>
             </span>
-            <span className="relative z-10 px-5 pb-3 sm:px-6">
-              <span className="block text-[25px] font-semibold leading-tight tracking-tight sm:text-[28px]">{tier.name}</span>
-              <span className={`mt-1 block text-xs leading-5 ${index===1?'text-white/60':'text-gray-500'}`}>{tier.subtitle}</span>
-            </span>
-            <span className={`relative z-10 mx-4 rounded-[22px] border px-4 py-4 sm:mx-5 sm:px-5 ${index===1?'border-[#75643a] bg-[#17181c]':'border-[#e8dbb7] bg-white/75 shadow-inner'}`}>
-              <span className={`block text-[9px] font-bold uppercase tracking-[.16em] ${index===1?'text-[#d8c27f]':'text-[#9b7b35]'}`}>{currencyLabel(displayCurrency)}</span>
-              <span className={`mt-1 block break-words text-[27px] font-extrabold leading-tight tracking-tight sm:text-[32px] ${index===1?'text-[#f1d98d]':'text-[#24242a]'}`}>{pkg?(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx)===null?(rateLoading?'Loading exchange rate…':money(pkg.amount,pkg.currency || 'UGX')):money(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):loading?'Loading…':'Price set by ministry'}</span>
-              <span className={`mt-1 block text-[10px] ${index===1?'text-white/55':'text-gray-500'}`}>Contribution to the Ministry</span>
-            </span>
-            <span className="relative z-10 mx-5 my-4 h-px sm:mx-6" style={{background:index===1?'linear-gradient(90deg,transparent,#8f7942,transparent)':'linear-gradient(90deg,transparent,#d9c58c,transparent)'}}/>
-            <span className={`relative z-10 px-5 pb-2 text-[10px] font-extrabold uppercase tracking-[.16em] sm:px-6 ${index===1?'text-[#d8c27f]':'text-[#8c7136]'}`}>Included benefits</span>
-            <ul className={`relative z-10 flex-1 px-5 pb-5 text-xs leading-5 sm:px-6 ${index===1?'text-white/85':'text-gray-700'}`}>{tier.benefits.map((item,benefitIndex)=><li key={item} className={`flex items-start gap-2.5 border-t border-dotted py-3 ${benefitIndex===0?'border-transparent':index===1?'border-white/25':'border-[#d9c58c]'}`}><span className="mt-0.5 inline-flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-[#62a91d] text-[10px] font-black text-white shadow-sm">✓</span><span>{item}</span></li>)}</ul>
-            <span className={`relative z-10 mx-4 mb-4 rounded-full border py-3 text-center text-[11px] font-extrabold tracking-wide transition sm:mx-5 ${active?(index===1?'border-[#e6d18e] bg-[#e6d18e] text-[#242126]':'border-[#9b7b35] bg-[#9b7b35] text-white'):(index===1?'border-white/25 bg-white/5 text-white':'border-[#d8c58f] bg-white/60 text-[#705a2b]')}`}>{active?'Selected package':'Choose package'}</span>
-          </span>
-        </button>;
+          </button>
+        );
       })}
     </div>
     <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">

@@ -3,6 +3,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase, supabaseReady } from '../lib/supabase';
 import PageHeader from '../components/PageHeader';
 
+const toProfileSlug = value => (value || 'member')
+  .normalize('NFKD')
+  .replace(/[\\u0300-\\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-|-$/g, '') || 'member';
+
 const tabs = [
   { id: 'directory', label: 'Member directory' },
   { id: 'messages', label: 'Messages' },
@@ -216,7 +223,7 @@ export default function Community() {
               {filteredDirectory.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredDirectory.map(person => <article key={person.user_id} className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                   {person.photo_url ? <img src={person.photo_url} alt="" className="h-14 w-14 rounded-full object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-ink text-lg font-bold text-gold">{person.full_name.slice(0,1).toUpperCase()}</div>}
-                  <div className="min-w-0 flex-1"><h3 className="truncate font-semibold">{person.full_name}</h3><p className="text-sm text-gray-500">{person.ministry || person.small_group || 'Tidori member'}</p>
+                  <div className="min-w-0 flex-1"><Link to={`/members/profiles/${toProfileSlug(person.full_name)}`} className="block truncate font-semibold text-navy hover:text-[#009cff]">{person.full_name}</Link><p className="text-sm text-gray-500">{person.ministry || person.small_group || 'Tidori member'}</p>
                     <button disabled={working} onClick={() => startConversation(person)} className="mt-2 text-sm font-semibold text-[#009cff]">Message member</button></div>
                 </article>)}
               </div> : <p className="rounded-xl bg-gray-50 p-6 text-center text-gray-600">No members match your search yet. Members appear here only when they enable directory visibility in their profile.</p>}

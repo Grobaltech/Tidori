@@ -126,7 +126,7 @@ export default function Profile() {
       if (!session) navigate('/login', { replace: true });
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
-  }, [navigate, username, pathname]);
+  }, [navigate, username, pathname, memberUserId]);
 
   const change = (key, value) => setProfile(current => ({ ...current, [key]: value }));
 

@@ -453,8 +453,10 @@ async function databasePushEvent(request, env) {
 
 
 async function appointmentFees(request, env) {
-  const rows = await supabaseRequest(env, "appointment_fee_rules?select=id,appointment_type,meeting_mode,amount,currency&is_active=eq.true&order=appointment_type.asc");
-  return json({ rules: rows || [] });
+  const rows = await supabaseRequest(env,
+    "pastor_appointment_packages?select=id,tier_code,package_name,amount,currency,is_active&is_active=eq.true&order=tier_code.asc"
+  );
+  return json({ packages: rows || [] });
 }
 
 async function createAppointmentRequest(request, env) {
@@ -465,17 +467,33 @@ async function createAppointmentRequest(request, env) {
   const fullName = clean(input.full_name, 120);
   const email = clean(input.email, 200).toLowerCase();
   const phone = clean(input.phone, 40);
-  const appointmentType = clean(input.appointment_type, 120);
+  const appointmentType = clean(input.appointment_type || input.service, 160);
   const meetingMode = clean(input.meeting_mode, 20);
   const requestedAt = new Date(input.requested_at);
+  const tier = clean(input.package_tier, 12).toLowerCase();
+  const universalServices = new Set([
+    "Crisis support",
+    "Licensed therapist referrals",
+    "Benevolence or care ministries (meals, financial help, rides)",
+    "Emergency pastoral intervention",
+  ]);
+  const universal = universalServices.has(appointmentType);
+  const modeEntitlements = {
+    bronze: ["audio"],
+    silver: ["audio", "video"],
+    gold: ["audio", "video", "in_person"],
+  };
   if (fullName.length < 2 || phone.length < 6 || !appointmentType
-      || !["in_person", "phone", "audio", "video"].includes(meetingMode)
+      || !["in_person", "audio", "video"].includes(meetingMode)
       || !Number.isFinite(requestedAt.getTime()) || requestedAt.getTime() < Date.now() - 60000) {
     return json({ error: "Complete your name, phone, appointment details and choose a future date and time." }, 400);
   }
+  if (!universal && (!modeEntitlements[tier] || !modeEntitlements[tier].includes(meetingMode))) {
+    return json({ error: "Your selected package does not include this appointment mode. Please choose an eligible package or meeting method." }, 403);
+  }
 
   let userId = null;
-  const accessToken = (request.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
+  const accessToken = (request.headers.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1];
   if (accessToken) {
     const authResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
       headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${accessToken}` },
@@ -485,14 +503,19 @@ async function createAppointmentRequest(request, env) {
     userId = authUser.id;
   }
 
-  const rules = await supabaseRequest(env,
-    `appointment_fee_rules?select=id,amount,currency&appointment_type=eq.${encodeURIComponent(appointmentType)}&meeting_mode=eq.${encodeURIComponent(meetingMode)}&is_active=eq.true&limit=1`
-  );
-  const rule = rules?.[0];
-  if (!rule) return json({ error: "This appointment type and meeting method is not currently configured. Please contact the church office." }, 409);
-  const amount = Number(rule.amount);
-  const currency = String(rule.currency || "UGX").toUpperCase();
-  if (amount > 0 && (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+  let packageRow = null;
+  let amount = 0;
+  let currency = "UGX";
+  if (!universal) {
+    const packages = await supabaseRequest(env,
+      `pastor_appointment_packages?select=id,tier_code,amount,currency&tier_code=eq.${encodeURIComponent(tier)}&is_active=eq.true&limit=1`
+    );
+    packageRow = packages?.[0];
+    if (!packageRow) return json({ error: "This appointment package is not currently available. Please contact the church office." }, 409);
+    amount = Number(packageRow.amount);
+    currency = String(packageRow.currency || "UGX").toUpperCase();
+  }
+  if (amount > 0 && (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))) {
     return json({ error: "A valid email address is required for secure online payment." }, 400);
   }
 
@@ -503,24 +526,24 @@ async function createAppointmentRequest(request, env) {
     body: JSON.stringify([{
       user_id: userId, full_name: fullName, email: email || null, phone,
       appointment_type: appointmentType, meeting_mode: meetingMode,
+      package_tier: universal ? null : tier,
       requested_at: requestedAt.toISOString(), notes: clean(input.notes, 2000) || null,
       status: "requested", payment_status: "unpaid", fee_amount: amount,
-      currency, fee_rule_id: rule.id, pesapal_merchant_reference: merchantReference,
+      currency, fee_rule_id: null, pesapal_merchant_reference: merchantReference,
     }]),
   });
   const appointment = rows?.[0];
   if (!appointment?.id) throw new Error("The appointment request could not be saved.");
-
   if (amount === 0) return json({ success: true, appointment_id: appointment.id, fee_amount: 0, currency, free: true });
 
   try {
     const token = await pesapalToken(env);
     const origin = new URL(request.url).origin;
     const ipnRegistration = await ensurePesapalIpn(env, token, origin);
-    const [firstName, ...lastParts] = fullName.split(/\s+/);
+    const [firstName, ...lastParts] = fullName.split(/\\s+/);
     const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
       id: merchantReference, currency, amount: Number(amount.toFixed(2)),
-      description: `Tidori appointment: ${appointmentType}`,
+      description: `Tidori ${tier} appointment: ${appointmentType}`,
       callback_url: `${origin}/api/payments/pesapal/callback`,
       redirect_mode: "PARENT_WINDOW",
       cancellation_url: `${origin}/appointments?payment=cancelled&reference=${encodeURIComponent(merchantReference)}`,

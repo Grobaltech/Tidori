@@ -16,7 +16,8 @@ const services = [
   'Licensed therapist referrals','Crisis support','Life coaching or mentoring','Financial counselling or classes',
 ];
 const modeLabels = { audio:'Audio call', video:'Video call', in_person:'Physical meeting' };
-const money = (amount,currency='UGX') => `${currency} ${Number(amount||0).toLocaleString('en-UG')}`;
+const money = (amount,currency='UGX') => new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'en-UG', { style:'currency', currency, maximumFractionDigits:currency === 'UGX' ? 0 : 2 }).format(Number(amount||0));
+const currencyLabel = currency => currency === 'USD' ? '🇺🇸 USD · US Dollar' : '🇺🇬 UGX · Ugandan Shilling';
 
 export default function AppointmentForm() {
   const [form,setForm] = useState({ full_name:'', email:'', phone:'', service:'Pastoral care', package_tier:'bronze', meeting_mode:'audio', date:'', time:'', notes:'' });
@@ -91,7 +92,8 @@ export default function AppointmentForm() {
           style={{borderColor:active?tier.color:undefined,'--tw-ring-color':tier.color}}>
           {index===1&&<span className="absolute -top-3 right-5 rounded-full bg-[#191c24] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Popular</span>}
           <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl text-sm font-black" style={{backgroundColor:tier.color+'22',color:tier.color}}>{tier.name.slice(0,1)}</span>
-          <span className="text-xs font-bold uppercase tracking-[.18em]" style={{color:tier.color}}>{tier.name} ribbon</span>
+          <span className="text-xs font-bold uppercase tracking-[.18em]" style={{color:tier.color}}>Contribution to the Ministry</span>
+          <span className="mt-2 inline-flex w-fit rounded-full bg-[#f4f1e8] px-2.5 py-1 text-[10px] font-bold tracking-wide text-[#6b5520]">{currencyLabel(pkg?.currency || 'UGX')}</span>
           <span className="mt-2 text-2xl font-semibold text-[#191c24]">{pkg?money(pkg.amount,pkg.currency):loading?'Loading…':'Price set by ministry'}</span>
           <span className="mt-1 text-xs text-gray-500">{tier.subtitle}</span>
           <span className="my-4 h-px w-full bg-gray-100"/>
@@ -112,6 +114,7 @@ export default function AppointmentForm() {
       <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm sm:col-span-2">
         <span className="text-gray-500">{universal?'Support request':'Selected package fee'}</span>
         <strong className="ml-2 text-lg text-[#191c24]">{universal?'No package fee':selectedPackage?money(fee,selectedPackage.currency):'Not yet configured'}</strong>
+        {!universal && selectedPackage && <span className="ml-2 inline-flex rounded-full bg-[#f4f1e8] px-2 py-1 text-[10px] font-bold text-[#6b5520]">{currencyLabel(selectedPackage.currency)}</span>}
         <p className="mt-1 text-xs text-gray-500">{universal?'This support is not restricted by paid package. The ministry will assess and coordinate the appropriate help.':selectedPackage?(fee>0?'Secure payment is completed through Pesapal after submitting.':'This package has been configured as free.'):'The ministry administrator must configure this package before booking.'}</p>
       </div>
       <label className="text-sm font-semibold sm:col-span-2">Additional details<textarea className="field mt-1 min-h-24" name="notes" value={form.notes} onChange={update} maxLength={2000} placeholder="Tell us briefly how the ministry can support you."/></label>

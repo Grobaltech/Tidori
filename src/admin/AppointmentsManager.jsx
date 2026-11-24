@@ -172,7 +172,7 @@ export default function AppointmentsManager({ canManage = false }) {
       {notice && <p role="status" className="m-5 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
       {roomError && <p role="alert" className="m-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{roomError}</p>}
       <div className="overflow-x-auto">
-        <table className="admin-table w-full min-w-[980px]"><thead><tr><th>Visitor</th><th>Appointment</th><th>Meeting mode</th><th>Preferred date & time</th><th>Appointment status</th><th>Payment</th><th>Action</th></tr></thead>
+        <table className="admin-table w-full min-w-[980px]"><thead><tr><th>Visitor</th><th>Appointment / service</th><th>Package</th><th>Meeting mode</th><th>Preferred date & time</th><th>Appointment status</th><th>Payment</th><th>Action</th></tr></thead>
           <tbody>{filtered.map(row => <tr key={row.id}>
             <td><strong className="block text-[#191c24]">{row.full_name}</strong><span className="text-xs text-gray-500">{row.phone}</span>{row.email && <span className="block text-xs text-gray-500">{row.email}</span>}</td>
             <td>{row.appointment_type || 'Pastoral appointment'}{row.notes && <span className="mt-1 block max-w-[220px] text-xs text-gray-500">{row.notes}</span>}</td>

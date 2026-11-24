@@ -13,7 +13,8 @@ import { dateLong } from '../lib/format';
 const allowedArticleTags = new Set(['P','H1','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','U','BLOCKQUOTE','A','IMG','BR','HR','SPAN','DIV']);
 function safeArticleHtml(html = '') {
   if (typeof window === 'undefined') return '';
-  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const source = /<\\/?[a-z][\\s\\S]*>/i.test(html) ? html : html.split(/\\n{2,}/).map(part => `<p>${part.split('\\n').map(line => line.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')).join('<br>')}</p>`).join('');
+  const parsed = new DOMParser().parseFromString(source, 'text/html');
   const cleanNode = (node) => [...node.childNodes].forEach((child) => {
     if (child.nodeType === Node.TEXT_NODE) return;
     if (child.nodeType !== Node.ELEMENT_NODE) { child.remove(); return; }
@@ -21,8 +22,8 @@ function safeArticleHtml(html = '') {
     [...child.attributes].forEach((attr) => {
       const name = attr.name.toLowerCase();
       if (child.tagName === 'A' && name === 'href') { if (!/^(https?:|mailto:|tel:|\\/)/i.test(attr.value)) child.removeAttribute(attr.name); }
-      else if (child.tagName === 'IMG' && name === 'src') { if (!/^https?:\\/\\//i.test(attr.value)) child.removeAttribute(attr.name); }
-      else if (name === 'style') { const safe = attr.value.split(';').map(rule=>rule.trim()).filter(rule=>/^(color|background-color|text-align):\\s*[#(),.%\\w -]+$/i.test(rule)).join(';'); if(safe) child.setAttribute('style',safe); else child.removeAttribute('style'); }
+      else if (child.tagName === 'IMG' && name === 'src') { if (!/^https?:\/\//i.test(attr.value)) child.removeAttribute(attr.name); }
+      else if (name === 'style') { const safe = attr.value.split(';').map(rule=>rule.trim()).filter(rule=>/^(color|background-color|text-align):\s*[#(),.%\w -]+$/i.test(rule)).join(';'); if(safe) child.setAttribute('style',safe); else child.removeAttribute('style'); }
       else if (!(child.tagName === 'A' && ['target','rel','title'].includes(name)) && !(child.tagName === 'IMG' && ['alt','title','width'].includes(name))) child.removeAttribute(attr.name);
     });
     if(child.tagName==='A'){child.setAttribute('rel','noopener noreferrer');child.setAttribute('target','_blank');}

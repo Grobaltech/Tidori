@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -53,7 +53,7 @@ export default function App() {
         <Route path="/members" element={<Community />} />
         <Route path="/members/profiles" element={<Profile />} />
         <Route path="/members/profiles/:username" element={<Profile />} />
-        <Route path="/community" element={<Community />} />
+        <Route path="/community" element={<Navigate to="/members" replace />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="*" element={<NotFound />} />
       </Route>

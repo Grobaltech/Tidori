@@ -31,8 +31,8 @@ const routeLabels = {
 };
 
 export default function PageHeader({ title }) {
-  useDocTitle(title);
   const { pathname } = useLocation();
+  useDocTitle(pathname === '/members' || pathname === '/members/' ? 'Tidori Connect' : title);
   const segments = pathname.split('/').filter(Boolean);
   const isMemberProfile = /^\\/members\\/profiles\\/[^/]+\\/?$/.test(pathname);
   const isProfileIndex = pathname === '/members/profiles' || pathname === '/members/profiles/';

@@ -34,6 +34,13 @@ export default function Profile() {
   const [testRoom, setTestRoom] = useState(null);
   const [videoTestError, setVideoTestError] = useState('');
 
+  const displayName = profile.full_name?.trim() || user?.email?.split('@')[0] || 'My Profile';
+
+  useEffect(() => {
+    if (!user) return;
+    document.title = `${displayName} | Tidori Ministries`;
+  }, [displayName, user]);
+
   useEffect(() => {
     if (!supabaseReady) { setBusy(false); return; }
     let active = true;
@@ -220,7 +227,7 @@ export default function Profile() {
   if (!user) return null;
 
   return <>
-    <PageHeader title={profile.full_name?.trim() || user.email?.split('@')[0] || 'My Profile'} />
+    <PageHeader title={displayName} />
     <div className="container-page max-w-3xl pt-8">
       <Link to="/community" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/50 bg-ink px-5 py-4 text-white shadow-sm hover:bg-navy">
         <span><strong className="block text-lg text-gold">Open Tidori Connect</strong><span className="text-sm text-white/80">Find church members, send private messages and share prayer requests.</span></span>

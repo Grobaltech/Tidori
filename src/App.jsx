@@ -50,6 +50,9 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/members" element={<Community />} />
+        <Route path="/members/profiles" element={<Community />} />
+        <Route path="/members/profiles/:username" element={<Profile />} />
         <Route path="/community" element={<Community />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="*" element={<NotFound />} />

@@ -18,6 +18,7 @@ const tabs = [
 
 export default function Community() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'messages' ? 'messages' : 'directory');
   const [directory, setDirectory] = useState([]);
@@ -102,14 +103,14 @@ export default function Community() {
     let alive = true;
     supabase.auth.getUser().then(async ({ data, error: authError }) => {
       if (!alive) return;
-      if (authError || !data.user) { navigate('/login'); return; }
+      if (authError || !data.user) { navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`, { replace: true }); return; }
       setUser(data.user);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) navigate('/login');
+      if (!session) navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`, { replace: true });
     });
     return () => { alive = false; listener.subscription.unsubscribe(); };
-  }, [navigate]);
+  }, [navigate, location.pathname, location.search]);
 
   useEffect(() => {
     if (!user) return;

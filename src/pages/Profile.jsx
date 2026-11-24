@@ -72,11 +72,11 @@ export default function Profile() {
           place_of_origin: data.place_of_origin || {},
           current_address: data.current_address || {},
         });
-        const memberSlug = toProfileSlug(data.full_name || authData.user.email?.split('@')[0] || 'member');
-        navigate(`/members/profiles/${memberSlug}`, { replace: true });
       } else {
         setError('Your member profile has not been created yet. Please contact the church administrator.');
       }
+      const memberSlug = toProfileSlug(data?.full_name || authData.user.email?.split('@')[0] || 'member');
+      navigate(`/members/profiles/${memberSlug}`, { replace: true });
       setBusy(false);
     };
     load();

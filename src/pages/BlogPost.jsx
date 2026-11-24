@@ -21,7 +21,7 @@ function safeArticleHtml(html = '') {
     if (!allowedArticleTags.has(child.tagName)) { child.replaceWith(...child.childNodes); return; }
     [...child.attributes].forEach((attr) => {
       const name = attr.name.toLowerCase();
-      if (child.tagName === 'A' && name === 'href') { if (!/^(https?:|mailto:|tel:|\\/)/i.test(attr.value)) child.removeAttribute(attr.name); }
+      if (child.tagName === 'A' && name === 'href') { if (!(/^(https?:|mailto:|tel:)/i.test(attr.value) || attr.value.startsWith('/'))) child.removeAttribute(attr.name); }
       else if (child.tagName === 'IMG' && name === 'src') { if (!/^https?:\/\//i.test(attr.value)) child.removeAttribute(attr.name); }
       else if (name === 'style') { const safe = attr.value.split(';').map(rule=>rule.trim()).filter(rule=>/^(color|background-color|text-align):\s*[#(),.%\w -]+$/i.test(rule)).join(';'); if(safe) child.setAttribute('style',safe); else child.removeAttribute('style'); }
       else if (!(child.tagName === 'A' && ['target','rel','title'].includes(name)) && !(child.tagName === 'IMG' && ['alt','title','width'].includes(name))) child.removeAttribute(attr.name);

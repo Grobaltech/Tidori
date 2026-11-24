@@ -83,17 +83,20 @@ export default function AppointmentForm() {
 
   return <section className="bg-mist p-5 sm:p-8">
     <div className="mb-6"><p className="mb-2 text-gold">Pastoral appointments</p><h2 className="text-2xl sm:text-3xl">Choose your appointment package</h2><p className="mt-2 text-sm leading-6 text-gray-600">Each package includes the benefits of the tier below it. Crisis support, emergency pastoral intervention, therapist referrals and needs-based benevolence remain available regardless of package.</p></div>
-    <div className="mb-7 grid items-stretch gap-4 md:grid-cols-3">
+    <div className="mb-7 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {tiers.map((tier,index)=>{
         const pkg=packages.find(p=>p.tier_code===tier.code&&p.is_active);
         const active=form.package_tier===tier.code;
         return <button key={tier.code} type="button" onClick={()=>setForm(v=>({...v,package_tier:tier.code,meeting_mode:tier.modes.includes(v.meeting_mode)?v.meeting_mode:tier.modes[0]}))}
-          className={`relative flex h-full flex-col rounded-[24px] border bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${active?'ring-2 ring-offset-2':'border-gray-200'} ${index===1?'md:-translate-y-2 md:shadow-lg':''}`}
-          style={{borderColor:active?tier.color:undefined,'--tw-ring-color':tier.color}}>
+          className={`relative flex h-full flex-col rounded-[24px] border-2 p-4 text-left shadow-md sm:p-5 transition hover:-translate-y-1 hover:shadow-lg ${active?'ring-2 ring-offset-2':'border-gray-200'} ${index===1?'md:-translate-y-2 md:shadow-lg':''}`}
+          style={{borderColor:active?tier.color:tier.color+'88',backgroundColor:tier.color+'12','--tw-ring-color':tier.color}}>
           {index===1&&<span className="absolute -top-3 right-5 rounded-full bg-[#191c24] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Popular</span>}
-          <span className="mb-3 flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-extrabold uppercase tracking-[.16em] text-white shadow-sm" style={{backgroundColor:tier.color}}>{tier.name}</span>
-          <span className="mt-2 inline-flex w-fit rounded-full bg-[#f4f1e8] px-2.5 py-1 text-[10px] font-bold tracking-wide text-[#6b5520]">{currencyLabel(pkg?.currency || 'UGX')}</span>
-          <span className="mt-2 text-2xl font-semibold text-[#191c24]">{pkg?money(pkg.amount,pkg.currency):loading?'Loading…':'Price set by ministry'}</span>
+          <span className="mb-3 flex w-full items-center justify-center rounded-xl px-4 py-4 text-base font-extrabold uppercase tracking-[.16em] text-white shadow-md" style={{backgroundColor:tier.color}}>{tier.name}</span>
+          <span className="mt-1 block rounded-2xl px-4 py-4 text-center text-white shadow-inner" style={{backgroundColor:tier.color}}>
+            <span className="block text-[10px] font-bold uppercase tracking-[.12em]">{currencyLabel(pkg?.currency || 'UGX')}</span>
+            <span className="mt-1 block break-words text-2xl font-extrabold leading-tight sm:text-3xl">{pkg?money(pkg.amount,pkg.currency):loading?'Loading…':'Price set by ministry'}</span>
+            <span className="mt-1 block text-[10px] font-semibold">Contribution to the Ministry</span>
+          </span>
           <span className="mt-1 text-xs text-gray-500">{tier.subtitle}</span>
           <span className="my-4 h-px w-full bg-gray-100"/>
           <span className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">Included benefits</span>

@@ -13,7 +13,7 @@ const formatValue = (value) => {
   return String(value);
 };
 
-function UserManagement({ role }) {
+export default function UserManagementPage({ role }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");

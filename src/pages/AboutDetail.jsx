@@ -67,7 +67,7 @@ const pages = {
     ],
     note: 'These are registered organisational objectives. They should not be read as confirmation that every listed service or facility is currently operating.'
   },
-  focus: {
+  'focus-areas': {
     title: 'Our Areas of Focus',
     kicker: 'How We Seek to Serve',
     heading: 'A holistic approach to spiritual and community wellbeing',

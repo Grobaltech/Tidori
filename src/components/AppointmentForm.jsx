@@ -18,10 +18,18 @@ const services = [
 const modeLabels = { audio:'Audio call', video:'Video call', in_person:'Physical meeting' };
 const money = (amount,currency='UGX') => new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'en-UG', { style:'currency', currency, maximumFractionDigits:currency === 'UGX' ? 0 : 2 }).format(Number(amount||0));
 const currencyLabel = currency => currency === 'USD' ? '🇺🇸 USD · US Dollar' : '🇺🇬 UGX · Ugandan Shilling';
+const convertedAmount = (amount,from,to,usdToUgx) => {
+  if (from === to) return Number(amount || 0);
+  if (!usdToUgx) return null;
+  return from === 'USD' && to === 'UGX' ? Number(amount || 0) * usdToUgx : Number(amount || 0) / usdToUgx;
+};
 
 export default function AppointmentForm() {
   const [form,setForm] = useState({ full_name:'', email:'', phone:'', service:'Pastoral care', package_tier:'bronze', meeting_mode:'audio', date:'', time:'', notes:'' });
   const [packages,setPackages] = useState([]);
+  const [displayCurrency,setDisplayCurrency] = useState('UGX');
+  const [usdToUgx,setUsdToUgx] = useState(null);
+  const [rateLoading,setRateLoading] = useState(true);
   const [busy,setBusy] = useState(false);
   const [loading,setLoading] = useState(true);
   const [message,setMessage] = useState('');
@@ -34,6 +42,11 @@ export default function AppointmentForm() {
 
   useEffect(()=>{
     let active=true;
+    fetch('https://open.er-api.com/v6/latest/USD',{cache:'no-store'})
+      .then(r=>{if(!r.ok)throw new Error('Exchange rate unavailable');return r.json();})
+      .then(data=>{if(active&&data.result==='success'&&Number(data.rates?.UGX)>0)setUsdToUgx(Number(data.rates.UGX));})
+      .catch(()=>{if(active)setUsdToUgx(null);})
+      .finally(()=>{if(active)setRateLoading(false);});
     fetch('/api/appointments/fees',{cache:'no-store'})
       .then(r=>r.json()).then(data=>{if(active)setPackages(Array.isArray(data.packages)?data.packages:[]);})
       .catch(()=>{if(active)setPackages([]);})
@@ -83,6 +96,10 @@ export default function AppointmentForm() {
 
   return <section className="bg-mist p-5 sm:p-8">
     <div className="mb-6"><p className="mb-2 text-gold">Pastoral appointments</p><h2 className="text-2xl sm:text-3xl">Choose your appointment package</h2><p className="mt-2 text-sm leading-6 text-gray-600">Each package includes the benefits of the tier below it. Crisis support, emergency pastoral intervention, therapist referrals and needs-based benevolence remain available regardless of package.</p></div>
+    <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div><p className="text-sm font-bold text-[#191c24]">Display prices in</p><p className="text-xs text-gray-500">Choose the currency you are most comfortable with</p></div>
+      <select aria-label="Display currency" className="field w-full sm:max-w-[230px]" value={displayCurrency} onChange={event=>setDisplayCurrency(event.target.value)}><option value="UGX">🇺🇬 UGX · Ugandan Shilling</option><option value="USD">🇺🇸 USD · US Dollar</option></select>
+    </div>
     <div className="mb-7 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {tiers.map((tier,index)=>{
         const pkg=packages.find(p=>p.tier_code===tier.code&&p.is_active);
@@ -93,8 +110,8 @@ export default function AppointmentForm() {
           {index===1&&<span className="absolute -top-3 right-5 rounded-full bg-[#191c24] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Popular</span>}
           <span className="mb-3 flex w-full items-center justify-center rounded-xl px-4 py-4 text-base font-extrabold uppercase tracking-[.16em] text-white shadow-md" style={{backgroundColor:tier.color}}>{tier.name}</span>
           <span className="mt-1 block rounded-2xl px-4 py-4 text-center text-white shadow-inner" style={{backgroundColor:tier.color}}>
-            <span className="block text-[10px] font-bold uppercase tracking-[.12em]">{currencyLabel(pkg?.currency || 'UGX')}</span>
-            <span className="mt-1 block break-words text-2xl font-extrabold leading-tight sm:text-3xl">{pkg?money(pkg.amount,pkg.currency):loading?'Loading…':'Price set by ministry'}</span>
+            <span className="block text-[10px] font-bold uppercase tracking-[.12em]">{currencyLabel(displayCurrency)}</span>
+            <span className="mt-1 block break-words text-2xl font-extrabold leading-tight sm:text-3xl">{pkg?(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx)===null?(rateLoading?'Loading exchange rate…':money(pkg.amount,pkg.currency || 'UGX')):money(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):loading?'Loading…':'Price set by ministry'}</span>
             <span className="mt-1 block text-[10px] font-semibold">Contribution to the Ministry</span>
           </span>
           <span className="mt-1 text-xs text-gray-500">{tier.subtitle}</span>
@@ -115,9 +132,9 @@ export default function AppointmentForm() {
       <label className="text-sm font-semibold">Preferred time<input className="field mt-1" type="time" name="time" value={form.time} onChange={update} required/></label>
       <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm sm:col-span-2">
         <span className="text-gray-500">{universal?'Support request':'Selected package fee'}</span>
-        <strong className="ml-2 text-lg text-[#191c24]">{universal?'No package fee':selectedPackage?money(fee,selectedPackage.currency):'Not yet configured'}</strong>
-        {!universal && selectedPackage && <span className="ml-2 inline-flex rounded-full bg-[#f4f1e8] px-2 py-1 text-[10px] font-bold text-[#6b5520]">{currencyLabel(selectedPackage.currency)}</span>}
-        <p className="mt-1 text-xs text-gray-500">{universal?'This support is not restricted by paid package. The ministry will assess and coordinate the appropriate help.':selectedPackage?(fee>0?'Secure payment is completed through Pesapal after submitting.':'This package has been configured as free.'):'The ministry administrator must configure this package before booking.'}</p>
+        <strong className="ml-2 text-lg text-[#191c24]">{universal?'No package fee':selectedPackage?(convertedAmount(fee,selectedPackage.currency || 'UGX',displayCurrency,usdToUgx)===null?money(fee,selectedPackage.currency):money(convertedAmount(fee,selectedPackage.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):'Not yet configured'}</strong>
+        {!universal && selectedPackage && <span className="ml-2 inline-flex rounded-full bg-[#f4f1e8] px-2 py-1 text-[10px] font-bold text-[#6b5520]">{currencyLabel(displayCurrency)}</span>}
+        <p className="mt-1 text-xs text-gray-500">{universal?'This support is not restricted by paid package. The ministry will assess and coordinate the appropriate help.':selectedPackage?(fee>0?'Payment will be processed in the package currency configured by the ministry through Pesapal. The selector changes the displayed equivalent only.':'This package has been configured as free.'):'The ministry administrator must configure this package before booking.'}</p>
       </div>
       <label className="text-sm font-semibold sm:col-span-2">Additional details<textarea className="field mt-1 min-h-24" name="notes" value={form.notes} onChange={update} maxLength={2000} placeholder="Tell us briefly how the ministry can support you."/></label>
       {error&&<p role="alert" className="text-sm text-red-600 sm:col-span-2">{error}</p>}

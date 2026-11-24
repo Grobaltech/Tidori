@@ -314,7 +314,7 @@ export default function AppointmentForm() {
               ? 'This support is not restricted by paid package. The ministry will assess and coordinate the appropriate help.'
               : selectedPackage
                 ? (fee > 0
-                    ? 'Payment will be processed in the package currency configured by the ministry through Pesapal. The selector changes the displayed equivalent only.'
+                    ? 'Payment will be processed in the package currency configured by the ministry. The selector changes the displayed equivalent only.'
                     : 'This package has been configured as free.')
                 : 'The ministry administrator must configure this package before booking.'}
           </p>

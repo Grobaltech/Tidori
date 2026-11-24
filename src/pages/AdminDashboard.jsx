@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FaBars, FaTimes, FaTachometerAlt, FaUsers, FaPrayingHands, FaCalendarAlt,
   FaHandsHelping, FaNewspaper, FaEnvelope, FaCog, FaSignOutAlt, FaChurch,
@@ -32,6 +32,45 @@ const sections = [
   { id: 'pledges', label: 'Giving pledges', icon: FaHandsHelping },
 ];
 
+const sectionSlugs = {
+  overview: 'overview',
+  users: 'users',
+  access: 'access-control',
+  members: 'members',
+  ministries: 'ministries',
+  events: 'events',
+  appointments: 'appointments',
+  finance: 'giving',
+  outreach: 'outreach',
+  content: 'website-content',
+  messages: 'messages',
+  settings: 'settings',
+  volunteers: 'volunteers',
+  team: 'church-team',
+  newsletter: 'newsletter',
+  pledges: 'giving-pledges',
+};
+
+const sectionGroups = [
+  { label: 'Overview', ids: ['overview'] },
+  { label: 'People & Access', ids: ['users', 'access', 'members', 'team', 'volunteers'] },
+  { label: 'Church Operations', ids: ['ministries', 'events', 'appointments', 'outreach'] },
+  { label: 'Communications', ids: ['messages', 'newsletter'] },
+  { label: 'Finance', ids: ['finance', 'pledges'] },
+  { label: 'Website & Settings', ids: ['content', 'settings'] },
+];
+
+const sectionBySlug = Object.fromEntries(
+  Object.entries(sectionSlugs).map(([id, slug]) => [slug, id])
+);
+
+const sectionFromPath = (pathname) => {
+  const slug = pathname.replace(/^\\/admin\\/?/, '').split('/')[0];
+  return sectionBySlug[slug] || null;
+};
+
+const sectionPath = (id) => `/admin/${sectionSlugs[id] || 'overview'}/`;
+
 const tableConfig = {
   users: { table: 'profiles', title: 'User accounts', columns: [['full_name','Full name'],['email','Email'],['phone','Phone'],['role','Account role'],['member_status','Membership status'],['created_at','Registered']], search: ['full_name','email','phone','role','member_status'] },
   members: { table: 'profiles', title: 'Member records', columns: [['full_name','Full name'],['email','Email'],['phone','Phone'],['role','Account role'],['member_status','Church status'],['created_at','Joined']], search: ['full_name','email','phone','role','member_status'] },
@@ -60,13 +99,15 @@ const formatValue = (value) => {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeSection = sectionFromPath(location.pathname);
+  const activeSection = routeSection || 'overview';
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState('');
   const [dataError, setDataError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('overview');
   const [records, setRecords] = useState({});
   const [counts, setCounts] = useState({});
   const [search, setSearch] = useState('');
@@ -151,7 +192,7 @@ export default function AdminDashboard() {
 
   const initials = useMemo(() => (profile?.full_name || user?.email || 'A').slice(0, 1).toUpperCase(), [profile, user]);
   const signOut = async () => { await supabase.auth.signOut(); navigate('/login'); };
-  const changeSection = (id) => { setActiveSection(id); setSearch(''); setSelectedRecord(null); setSidebarOpen(false); };
+  const changeSection = (id) => { navigate(sectionPath(id)); setSearch(''); setSelectedRecord(null); setSidebarOpen(false); };
   const isAdministrator = ['admin','super_admin'].includes(profile?.role);
   const modulePermission = { users:'users.view', members:'members.view', ministries:'ministries.view', events:'events.view', appointments:'appointments.view', finance:'giving.view', outreach:'outreach.view', content:'website.manage', messages:'messages.view', volunteers:'volunteers.view', team:'team.view', newsletter:'newsletter.view', pledges:'giving.view' };
   const canOpen = (id) => isAdministrator || Boolean(profile?.permissions?.includes(modulePermission[id]));
@@ -163,8 +204,39 @@ export default function AdminDashboard() {
     return canOpen(item.id);
   }), [profile, isAdministrator]);
   useEffect(() => {
-    if (profile && !isAdministrator && visibleSections.length && !visibleSections.some(item => item.id === activeSection)) setActiveSection(visibleSections[0].id);
-  }, [profile, isAdministrator, visibleSections, activeSection]);
+    const path = location.pathname;
+    if (path === '/admin' || path === '/admin/') {
+      navigate('/admin/overview/', { replace: true });
+      return;
+    }
+    if (!routeSection) {
+      navigate('/admin/overview/', { replace: true });
+      return;
+    }
+    if (!path.endsWith('/')) {
+      navigate(`${path}/`, { replace: true });
+      return;
+    }
+    if (profile && !isAdministrator && visibleSections.length && !visibleSections.some(item => item.id === activeSection)) {
+      navigate(sectionPath(visibleSections[0].id), { replace: true });
+    }
+  }, [location.pathname, routeSection, navigate, profile, isAdministrator, visibleSections, activeSection]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+    setSelectedRecord(null);
+    setSearch('');
+    const canonical = `${window.location.origin}${sectionPath(activeSection)}`;
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute('href', canonical);
+    const page = sections.find(item => item.id === activeSection);
+    document.title = `${page?.label || 'Dashboard'} | Tidori Ministries Administration`;
+  }, [location.pathname, activeSection]);
 
   const filteredRecords = useMemo(() => {
     const key = activeSection === 'ministries' ? 'members' : activeSection;
@@ -198,8 +270,19 @@ export default function AdminDashboard() {
         </Link>
         <div className="admin-nav-label">Main menu</div>
         <nav className="admin-nav" aria-label="Administrator navigation">
-          {visibleSections.map(item => { const ItemIcon = item.icon; return <button key={item.id} className={activeSection === item.id ? 'active' : ''} onClick={() => changeSection(item.id)}><span className="admin-nav-icon"><ItemIcon /></span>{item.label}</button>; })}
-
+          {sectionGroups.map(group => {
+            const items = group.ids.map(id => visibleSections.find(item => item.id === id)).filter(Boolean);
+            if (!items.length) return null;
+            return <div key={group.label} className="admin-nav-group">
+              <div className="admin-nav-label">{group.label}</div>
+              {items.map(item => {
+                const ItemIcon = item.icon;
+                return <Link key={item.id} to={sectionPath(item.id)} className={activeSection === item.id ? 'active' : ''} onClick={() => { setSearch(''); setSelectedRecord(null); setSidebarOpen(false); }}>
+                  <span className="admin-nav-icon"><ItemIcon /></span>{item.label}
+                </Link>;
+              })}
+            </div>;
+          })}
         </nav>
         <div className="mx-5 mt-8 rounded-lg bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#191c24]"><FaUserShield className="text-[#009cff]" /> Secure administration</div><p className="m-0 text-xs leading-5 text-gray-400">Access is restricted to authorised Tidori administrators.</p></div>
       </aside>
@@ -236,7 +319,7 @@ export default function AdminDashboard() {
           </div>
         </header>
         <div className="admin-content">
-          <div className="mb-7 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#009cff]">Tidori Ministries</p><h1 className="admin-page-title">{current.label}</h1><p className="admin-muted mt-1">Live records from the Tidori Supabase project.</p></div><div className="flex items-center gap-2"><span className="admin-pill">Administrator</span><button onClick={loadOverview} disabled={loadingData} className="admin-icon-button" title="Refresh live records"><FaSyncAlt className={loadingData ? 'animate-spin' : ''} /></button></div></div>
+          <div className="mb-7 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-2 text-xs text-gray-400"><Link to="/admin/overview/" className="hover:text-[#009cff]">Admin</Link> <span className="px-1">/</span> {sectionGroups.find(group => group.ids.includes(activeSection))?.label || 'Administration'} <span className="px-1">/</span> <span className="text-[#009cff]">{current.label}</span></p><p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#009cff]">Tidori Ministries</p><h1 className="admin-page-title">{current.label}</h1><p className="admin-muted mt-1">Live records from the Tidori Supabase project.</p></div><div className="flex items-center gap-2"><span className="admin-pill">Administrator</span><button onClick={loadOverview} disabled={loadingData} className="admin-icon-button" title="Refresh live records"><FaSyncAlt className={loadingData ? 'animate-spin' : ''} /></button></div></div>
           {dataError && <div role="alert" className="mb-5 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><strong>Some records could not be loaded.</strong> {dataError} <span className="block mt-1">Run the administrator access SQL file supplied with this update in the Tidori Supabase SQL Editor, then refresh.</span></div>}
           {activeSection === 'access' ? <UserAccessControl role={profile?.role} /> : activeSection === 'appointments' ? <AppointmentsManager canManage={isAdministrator} /> : activeSection === 'finance' ? <FinancialManager /> : activeSection === 'team' ? <TeamManager canManage={isAdministrator} /> : activeSection === 'content' ? <WebsiteCMS /> : activeSection === 'overview' ? <>
             <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -105,20 +105,29 @@ export default function AppointmentForm() {
         const pkg=packages.find(p=>p.tier_code===tier.code&&p.is_active);
         const active=form.package_tier===tier.code;
         return <button key={tier.code} type="button" onClick={()=>setForm(v=>({...v,package_tier:tier.code,meeting_mode:tier.modes.includes(v.meeting_mode)?v.meeting_mode:tier.modes[0]}))}
-          className={`relative flex h-full flex-col rounded-[24px] border-2 p-4 text-left shadow-md sm:p-5 transition hover:-translate-y-1 hover:shadow-lg ${active?'ring-2 ring-offset-2':'border-gray-200'} ${index===1?'md:-translate-y-2 md:shadow-lg':''}`}
-          style={{borderColor:active?tier.color:tier.color+'88',backgroundColor:tier.color+'12','--tw-ring-color':tier.color}}>
-          {index===1&&<span className="absolute -top-3 right-5 rounded-full bg-[#191c24] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Popular</span>}
-          <span className="mb-3 flex w-full items-center justify-center rounded-xl px-4 py-4 text-base font-extrabold uppercase tracking-[.16em] text-white shadow-md" style={{backgroundColor:tier.color}}>{tier.name}</span>
-          <span className="mt-1 block rounded-2xl px-4 py-4 text-center text-white shadow-inner" style={{backgroundColor:tier.color}}>
-            <span className="block text-[10px] font-bold uppercase tracking-[.12em]">{currencyLabel(displayCurrency)}</span>
-            <span className="mt-1 block break-words text-2xl font-extrabold leading-tight sm:text-3xl">{pkg?(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx)===null?(rateLoading?'Loading exchange rate…':money(pkg.amount,pkg.currency || 'UGX')):money(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):loading?'Loading…':'Price set by ministry'}</span>
-            <span className="mt-1 block text-[10px] font-semibold">Contribution to the Ministry</span>
+          className={`group relative flex h-full flex-col rounded-[34px] border-[3px] p-[7px] text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${active?'shadow-xl ring-2 ring-offset-2':'shadow-lg'} ${index===1?'md:-translate-y-3 md:hover:-translate-y-4':''}`}
+          style={{borderColor:tier.color,background:index===1?'linear-gradient(145deg,#e8d38b 0%,#c9a84e 48%,#f5e7b2 100%)':'linear-gradient(145deg,#fffdf7 0%,#f1e6c7 100%)','--tw-ring-color':tier.color}}>
+          <span className={`relative flex h-full flex-col overflow-hidden rounded-[27px] border ${index===1?'border-[#d8bd69] bg-[#202126] text-white':'border-[#eadfbf] bg-gradient-to-b from-[#fffefa] via-[#fffdf6] to-[#f7edcf] text-[#24242a]'}`}>
+            {index===1&&<span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>}
+            {index===1&&<span className="absolute -right-10 top-7 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">Popular</span>}
+            <span className="flex items-center justify-between px-5 pb-2 pt-6 sm:px-6">
+              <span className={`text-[10px] font-bold uppercase tracking-[.2em] ${index===1?'text-[#d9c17c]':'text-[#9b7b35]'}`}>Tidori Ministries</span>
+              <span className={`rounded-full border px-3 py-1 text-[9px] font-extrabold uppercase tracking-[.14em] ${index===1?'border-[#c9ad5c] text-[#ead79c]':'border-[#d9c58c] text-[#80652b]'}`}>{tier.name}</span>
+            </span>
+            <span className="px-5 pb-3 sm:px-6">
+              <span className="block text-[25px] font-semibold leading-tight tracking-tight sm:text-[28px]">{tier.name}</span>
+              <span className={`mt-1 block text-xs leading-5 ${index===1?'text-white/60':'text-gray-500'}`}>{tier.subtitle}</span>
+            </span>
+            <span className={`mx-4 rounded-[22px] border px-4 py-4 sm:mx-5 sm:px-5 ${index===1?'border-[#75643a] bg-[#17181c]':'border-[#e8dbb7] bg-white/75 shadow-inner'}`}>
+              <span className={`block text-[9px] font-bold uppercase tracking-[.16em] ${index===1?'text-[#d8c27f]':'text-[#9b7b35]'}`}>{currencyLabel(displayCurrency)}</span>
+              <span className={`mt-1 block break-words text-[27px] font-extrabold leading-tight tracking-tight sm:text-[32px] ${index===1?'text-[#f1d98d]':'text-[#24242a]'}`}>{pkg?(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx)===null?(rateLoading?'Loading exchange rate…':money(pkg.amount,pkg.currency || 'UGX')):money(convertedAmount(pkg.amount,pkg.currency || 'UGX',displayCurrency,usdToUgx),displayCurrency)):loading?'Loading…':'Price set by ministry'}</span>
+              <span className={`mt-1 block text-[10px] ${index===1?'text-white/55':'text-gray-500'}`}>Contribution to the Ministry</span>
+            </span>
+            <span className="mx-5 my-4 h-px sm:mx-6" style={{background:index===1?'linear-gradient(90deg,transparent,#8f7942,transparent)':'linear-gradient(90deg,transparent,#d9c58c,transparent)'}}/>
+            <span className={`px-5 pb-2 text-[10px] font-extrabold uppercase tracking-[.16em] sm:px-6 ${index===1?'text-[#d8c27f]':'text-[#8c7136]'}`}>Included benefits</span>
+            <ul className={`flex-1 space-y-3 px-5 pb-5 text-xs leading-5 sm:px-6 ${index===1?'text-white/85':'text-gray-700'}`}>{tier.benefits.map(item=><li key={item} className="flex items-start gap-2.5"><span className="mt-0.5 inline-flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-[#62a91d] text-[10px] font-black text-white shadow-sm">✓</span><span>{item}</span></li>)}</ul>
+            <span className={`mx-4 mb-4 rounded-full border py-3 text-center text-[11px] font-extrabold tracking-wide transition sm:mx-5 ${active?(index===1?'border-[#e6d18e] bg-[#e6d18e] text-[#242126]':'border-[#9b7b35] bg-[#9b7b35] text-white'):(index===1?'border-white/25 bg-white/5 text-white':'border-[#d8c58f] bg-white/60 text-[#705a2b]')}`}>{active?'Selected package':'Choose package'}</span>
           </span>
-          <span className="mt-1 text-xs text-gray-500">{tier.subtitle}</span>
-          <span className="my-4 h-px w-full bg-gray-100"/>
-          <span className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">Included benefits</span>
-          <ul className="space-y-2 text-xs leading-5 text-gray-700">{tier.benefits.map(item=><li key={item} className="flex gap-2"><span className="font-bold" style={{color:tier.color}}>✓</span><span>{item}</span></li>)}</ul>
-          <span className="mt-5 rounded-xl py-2.5 text-center text-xs font-bold" style={{backgroundColor:active?tier.color:'#f3f4f6',color:active?'white':'#374151'}}>{active?'Selected package':'Choose package'}</span>
         </button>;
       })}
     </div>

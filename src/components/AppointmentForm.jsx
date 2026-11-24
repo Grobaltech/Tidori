@@ -91,8 +91,7 @@ export default function AppointmentForm() {
           className={`relative flex h-full flex-col rounded-[24px] border bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${active?'ring-2 ring-offset-2':'border-gray-200'} ${index===1?'md:-translate-y-2 md:shadow-lg':''}`}
           style={{borderColor:active?tier.color:undefined,'--tw-ring-color':tier.color}}>
           {index===1&&<span className="absolute -top-3 right-5 rounded-full bg-[#191c24] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Popular</span>}
-          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl text-sm font-black" style={{backgroundColor:tier.color+'22',color:tier.color}}>{tier.name.slice(0,1)}</span>
-          <span className="text-xs font-bold uppercase tracking-[.18em]" style={{color:tier.color}}>Contribution to the Ministry</span>
+          <span className="mb-3 flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-extrabold uppercase tracking-[.16em] text-white shadow-sm" style={{backgroundColor:tier.color}}>{tier.name}</span>
           <span className="mt-2 inline-flex w-fit rounded-full bg-[#f4f1e8] px-2.5 py-1 text-[10px] font-bold tracking-wide text-[#6b5520]">{currencyLabel(pkg?.currency || 'UGX')}</span>
           <span className="mt-2 text-2xl font-semibold text-[#191c24]">{pkg?money(pkg.amount,pkg.currency):loading?'Loading…':'Price set by ministry'}</span>
           <span className="mt-1 text-xs text-gray-500">{tier.subtitle}</span>

@@ -17,6 +17,10 @@ alter table public.appointments
   add column if not exists package_tier text
     check (package_tier is null or package_tier in ('bronze','silver','gold'));
 
+alter table public.appointments
+  add column if not exists billing_period text
+    check (billing_period is null or billing_period in ('monthly','annual'));
+
 alter table public.pastor_appointment_packages enable row level security;
 revoke all on public.pastor_appointment_packages from anon, authenticated;
 grant select on public.pastor_appointment_packages to anon, authenticated;

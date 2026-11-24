@@ -720,17 +720,19 @@ async function verifyPayment(env, trackingId, merchantReference) {
         : "pending";
 
   if (merchantReference.startsWith("TIDORI-BURSARY-")) {
-    const records = await supabaseRequest(env, `bursary_applications?select=id,application_fee,currency,payment_status&merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}&limit=1`);
+    const records = await supabaseRequest(env, `bursary_applications?select=id,application_fee,currency,payment_status,pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(merchantReference)}&limit=1`);
     const application = records?.[0];
     if (!application) throw new Error("No matching bursary application payment exists.");
+    if (application.pesapal_order_tracking_id && application.pesapal_order_tracking_id !== trackingId) throw new Error("This bursary reference is already linked to a different Pesapal transaction.");
     if (String(data.currency || "").toUpperCase() !== "UGX" || Math.abs(Number(data.amount) - 11000) > 0.01
         || Number(application.application_fee) !== 11000 || String(application.currency).toUpperCase() !== "UGX") {
       throw new Error("The verified Pesapal amount or currency does not match the UGX 11,000 bursary application fee.");
     }
-    const updated = await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(application.id)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}`, {
+    const updated = await supabaseRequest(env, `bursary_applications?id=eq.${encodeURIComponent(application.id)}`, {
       method: "PATCH", headers: { prefer: "return=representation" },
       body: JSON.stringify({
         payment_status: paymentStatus,
+        pesapal_order_tracking_id: trackingId,
         paid_at: paymentStatus === "paid" ? (data.created_date || new Date().toISOString()) : null,
         application_serial: paymentStatus === "paid"
           ? `TMB-${new Date().getFullYear()}-${application.id.slice(0,8).toUpperCase()}`
@@ -742,22 +744,24 @@ async function verifyPayment(env, trackingId, merchantReference) {
 
   if (merchantReference.startsWith("TIDORI-APPT-")) {
     const records = await supabaseRequest(env,
-      `appointments?select=id,fee_amount,currency,payment_status&pesapal_merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}&limit=1`
+      `appointments?select=id,fee_amount,currency,payment_status,pesapal_order_tracking_id&pesapal_merchant_reference=eq.${encodeURIComponent(merchantReference)}&limit=1`
     );
     const appointment = records?.[0];
     if (!appointment) throw new Error("No matching appointment payment record exists.");
+    if (appointment.pesapal_order_tracking_id && appointment.pesapal_order_tracking_id !== trackingId) throw new Error("This appointment reference is already linked to a different Pesapal transaction.");
     if (String(data.currency || "").toUpperCase() !== String(appointment.currency || "UGX").toUpperCase()
         || Math.abs(Number(data.amount) - Number(appointment.fee_amount)) > 0.01) {
       throw new Error("The verified Pesapal amount or currency does not match this appointment.");
     }
     const updated = await supabaseRequest(env,
-      `appointments?id=eq.${encodeURIComponent(appointment.id)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}`,
+      `appointments?id=eq.${encodeURIComponent(appointment.id)}`,
       { method: "PATCH", headers: { prefer: "return=representation" },
         body: JSON.stringify({
           // Appointment payment_status uses the schema's unpaid/paid/waived values.
           // Preserve the actual Pesapal result in the response, but keep non-paid
           // transactions in the database's supported "unpaid" state.
           payment_status: paymentStatus === "paid" ? "paid" : "unpaid",
+          pesapal_order_tracking_id: trackingId,
           paid_at: paymentStatus === "paid" ? (data.created_date || new Date().toISOString()) : null,
           ...(data.payment_method ? { payment_method: clean(data.payment_method, 80) } : {}),
           ...(data.confirmation_code ? { payment_reference: clean(data.confirmation_code, 120) } : {}),
@@ -767,10 +771,11 @@ async function verifyPayment(env, trackingId, merchantReference) {
   }
 
   const records = await supabaseRequest(env,
-    `donation_pledges?select=amount,currency&merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}&limit=1`
+    `donation_pledges?select=id,amount,currency,status,pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(merchantReference)}&limit=1`
   );
   const donation = records?.[0];
   if (!donation) throw new Error("No matching donation record exists for this Pesapal transaction.");
+  if (donation.pesapal_order_tracking_id && donation.pesapal_order_tracking_id !== trackingId) throw new Error("This donation reference is already linked to a different Pesapal transaction.");
   const verifiedAmount = Number(data.amount);
   const recordedAmount = Number(donation.amount);
   const verifiedCurrency = String(data.currency || "").trim().toUpperCase();
@@ -791,12 +796,13 @@ async function verifyPayment(env, trackingId, merchantReference) {
     throw new Error("The verified Pesapal amount or currency does not match the donation. The payment has not been marked as paid; an administrator can use the diagnostic details to investigate.");
   }
   const updated = await supabaseRequest(env,
-    `donation_pledges?merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}${paymentStatus === "paid" ? "&status=neq.paid" : ""}`,
+    `donation_pledges?id=eq.${encodeURIComponent(donation.id)}${paymentStatus === "paid" ? "&status=neq.paid" : ""}`,
     {
       method: "PATCH",
       headers: { prefer: "return=representation" },
       body: JSON.stringify({
         status: paymentStatus,
+        pesapal_order_tracking_id: trackingId,
         payment_method: clean(data.payment_method, 80) || null,
         confirmation_code: clean(data.confirmation_code, 120) || null,
         paid_at: paymentStatus === "paid" ? (data.created_date || new Date().toISOString()) : null,

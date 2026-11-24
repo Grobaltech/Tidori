@@ -5,7 +5,14 @@ export default function PWAInstallPrompt() {
   const [installEvent, setInstallEvent] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [installed, setInstalled] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      const dismissedUntil = Number(localStorage.getItem('tidori-install-prompt-dismissed-until') || 0);
+      return dismissedUntil > Date.now();
+    } catch {
+      return false;
+    }
+  });
   const [checkingInstall, setCheckingInstall] = useState(true);
   const nativeApp = Capacitor.isNativePlatform();
 
@@ -84,7 +91,9 @@ export default function PWAInstallPrompt() {
 
   // Native Capacitor builds already have an Android launcher icon; never show
   // the website's PWA installation banner inside the native application.
-  if (nativeApp || checkingInstall || installed || dismissed) return null;
+  // Only display the banner after the browser confirms that Tidori can be
+  // installed. This avoids showing a generic install message on every visit.
+  if (nativeApp || checkingInstall || installed || dismissed || !installEvent) return null;
 
   return (
     <>
@@ -132,7 +141,19 @@ export default function PWAInstallPrompt() {
         </button>
         <button
           type="button"
-          onClick={() => setDismissed(true)}
+          onClick={() => {
+            try {
+              // Respect the user's choice across reloads, but allow the banner
+              // to return after 30 days if they change their mind.
+              localStorage.setItem(
+                'tidori-install-prompt-dismissed-until',
+                String(Date.now() + 30 * 24 * 60 * 60 * 1000)
+              );
+            } catch (error) {
+              console.info('Tidori install prompt preference could not be saved:', error);
+            }
+            setDismissed(true);
+          }
           aria-label="Dismiss install notification"
           style={{
             flex: '0 0 28px', width: 28, height: 28, padding: 0,

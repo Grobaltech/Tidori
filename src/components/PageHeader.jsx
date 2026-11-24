@@ -34,9 +34,10 @@ export default function PageHeader({ title }) {
   useDocTitle(title);
   const { pathname } = useLocation();
   const segments = pathname.split('/').filter(Boolean);
-  const isMemberProfile = /^\/members\/profiles\/[^/]+\/?$/.test(pathname);
+  const isMemberProfile = /^\\/members\\/profiles\\/[^/]+\\/?$/.test(pathname);
   const isProfileIndex = pathname === '/members/profiles' || pathname === '/members/profiles/';
   const isOwnProfile = pathname === '/profile' || pathname === '/profile/';
+  const hideLargeTitle = pathname === '/members' || pathname.startsWith('/members/') || isOwnProfile;
   const crumbs = [];
 
   if (isMemberProfile || isOwnProfile) {
@@ -65,10 +66,12 @@ export default function PageHeader({ title }) {
   }
 
   return (
-    <section className="page-header-bg mb-11 px-4 pb-20 pt-24 text-center md:pt-32">
-      <h2 className="relative mb-5 inline-block pb-2 text-[40px] font-bold !text-gold sm:text-[60px] after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-24 after:-translate-x-1/2 after:bg-gold">
-        {title}
-      </h2>
+    <section className={`page-header-bg mb-11 px-4 text-center ${hideLargeTitle ? 'pb-16 pt-20 md:pt-24' : 'pb-20 pt-24 md:pt-32'}`}>
+      {!hideLargeTitle && (
+        <h2 className="relative mb-5 inline-block pb-2 text-[40px] font-bold !text-gold sm:text-[60px] after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-24 after:-translate-x-1/2 after:bg-gold">
+          {title}
+        </h2>
+      )}
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center justify-center gap-2 text-base font-semibold sm:text-lg">
         <Link to="/" className="text-white/85 transition-colors hover:text-gold">Home</Link>
         {crumbs.map((crumb, index) => (

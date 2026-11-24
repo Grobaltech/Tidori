@@ -17,6 +17,7 @@ import AdminPageHeader from '../admin/layout/AdminPageHeader';
 import OverviewPage from '../admin/pages/OverviewPage';
 import MembersPage from '../admin/pages/MembersPage';
 import UserManagementPage from '../admin/pages/UserManagementPage';
+import SettingsPage from '../admin/pages/SettingsPage';
 
 const sections = [
   { id: 'overview', label: 'Dashboard', icon: FaTachometerAlt },
@@ -313,7 +314,8 @@ export default function AdminDashboard() {
             : activeSection === 'content' ? <WebsiteCMS />
             : activeSection === 'overview' ? <OverviewPage records={records} counts={counts} loadingData={loadingData} changeSection={changeSection} formatValue={formatValue} />
             : activeSection === 'users' ? <UserManagementPage role={profile?.role} />
-            : activeSection === 'members' ? <MembersPage records={records} filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : activeSection === 'members' ? <MembersPage filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : activeSection === 'settings' ? <SettingsPage profile={profile} user={user} initials={initials} supabaseReady={supabaseReady} onSignOut={signOut} onRefresh={loadOverview} loadingData={loadingData} PesapalIpnSettings={PesapalIpnSettings} formatValue={formatValue} />
             : <section className="admin-card"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4"><div><h2 className="admin-section-title">{tableConfig[activeSection]?.title || current.label}</h2><p className="admin-muted mt-1">{activeSection==='ministries'?'Ministry assignments aggregated from member profiles.':'Showing up to 100 most recent database records.'}</p></div>{activeSection!=='ministries' && <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search records…" className="rounded border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#009cff]" />}</div>{renderTable(activeSection)}</section>}
           {selectedRecord && <div className="admin-card mt-5 p-5"><div className="mb-3 flex items-center justify-between"><h2 className="admin-section-title">Record details</h2><button onClick={()=>setSelectedRecord(null)} className="text-sm text-[#009cff]">Close</button></div><div className="grid gap-3 sm:grid-cols-2">{Object.entries(selectedRecord).filter(([key]) => typeof key === 'string' && key.trim().length > 0).map(([key,value])=><div key={key} className="min-w-0 overflow-hidden"><p className="text-xs font-semibold uppercase text-gray-400 break-words">{key.replaceAll('_',' ')}</p><p className="text-sm text-[#191c24] break-words [overflow-wrap:anywhere]">{typeof value==='object' && value!==null ? JSON.stringify(value) : formatValue(value)}</p></div>)}</div></div>}
           <footer className="mt-8 flex flex-wrap justify-between gap-2 text-xs text-gray-400"><span>© {new Date().getFullYear()} Tidori Ministries</span><span>Private administration portal · live database</span></footer>

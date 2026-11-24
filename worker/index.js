@@ -471,6 +471,7 @@ async function createAppointmentRequest(request, env) {
   const meetingMode = clean(input.meeting_mode, 20);
   const requestedAt = new Date(input.requested_at);
   const tier = clean(input.package_tier, 12).toLowerCase();
+  const billingPeriod = clean(input.billing_period || 'monthly', 12).toLowerCase();
   const universalServices = new Set([
     "Crisis support",
     "Licensed therapist referrals",
@@ -488,6 +489,7 @@ async function createAppointmentRequest(request, env) {
       || !Number.isFinite(requestedAt.getTime()) || requestedAt.getTime() < Date.now() - 60000) {
     return json({ error: "Complete your name, phone, appointment details and choose a future date and time." }, 400);
   }
+  if (!['monthly','annual'].includes(billingPeriod)) return json({ error: 'Choose monthly or annual billing.' }, 400);
   if (!universal && (!modeEntitlements[tier] || !modeEntitlements[tier].includes(meetingMode))) {
     return json({ error: "Your selected package does not include this appointment mode. Please choose an eligible package or meeting method." }, 403);
   }
@@ -512,7 +514,7 @@ async function createAppointmentRequest(request, env) {
     );
     packageRow = packages?.[0];
     if (!packageRow) return json({ error: "This appointment package is not currently available. Please contact the church office." }, 409);
-    amount = Number(packageRow.amount);
+    amount = Number(packageRow.amount) * (billingPeriod === 'annual' ? 12 : 1);
     currency = String(packageRow.currency || "UGX").toUpperCase();
   }
   if (amount > 0 && (!email || !/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email))) {
@@ -526,7 +528,7 @@ async function createAppointmentRequest(request, env) {
     body: JSON.stringify([{
       user_id: userId, full_name: fullName, email: email || null, phone,
       appointment_type: appointmentType, meeting_mode: meetingMode,
-      package_tier: universal ? null : tier,
+      package_tier: universal ? null : tier, billing_period: universal ? null : billingPeriod,
       requested_at: requestedAt.toISOString(), notes: clean(input.notes, 2000) || null,
       status: "requested", payment_status: "unpaid", fee_amount: amount,
       currency, fee_rule_id: null, pesapal_merchant_reference: merchantReference,

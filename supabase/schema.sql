@@ -37,7 +37,8 @@ create table if not exists public.posts (
   image_url text,
   author text,
   published_at timestamptz not null default now(),
-  published boolean not null default true
+  published boolean not null default true,
+  presentation jsonb not null default '{}'::jsonb
 );
 
 create table if not exists public.team_members (

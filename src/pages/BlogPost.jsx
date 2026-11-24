@@ -13,7 +13,7 @@ import { dateLong } from '../lib/format';
 const allowedArticleTags = new Set(['P','H1','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','U','BLOCKQUOTE','A','IMG','BR','HR','SPAN','DIV']);
 function safeArticleHtml(html = '') {
   if (typeof window === 'undefined') return '';
-  const source = /<\\/?[a-z][\\s\\S]*>/i.test(html) ? html : html.split(/\\n{2,}/).map(part => `<p>${part.split('\\n').map(line => line.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')).join('<br>')}</p>`).join('');
+  const source = /<\/?[a-z][\s\S]*>/i.test(html) ? html : html.split(/\n{2,}/).map(part => `<p>${part.split('\n').map(line => line.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')).join('<br>')}</p>`).join('');
   const parsed = new DOMParser().parseFromString(source, 'text/html');
   const cleanNode = (node) => [...node.childNodes].forEach((child) => {
     if (child.nodeType === Node.TEXT_NODE) return;

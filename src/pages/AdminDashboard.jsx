@@ -224,7 +224,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setSidebarOpen(false);
-    setSelectedRecord(null);
     setSearch('');
     const canonical = `${window.location.origin}${sectionPath(activeSection)}`;
     let canonicalLink = document.querySelector('link[rel="canonical"]');

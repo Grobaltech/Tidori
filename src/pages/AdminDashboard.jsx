@@ -249,6 +249,10 @@ export default function AdminDashboard() {
   if (checking) return <div className="min-h-screen grid place-items-center text-sm text-gray-500">Checking administrator access…</div>;
   if (error) return <div className="min-h-screen grid place-items-center bg-[#f3f6f9] p-5"><div className="max-w-md rounded-lg bg-white p-8 text-center shadow-sm"><FaUserShield className="mx-auto mb-4 text-3xl text-[#009cff]" /><h1 className="mb-2 text-xl font-bold text-[#191c24]">Administrator access</h1><p className="mb-5 text-sm text-gray-500">{error}</p><div className="flex justify-center gap-3"><Link className="rounded bg-[#009cff] px-4 py-2 text-sm font-semibold text-white" to="/profile">My profile</Link><button onClick={signOut} className="rounded border px-4 py-2 text-sm">Sign out</button></div></div></div>;
 
+  if (profile && !visibleSections.some(item => item.id === activeSection)) {
+    return <div className="min-h-screen grid place-items-center bg-[#f3f6f9] p-5"><div className="max-w-md rounded-lg bg-white p-8 text-center shadow-sm"><FaUserShield className="mx-auto mb-4 text-3xl text-[#009cff]" /><h1 className="mb-2 text-xl font-bold text-[#191c24]">Access restricted</h1><p className="mb-5 text-sm text-gray-500">Your account does not have permission to open this administration page.</p>{visibleSections[0] ? <Link className="rounded bg-[#009cff] px-4 py-2 text-sm font-semibold text-white" to={sectionPath(visibleSections[0].id)}>Return to an authorised page</Link> : <Link className="rounded bg-[#009cff] px-4 py-2 text-sm font-semibold text-white" to="/">Return to Tidori Ministries</Link>}</div></div>;
+  }
+
   const current = visibleSections.find(s => s.id === activeSection) || visibleSections[0] || sections[0];
   const Icon = current.icon;
   const renderTable = (key) => {

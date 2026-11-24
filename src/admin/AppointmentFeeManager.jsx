@@ -26,7 +26,8 @@ export default function AppointmentFeeManager(){
   const save=async()=>{
     setBusy(true);setError('');setNotice('');
     const {data:userData}=await supabase.auth.getUser();
-    if(tiers.some(tier=>{const row=packages.find(p=>p.tier_code===tier.tier_code);return !row||row.amount===''||row.amount===null||row.amount===undefined;})){setError('Enter a price for all three packages before saving. Use 0 only when a package is intentionally free.');setBusy(false);return;}\n    const rows=tiers.map(tier=>{
+    if(tiers.some(tier=>{const row=packages.find(p=>p.tier_code===tier.tier_code);return !row||row.amount===''||row.amount===null||row.amount===undefined;})){setError('Enter a price for all three packages before saving. Use 0 only when a package is intentionally free.');setBusy(false);return;}
+    const rows=tiers.map(tier=>{
       const current=packages.find(p=>p.tier_code===tier.tier_code)||{};
       return {tier_code:tier.tier_code,package_name:tier.package_name,amount:Number(current.amount||0),currency:current.currency||'UGX',is_active:current.is_active??true,updated_by:userData?.user?.id||null,updated_at:new Date().toISOString()};
     });

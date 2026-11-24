@@ -65,7 +65,7 @@ const sectionBySlug = Object.fromEntries(
 );
 
 const sectionFromPath = (pathname) => {
-  const slug = pathname.replace(/^\\/admin\\/?/, '').split('/')[0];
+  const slug = pathname.startsWith('/admin/') ? pathname.slice(7).split('/')[0] : '';
   return sectionBySlug[slug] || null;
 };
 

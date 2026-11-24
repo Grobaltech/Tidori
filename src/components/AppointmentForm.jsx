@@ -122,8 +122,8 @@ export default function AppointmentForm() {
               '--tw-ring-color':tier.color
             }}
           >
-            <span className={`relative isolate flex h-full min-h-[520px] flex-col overflow-hidden rounded-[22px] ${index===1?'text-white':'text-[#24242a]'}`}>
-              {/* SVG background with improved proportions */}
+            <span className={`relative isolate flex h-full min-h-[520px] flex-col overflow-hidden rounded-[22px] ${index===1?'text-white':'text-[#24242a]'`}>
+              {/* SVG background – soft modern notch matching the reference design */}
               <svg
                 aria-hidden="true"
                 viewBox="0 0 100 140"
@@ -146,23 +146,22 @@ export default function AppointmentForm() {
                     )}
                   </linearGradient>
                 </defs>
-                {/* Softer, more balanced top-right curve */}
+                {/* Soft modern curve (matches the enhanced reference cards) */}
                 <path
-                  d="M 8 0
-                     H 72
-                     C 80 0, 82 4, 82 8
-                     C 82 14, 88 16, 96 16
-                     H 100
-                     V 128
-                     Q 100 140 88 140
-                     H 12
-                     Q 0 140 0 128
-                     V 12
-                     Q 0 0 8 0
+                  d="M 6 0
+                     H 68
+                     C 78 0, 84 3, 86 9
+                     C 88 15, 93 18, 100 18
+                     V 132
+                     Q 100 140 92 140
+                     H 8
+                     Q 0 140 0 132
+                     V 8
+                     Q 0 0 6 0
                      Z"
                   fill={`url(#card-fill-${tier.code})`}
                   stroke={index===1 ? '#a58c50' : '#d8c99f'}
-                  strokeWidth="0.6"
+                  strokeWidth="0.55"
                   vectorEffect="non-scaling-stroke"
                 />
               </svg>
@@ -178,7 +177,7 @@ export default function AppointmentForm() {
 
               {/* Header */}
               <span className="relative z-10 flex items-center justify-between px-5 pb-1 pt-6 sm:px-6">
-                <span className={`text-[10px] font-bold uppercase tracking-[.2em] ${index===1?'text-[#d9c17c]':'text-[#9b7b35]'}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-[.2em] ${index===1?'text-[#d9c17c]':'text-[#9b7b35]'`}>
                   Tidori Ministries
                 </span>
                 <span className={`rounded-full border px-3 py-1 text-[9px] font-extrabold uppercase tracking-[.14em] ${index===1?'border-[#c9ad5c] text-[#ead79c]':'border-[#d9c58c] text-[#80652b]'}`}>
@@ -198,10 +197,10 @@ export default function AppointmentForm() {
 
               {/* Price box */}
               <span className={`relative z-10 mx-4 rounded-[18px] border px-4 py-3.5 sm:mx-5 sm:px-5 ${index===1?'border-[#75643a] bg-[#17181c]':'border-[#e8dbb7] bg-white/80 shadow-inner'}`}>
-                <span className={`block text-[9px] font-bold uppercase tracking-[.16em] ${index===1?'text-[#d8c27f]':'text-[#9b7b35]'}`}>
+                <span className={`block text-[9px] font-bold uppercase tracking-[.16em] ${index===1?'text-[#d8c27f]':'text-[#9b7b35]'`}>
                   {currencyLabel(displayCurrency)}
                 </span>
-                <span className={`mt-1 block break-words text-[26px] font-extrabold leading-tight tracking-tight sm:text-[30px] ${index===1?'text-[#f1d98d]':'text-[#24242a]'}`}>
+                <span className={`mt-1 block break-words text-[26px] font-extrabold leading-tight tracking-tight sm:text-[30px] ${index===1?'text-[#f1d98d]':'text-[#24242a]'`}>
                   {pkg
                     ? (convertedAmount(pkg.amount, pkg.currency || 'UGX', displayCurrency, usdToUgx) === null
                         ? (rateLoading ? 'Loading…' : money(pkg.amount, pkg.currency || 'UGX'))
@@ -224,7 +223,7 @@ export default function AppointmentForm() {
               />
 
               {/* Benefits label */}
-              <span className={`relative z-10 px-5 pb-1 text-[10px] font-extrabold uppercase tracking-[.16em] sm:px-6 ${index===1?'text-[#d8c27f]':'text-[#8c7136]'}`}>
+              <span className={`relative z-10 px-5 pb-1 text-[10px] font-extrabold uppercase tracking-[.16em] sm:px-6 ${index===1?'text-[#d8c27f]':'text-[#8c7136]'`}>
                 Included benefits
               </span>
 

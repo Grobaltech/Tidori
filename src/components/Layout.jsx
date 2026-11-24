@@ -169,7 +169,7 @@ function Navbar() {
               <div role="menu" aria-label="Account options" className="absolute right-0 top-full z-[60] mt-2 w-56 overflow-hidden rounded-lg border border-white/10 bg-ink py-2 shadow-xl">
                 {signedIn ? (
                   <>
-                    {['admin', 'super_admin'].includes(accountRole) && <Link role="menuitem" to="/admin" onClick={closeAccount} className="block px-4 py-3 text-sm font-semibold text-gold transition-colors hover:bg-gold/10">Administration Dashboard</Link>}
+                    {['admin', 'super_admin'].includes(accountRole) && <Link role="menuitem" to="/admin/overview/" onClick={closeAccount} className="block px-4 py-3 text-sm font-semibold text-gold transition-colors hover:bg-gold/10">Administration Dashboard</Link>}
                     <Link role="menuitem" to="/profile" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">My Profile</Link>
                     <Link role="menuitem" to="/members" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Tidori Connect</Link>
                     <Link role="menuitem" to="/members?tab=messages" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Messages</Link>

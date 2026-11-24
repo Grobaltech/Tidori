@@ -10,6 +10,29 @@ import { useAsync } from '../hooks/hooks';
 import { getPost, getPosts } from '../lib/api';
 import { dateLong } from '../lib/format';
 
+const allowedArticleTags = new Set(['P','H1','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','U','BLOCKQUOTE','A','IMG','BR','HR','SPAN','DIV']);
+function safeArticleHtml(html = '') {
+  if (typeof window === 'undefined') return '';
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const cleanNode = (node) => [...node.childNodes].forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE) return;
+    if (child.nodeType !== Node.ELEMENT_NODE) { child.remove(); return; }
+    if (!allowedArticleTags.has(child.tagName)) { child.replaceWith(...child.childNodes); return; }
+    [...child.attributes].forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      if (child.tagName === 'A' && name === 'href') { if (!/^(https?:|mailto:|tel:|\\/)/i.test(attr.value)) child.removeAttribute(attr.name); }
+      else if (child.tagName === 'IMG' && name === 'src') { if (!/^https?:\\/\\//i.test(attr.value)) child.removeAttribute(attr.name); }
+      else if (name === 'style') { const safe = attr.value.split(';').map(rule=>rule.trim()).filter(rule=>/^(color|background-color|text-align):\\s*[#(),.%\\w -]+$/i.test(rule)).join(';'); if(safe) child.setAttribute('style',safe); else child.removeAttribute('style'); }
+      else if (!(child.tagName === 'A' && ['target','rel','title'].includes(name)) && !(child.tagName === 'IMG' && ['alt','title','width'].includes(name))) child.removeAttribute(attr.name);
+    });
+    if(child.tagName==='A'){child.setAttribute('rel','noopener noreferrer');child.setAttribute('target','_blank');}
+    if(child.tagName==='IMG') child.setAttribute('loading','lazy');
+    cleanNode(child);
+  });
+  cleanNode(parsed.body);
+  return parsed.body.innerHTML;
+}
+
 function estimateReadingTime(body = '') {
   const words = body.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.ceil(words / 200));
@@ -114,11 +137,7 @@ export default function BlogPost() {
             </div>
           </div>
 
-          <div className={`blog-article-content ${presentation.content_width === 'narrow' ? 'max-w-[620px]' : presentation.content_width === 'wide' ? 'max-w-[980px]' : 'max-w-[760px]'}`}>
-            {paragraphs.map((paragraph, index) => (
-              <p key={index} className={index === 0 ? 'blog-lead' : ''}>{paragraph}</p>
-            ))}
-          </div>
+          <div className={`blog-article-content ${presentation.content_width === 'narrow' ? 'max-w-[620px]' : presentation.content_width === 'wide' ? 'max-w-[980px]' : 'max-w-[760px]'}`} dangerouslySetInnerHTML={{__html:safeArticleHtml(post.body || '')}} />
 
           {presentation.show_whatsapp !== false && <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-y border-gray-200 py-6">
             <p className="text-sm font-semibold text-navy">Was this article helpful? Share it with someone.</p>

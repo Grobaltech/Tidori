@@ -1,5 +1,5 @@
 {
-  "id": "/",
+  "id": "https://www.tidoriministries.org/",
   "name": "Tidori Ministries",
   "short_name": "Tidori",
   "description": "Tidori Ministries - a community of faith, hope and service.",
@@ -14,8 +14,8 @@
   "related_applications": [
     {
       "platform": "webapp",
-      "url": "/manifest.webmanifest",
-      "id": "https://tidori.grobaltechtechnologies.workers.dev/"
+      "url": "https://www.tidoriministries.org/manifest.webmanifest",
+      "id": "https://www.tidoriministries.org/"
     }
   ],
   "icons": [

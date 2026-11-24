@@ -22,9 +22,9 @@ export default function Login() {
 
   const chooseProfile = (profile) => {
     const requestedNext = params.get('next');
+    if (profile === 'super_admin' || profile === 'admin' || profile === 'church_admin') { navigate('/admin', { replace: true }); return; }
     if (requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//')) { navigate(requestedNext, { replace: true }); return; }
-    if (profile === 'super_admin' || profile === 'admin' || profile === 'church_admin') navigate('/admin', { replace: true });
-    else navigate('/profile', { replace: true });
+    navigate('/members', { replace: true });
   };
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function Login() {
           chooseProfile(choices[0]);
         } else {
           const requestedNext = params.get('next');
-          navigate(requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/profile', { replace: true });
+          navigate(requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/members', { replace: true });
         }
       }
     } catch (err) {

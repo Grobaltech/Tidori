@@ -40,6 +40,17 @@
   }
   .blog-article-content p { @apply mb-7; }
   .blog-article-content p:last-child { @apply mb-0; }
+  .blog-article-content h1 { @apply mb-5 mt-10 text-3xl font-extrabold leading-tight text-[#17465b] sm:text-4xl; }
+  .blog-article-content h2 { @apply mb-4 mt-10 border-l-4 border-gold pl-4 text-2xl font-bold leading-tight text-[#17465b] sm:text-3xl; }
+  .blog-article-content h3 { @apply mb-3 mt-8 text-xl font-bold leading-snug text-[#21845b] sm:text-2xl; }
+  .blog-article-content h4 { @apply mb-3 mt-7 text-lg font-bold text-[#c18b24]; }
+  .blog-article-content ul { @apply mb-7 list-disc space-y-2 pl-7; }
+  .blog-article-content ol { @apply mb-7 list-decimal space-y-2 pl-7; }
+  .blog-article-content li { @apply pl-1; }
+  .blog-article-content blockquote { @apply my-8 border-l-4 border-gold bg-[#fff8e8] px-6 py-5 text-lg font-medium italic leading-relaxed text-[#17465b]; }
+  .blog-article-content a { @apply font-semibold text-[#168b8a] underline decoration-[#168b8a]/40 underline-offset-4 hover:text-[#c18b24]; }
+  .blog-article-content img { @apply my-8 h-auto max-w-full rounded-xl shadow-md; }
+  .blog-article-content hr { @apply my-10 border-gray-200; }
   .blog-article-content .blog-lead {
     @apply border-l-4 border-gold pl-5 text-[20px] font-medium leading-[1.8] text-navy sm:pl-7 sm:text-[22px];
   }

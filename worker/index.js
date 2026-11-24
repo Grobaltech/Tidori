@@ -771,9 +771,24 @@ async function verifyPayment(env, trackingId, merchantReference) {
   );
   const donation = records?.[0];
   if (!donation) throw new Error("No matching donation record exists for this Pesapal transaction.");
-  if (String(data.currency || "").toUpperCase() !== String(donation.currency).toUpperCase()
-      || Math.abs(Number(data.amount) - Number(donation.amount)) > 0.01) {
-    throw new Error("The verified Pesapal amount or currency does not match the donation.");
+  const verifiedAmount = Number(data.amount);
+  const recordedAmount = Number(donation.amount);
+  const verifiedCurrency = String(data.currency || "").trim().toUpperCase();
+  const recordedCurrency = String(donation.currency || "").trim().toUpperCase();
+  // Giving is intentionally open-ended: donors choose any amount they wish.
+  // Compare Pesapal against the exact amount/currency recorded for this donation;
+  // never impose the fixed bursary application fee on donations.
+  if (!Number.isFinite(verifiedAmount) || !Number.isFinite(recordedAmount)
+      || verifiedCurrency !== recordedCurrency || Math.abs(verifiedAmount - recordedAmount) > 0.01) {
+    console.error("Pesapal donation amount/currency mismatch:", {
+      trackingId,
+      merchantReference,
+      pesapalAmount: data.amount ?? null,
+      pesapalCurrency: data.currency ?? null,
+      recordedAmount: donation.amount ?? null,
+      recordedCurrency: donation.currency ?? null,
+    });
+    throw new Error("The verified Pesapal amount or currency does not match the donation. The payment has not been marked as paid; an administrator can use the diagnostic details to investigate.");
   }
   const updated = await supabaseRequest(env,
     `donation_pledges?merchant_reference=eq.${encodeURIComponent(merchantReference)}&pesapal_order_tracking_id=eq.${encodeURIComponent(trackingId)}${paymentStatus === "paid" ? "&status=neq.paid" : ""}`,
@@ -942,6 +957,27 @@ async function handleNotification(request, env, isCallback) {
   }, result ? 200 : 500);
 }
 
+
+async function adminFinanceBursaries(request, env) {
+  const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter(key => !env[key]);
+  if (missing.length) return json({ error: "Finance data service is not configured.", missing }, 503);
+  const access = await requireSuperAdmin(request, env);
+  if (access.error) return access.error;
+
+  try {
+    // The bursary table deliberately denies browser-level access because it
+    // contains applicants' identity documents and other sensitive records.
+    // Return only the minimum financial fields needed by the Finance screen.
+    const [paid, pending] = await Promise.all([
+      supabaseRequest(env, "bursary_applications?select=id,applicant_name,application_fee,currency,payment_status,paid_at,created_at,merchant_reference&payment_status=eq.paid&order=paid_at.desc&limit=1000"),
+      supabaseRequest(env, "bursary_applications?select=id,applicant_name,application_fee,currency,payment_status,created_at,merchant_reference&payment_status=eq.pending&application_status=eq.awaiting_payment&order=created_at.desc&limit=100"),
+    ]);
+    return json({ bursaries: paid || [], pendingBursaries: pending || [] });
+  } catch (error) {
+    console.error("Super administrator finance bursary load failed:", error);
+    return json({ error: "Could not load bursary finance records." }, 502);
+  }
+}
 
 async function reconcilePesapalPayment(request, env) {
   const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "PESAPAL_CONSUMER_KEY", "PESAPAL_CONSUMER_SECRET"].filter(key => !env[key]);
@@ -1339,6 +1375,9 @@ export default {
       }
       if (url.pathname === "/api/admin/payments/reconcile" && request.method === "POST") {
         return await reconcilePesapalPayment(request, env);
+      }
+      if (url.pathname === "/api/admin/finance/bursaries" && request.method === "GET") {
+        return await adminFinanceBursaries(request, env);
       }
       if (url.pathname === "/api/payments/status" && request.method === "GET") {
         return await paymentStatus(request, env);

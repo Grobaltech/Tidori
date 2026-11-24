@@ -54,7 +54,7 @@ export default function Login() {
         if (authError) throw authError;
 
         // Route by the role stored on this user's existing Tidori profile.
-        // The member profile remains the destination for ordinary members.
+        // Ordinary members and leaders enter the members-only Tidori Connect area.
         const { data: accountProfile, error: roleError } = await supabase
           .from('profiles')
           .select('role,member_status,full_name')

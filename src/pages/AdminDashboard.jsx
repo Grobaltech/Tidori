@@ -18,6 +18,13 @@ import OverviewPage from '../admin/pages/OverviewPage';
 import MembersPage from '../admin/pages/MembersPage';
 import UserManagementPage from '../admin/pages/UserManagementPage';
 import SettingsPage from '../admin/pages/SettingsPage';
+import MinistriesPage from '../admin/pages/MinistriesPage';
+import EventsPage from '../admin/pages/EventsPage';
+import OutreachPage from '../admin/pages/OutreachPage';
+import MessagesPage from '../admin/pages/MessagesPage';
+import VolunteersPage from '../admin/pages/VolunteersPage';
+import NewsletterPage from '../admin/pages/NewsletterPage';
+import GivingPledgesPage from '../admin/pages/GivingPledgesPage';
 
 const sections = [
   { id: 'overview', label: 'Dashboard', icon: FaTachometerAlt },
@@ -261,14 +268,7 @@ export default function AdminDashboard() {
 
   const current = visibleSections.find(s => s.id === activeSection) || visibleSections[0] || sections[0];
   const Icon = current.icon;
-  const renderTable = (key) => {
-    const cfg = tableConfig[key];
-    const rows = key === 'ministries'
-      ? [...new Map((records.members || []).filter(r => r.ministry).map(r => [r.ministry, { ministry:r.ministry, people:(records.members || []).filter(p => p.ministry === r.ministry).length }])).values()]
-      : (records[key] || []);
-    if (key === 'ministries') return <div className="overflow-x-auto"><table className="admin-table w-full"><thead><tr><th>Ministry</th><th>People recorded</th></tr></thead><tbody>{rows.map(r=><tr key={r.ministry}><td>{r.ministry}</td><td>{r.people}</td></tr>)}</tbody></table>{!rows.length && <div className="admin-empty">No ministry assignments have been recorded in member profiles yet.</div>}</div>;
-    return <div className="overflow-x-auto"><table className="admin-table w-full"><thead><tr>{cfg.columns.map(([field,label])=><th key={field}>{label}</th>)}</tr></thead><tbody>{filteredRecords.map((row,i)=><tr key={row.id || row.email || i} onClick={()=>setSelectedRecord(row)} className="cursor-pointer"><td className="sr-only">{row.id}</td>{cfg.columns.map(([field])=><td key={field}>{field === 'message' ? (String(row[field] || '').length > 110 ? String(row[field]).slice(0, 110) + '…' : formatValue(row[field])) : formatValue(row[field])}</td>)}</tr>)}</tbody></table>{!filteredRecords.length && <div className="admin-empty">{loadingData ? 'Loading records…' : 'No matching records were found.'}</div>}</div>;
-  };
+
 
   return (
     <div className={`tidori-admin ${sidebarOpen ? 'sidebar-open' : ''}`}>
@@ -316,7 +316,14 @@ export default function AdminDashboard() {
             : activeSection === 'users' ? <UserManagementPage role={profile?.role} />
             : activeSection === 'members' ? <MembersPage filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
             : activeSection === 'settings' ? <SettingsPage profile={profile} user={user} initials={initials} supabaseReady={supabaseReady} onSignOut={signOut} onRefresh={loadOverview} loadingData={loadingData} PesapalIpnSettings={PesapalIpnSettings} formatValue={formatValue} />
-            : <section className="admin-card"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4"><div><h2 className="admin-section-title">{tableConfig[activeSection]?.title || current.label}</h2><p className="admin-muted mt-1">{activeSection==='ministries'?'Ministry assignments aggregated from member profiles.':'Showing up to 100 most recent database records.'}</p></div>{activeSection!=='ministries' && <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search records…" className="rounded border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#009cff]" />}</div>{renderTable(activeSection)}</section>}
+            : activeSection === 'ministries' ? <MinistriesPage records={records} filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : activeSection === 'events' ? <EventsPage records={records} filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : activeSection === 'outreach' ? <OutreachPage records={records} filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : activeSection === 'messages' ? <MessagesPage records={records} filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : activeSection === 'volunteers' ? <VolunteersPage records={records} filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : activeSection === 'newsletter' ? <NewsletterPage records={records} filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : activeSection === 'pledges' ? <GivingPledgesPage records={records} filteredRecords={filteredRecords} search={search} setSearch={setSearch} loadingData={loadingData} onSelectRecord={setSelectedRecord} tableConfig={tableConfig} formatValue={formatValue} />
+            : <section className="admin-card p-5"><p className="text-sm text-gray-500">This administration page is not yet available.</p></section>}
           {selectedRecord && <div className="admin-card mt-5 p-5"><div className="mb-3 flex items-center justify-between"><h2 className="admin-section-title">Record details</h2><button onClick={()=>setSelectedRecord(null)} className="text-sm text-[#009cff]">Close</button></div><div className="grid gap-3 sm:grid-cols-2">{Object.entries(selectedRecord).filter(([key]) => typeof key === 'string' && key.trim().length > 0).map(([key,value])=><div key={key} className="min-w-0 overflow-hidden"><p className="text-xs font-semibold uppercase text-gray-400 break-words">{key.replaceAll('_',' ')}</p><p className="text-sm text-[#191c24] break-words [overflow-wrap:anywhere]">{typeof value==='object' && value!==null ? JSON.stringify(value) : formatValue(value)}</p></div>)}</div></div>}
           <footer className="mt-8 flex flex-wrap justify-between gap-2 text-xs text-gray-400"><span>© {new Date().getFullYear()} Tidori Ministries</span><span>Private administration portal · live database</span></footer>
         </div>

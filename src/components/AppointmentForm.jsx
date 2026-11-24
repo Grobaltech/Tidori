@@ -114,7 +114,7 @@ export default function AppointmentForm() {
                   {index===1 ? <><stop offset="0%" stopColor="#202126"/><stop offset="100%" stopColor="#202126"/></> : <><stop offset="0%" stopColor="#fffefa"/><stop offset="52%" stopColor="#fffdf6"/><stop offset="100%" stopColor="#f7edcf"/></>}
                 </linearGradient>
               </defs>
-              <path d="M 10 0 H 69 C 77 0 78 8 78 14 C 78 20 84 22 91 22 H 100 V 90 Q 100 100 90 100 H 10 Q 0 100 0 90 V 10 Q 0 0 10 0 Z" fill={`url(#card-fill-${tier.code})`} stroke={index===1?"#a58c50":"#d8c99f"} strokeWidth="0.65" vectorEffect="non-scaling-stroke"/>
+              <path d="M 10 0 H 78 C 84 0 85 5 85 9 C 85 13 89 15 95 15 H 100 V 90 Q 100 100 90 100 H 10 Q 0 100 0 90 V 10 Q 0 0 10 0 Z" fill={`url(#card-fill-${tier.code})`} stroke={index===1?"#a58c50":"#d8c99f"} strokeWidth="0.65" vectorEffect="non-scaling-stroke"/>
             </svg>
             {index===1&&<span className="absolute z-10 inset-x-0 top-0 h-1 bg-gradient-to-r from-[#8f702b] via-[#f6df91] to-[#8f702b]"/>}
             {index===1&&<span className="absolute -right-10 top-7 rotate-45 bg-gradient-to-r from-[#d5b65e] via-[#f7e8ae] to-[#c49b37] px-12 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#302817] shadow-md">Popular</span>}

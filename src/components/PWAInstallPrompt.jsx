@@ -48,8 +48,12 @@ export default function PWAInstallPrompt() {
       if (typeof navigator.getInstalledRelatedApps === 'function') {
         try {
           const relatedApps = await navigator.getInstalledRelatedApps();
+          const expectedAppId = new URL('/', window.location.origin).href;
           const tidoriInstalled = relatedApps.some(
-            (app) => app.platform === 'webapp'
+            (app) =>
+              app.platform === 'webapp' &&
+              typeof app.id === 'string' &&
+              new URL(app.id, window.location.origin).href === expectedAppId
           );
           if (active && tidoriInstalled) setInstalled(true);
         } catch (error) {

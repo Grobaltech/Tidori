@@ -59,15 +59,29 @@ function Navbar() {
   const [open, setOpen] = useState(false);
   const [sub, setSub] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const [accountRole, setAccountRole] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => { setOpen(false); setSub(false); setSearchOpen(false); setAccountOpen(false); }, [pathname]);
   useEffect(() => {
-    if (!supabaseReady) return;
-    supabase.auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session)));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setSignedIn(Boolean(session)));
-    return () => listener.subscription.unsubscribe();
+    if (!supabaseReady || !supabase) return;
+    let active = true;
+    const syncAccount = async (session) => {
+      if (!session?.user) {
+        if (active) { setSignedIn(false); setAccountRole(null); }
+        return;
+      }
+      if (active) setSignedIn(true);
+      const { data, error } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
+      if (active) setAccountRole(error ? null : data?.role || null);
+    };
+    supabase.auth.getSession().then(({ data }) => syncAccount(data?.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Defer the profile query until Supabase has finished its auth-state callback.
+      Promise.resolve().then(() => syncAccount(session));
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
   const closeAccount = () => setAccountOpen(false);
@@ -155,6 +169,7 @@ function Navbar() {
               <div role="menu" aria-label="Account options" className="absolute right-0 top-full z-[60] mt-2 w-56 overflow-hidden rounded-lg border border-white/10 bg-ink py-2 shadow-xl">
                 {signedIn ? (
                   <>
+                    {['admin', 'super_admin'].includes(accountRole) && <Link role="menuitem" to="/admin" onClick={closeAccount} className="block px-4 py-3 text-sm font-semibold text-gold transition-colors hover:bg-gold/10">Administration Dashboard</Link>}
                     <Link role="menuitem" to="/profile" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">My Profile</Link>
                     <Link role="menuitem" to="/members" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Tidori Connect</Link>
                     <Link role="menuitem" to="/members?tab=messages" onClick={closeAccount} className="block px-4 py-3 text-sm text-white transition-colors hover:bg-gold/10 hover:text-gold">Messages</Link>

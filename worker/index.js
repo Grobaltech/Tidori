@@ -493,7 +493,7 @@ async function createAppointmentRequest(request, env) {
   }
 
   let userId = null;
-  const accessToken = (request.headers.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1];
+  const accessToken = (request.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (accessToken) {
     const authResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
       headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${accessToken}` },
@@ -515,7 +515,7 @@ async function createAppointmentRequest(request, env) {
     amount = Number(packageRow.amount);
     currency = String(packageRow.currency || "UGX").toUpperCase();
   }
-  if (amount > 0 && (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))) {
+  if (amount > 0 && (!email || !/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email))) {
     return json({ error: "A valid email address is required for secure online payment." }, 400);
   }
 
@@ -540,7 +540,7 @@ async function createAppointmentRequest(request, env) {
     const token = await pesapalToken(env);
     const origin = new URL(request.url).origin;
     const ipnRegistration = await ensurePesapalIpn(env, token, origin);
-    const [firstName, ...lastParts] = fullName.split(/\\s+/);
+    const [firstName, ...lastParts] = fullName.split(/\s+/);
     const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
       id: merchantReference, currency, amount: Number(amount.toFixed(2)),
       description: `Tidori ${tier} appointment: ${appointmentType}`,

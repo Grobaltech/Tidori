@@ -31,7 +31,7 @@ export default function About() {
               <h3 className="mb-2 text-xl">Our Objectives</h3>
               <p className="leading-7">Our registered objectives cover evangelical and fellowship services, Christian values and teaching, charity and counselling support, worship and Gospel preaching, poverty reduction, church and fellowship development, education, entrepreneurship, institutional partnerships, resource mobilisation, socioeconomic empowerment and agricultural development.</p>
             </div>
-            <div id="focus" className="mb-6 scroll-mt-24">
+            <div id="focus-areas" className="mb-6 scroll-mt-24">
               <h3 className="mb-2 text-xl">Our Areas of Focus</h3>
               <p className="leading-7">Our areas of focus include evangelism and spiritual ministry; pastoral care and counselling; charity and community care; education and skills development; youth, women and family empowerment; economic and agricultural development; and institutional partnerships.</p>
             </div>

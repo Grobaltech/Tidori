@@ -17,7 +17,7 @@ const services = [
 ];
 const modeLabels = { audio:'Audio call', video:'Video call', in_person:'Physical meeting' };
 const money = (amount,currency='UGX') => new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'en-UG', { style:'currency', currency, maximumFractionDigits:currency === 'UGX' ? 0 : 2 }).format(Number(amount||0));
-const currencyLabel = currency => currency === 'USD' ? '🇺🇸 USD · US Dollar' : '🇺🇬 UGX · Ugandan Shilling';
+const currencyLabel = currency => currency === 'USD' ? '🇺🇸 USD' : '🇺🇬 UGX';
 const convertedAmount = (amount,from,to,usdToUgx) => {
   if (from === to) return Number(amount || 0);
   if (!usdToUgx) return null;

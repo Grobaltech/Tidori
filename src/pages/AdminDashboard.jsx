@@ -13,7 +13,6 @@ import AppointmentsManager from '../admin/AppointmentsManager';
 import TeamManager from '../admin/TeamManager';
 import FinancialManager from '../admin/FinancialManager';
 import AdminSidebar from '../admin/layout/AdminSidebar';
-import AdminBreadcrumbs from '../admin/layout/AdminBreadcrumbs';
 import AdminPageHeader from '../admin/layout/AdminPageHeader';
 
 const sections = [

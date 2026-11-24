@@ -23,7 +23,8 @@ const routeLabels = {
   appointments: 'Appointment',
   appointment: 'Appointments',
   community: 'Tidori Connect',
-  profile: 'My Profile',
+  profile: 'Profiles',
+  members: 'Members',
   notifications: 'Notifications',
   login: 'Login',
   register: 'Register',
@@ -33,15 +34,14 @@ export default function PageHeader({ title }) {
   useDocTitle(title);
   const { pathname } = useLocation();
   const segments = pathname.split('/').filter(Boolean);
-  const isBlogArticle = segments[0] === 'blog' && segments.length > 1;
   const isOwnProfile = pathname === '/profile' || pathname === '/profile/';
   const crumbs = [];
 
   if (isOwnProfile) {
     // Presentation-only hierarchy; keep the existing /profile route and database unchanged.
     crumbs.push(
-      { label: 'Members', current: false, link: false },
-      { label: 'Profiles', current: false, link: false },
+      { label: 'Members', to: '/community', current: false, link: true },
+      { label: 'Profiles', to: '/profile', current: false, link: true },
       { label: title || 'My Profile', current: true, link: false },
     );
   } else if (segments.length) {
@@ -66,7 +66,7 @@ export default function PageHeader({ title }) {
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center justify-center gap-2 text-base font-semibold sm:text-lg">
         <Link to="/" className="text-white/85 transition-colors hover:text-gold">Home</Link>
         {crumbs.map((crumb, index) => (
-          <span key={crumb.to} className="inline-flex items-center gap-2">
+          <span key={`${crumb.label}-${crumb.to || 'current'}`} className="inline-flex items-center gap-2">
             <span aria-hidden="true" className="text-gold/80">/</span>
             {crumb.current ? (
               <span aria-current="page" className="rounded-sm bg-gold/15 px-2 py-1 text-gold">{crumb.label}</span>

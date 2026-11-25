@@ -1,9 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const currencyOptions = [
-  ['UGX', 'Ugandan Shilling'], ['USD', 'US Dollar'], ['EUR', 'Euro'],
-  ['GBP', 'British Pound'], ['KES', 'Kenyan Shilling'], ['TZS', 'Tanzanian Shilling'],
-  ['RWF', 'Rwandan Franc'], ['MWK', 'Malawian Kwacha'], ['ZMW', 'Zambian Kwacha'],
+  ['UGX', 'Ugandan Shilling'], ['USD', 'US Dollar'],
 ];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -18,6 +16,16 @@ export default function GiveForm({ projectId = null, dark = false }) {
   const [error, setError] = useState('');
   const [checkoutUrl, setCheckoutUrl] = useState('');
   const [reference, setReference] = useState('');
+  const [usdRate, setUsdRate] = useState(null);
+  const [rateError, setRateError] = useState('');
+  useEffect(() => {
+    fetch('/api/payments/exchange-rate').then(async response => {
+      const data = await response.json();
+      if (!response.ok || !Number.isFinite(Number(data.rate)) || Number(data.rate) <= 0) throw new Error(data.error || 'USD giving is temporarily unavailable.');
+      setUsdRate(Number(data.rate));
+      setRateError('');
+    }).catch(error => setRateError(error.message || 'Could not load the USD exchange rate.'));
+  }, []);
   const final = Number(custom);
   const cls = dark ? 'field-dark' : 'field';
   const formatter = useMemo(() => new Intl.NumberFormat(undefined, {
@@ -25,6 +33,7 @@ export default function GiveForm({ projectId = null, dark = false }) {
     maximumFractionDigits: ['UGX','KES','TZS','RWF','MWK','ZMW'].includes(currency) ? 0 : 2,
   }), [currency]);
   const formatAmount = (value) => formatter.format(value);
+  const checkoutAmount = currency === 'USD' && usdRate ? Math.round(final * usdRate) : Math.round(final);
   const onCurrencyChange = (e) => {
     const next = e.target.value;
     setCurrency(next);
@@ -94,11 +103,11 @@ export default function GiveForm({ projectId = null, dark = false }) {
       <select id="giving-currency" value={currency} onChange={onCurrencyChange} className={`${cls} mb-4 w-full rounded-lg border px-3 py-3`}>
         {currencyOptions.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
       </select>
-      <p className={`mb-3 text-sm ${dark ? 'text-white/75' : 'text-ink/70'}`}>There is no fixed giving amount. Enter the amount you wish to give; your chosen currency and exact amount will be sent to Pesapal.</p>
+      <p className={`mb-3 text-sm ${dark ? 'text-white/75' : 'text-ink/70'}`}>There is no fixed giving amount. Enter your donation in UGX or USD. Tidori converts USD to UGX using its configured exchange rate, and Pesapal receives the payment request in UGX.</p>
       <input className={`${cls} mb-4`} type="number" min="0.01" step="any" placeholder={`Enter amount (${currency})`} value={custom} onChange={(e) => setCustom(e.target.value)} />
-      {custom && Number.isFinite(Number(custom)) && Number(custom) > 0 && <p className={`-mt-2 mb-4 text-sm font-semibold ${dark ? 'text-white' : 'text-ink'}`}>Donation total: {formatAmount(Number(custom))}</p>}
+      {custom && Number.isFinite(Number(custom)) && Number(custom) > 0 && <div className={`-mt-2 mb-4 text-sm ${dark ? 'text-white' : 'text-ink'}`}><p className="font-semibold">Donation total: {formatAmount(Number(custom))}</p>{currency === 'USD' && (usdRate ? <p className="mt-1">Estimated Pesapal charge: {new Intl.NumberFormat().format(checkoutAmount)} UGX (1 USD = {new Intl.NumberFormat().format(usdRate)} UGX)</p> : <p className="mt-1 text-amber-600">{rateError || 'Loading exchange rate…'}</p>)}{currency === 'UGX' && <p className="mt-1">Pesapal charge: {new Intl.NumberFormat().format(checkoutAmount)} UGX</p>}</div>}
       <input className="hidden" tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => setTrap(e.target.value)} aria-hidden="true" />
-      <button className={`btn-custom ${dark ? 'btn-light' : ''}`} disabled={status === 'sending'}>
+      <button className={`btn-custom ${dark ? 'btn-light' : ''}`} disabled={status === 'sending' || (currency === 'USD' && !usdRate)}>
         {status === 'sending' ? 'Connecting to Pesapal...' : 'Continue to Secure Payment'}
       </button>
       {status === 'error' && <p className="mt-3 text-red-500">{error}</p>}

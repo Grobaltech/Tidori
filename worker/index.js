@@ -849,7 +849,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
     }
   );
   // Notify only when the verified Pesapal status first transitions to paid.
-  if (paymentStatus === "paid" && updated?.length) {
+  if (amountMatches && paymentStatus === "paid" && updated?.length) {
     await sendPushToAdmins(env, 'Successful Tidori payment', `${data.currency} ${Number(data.amount).toLocaleString()} donation received and verified.`, '/admin');
   }
   return { paymentStatus: amountMatches ? paymentStatus : "pending", pesapalStatus: paymentStatus,

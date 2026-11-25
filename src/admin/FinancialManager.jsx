@@ -111,6 +111,7 @@ export default function FinancialManager() {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || 'Pesapal verification failed.');
       if (result.requiresReview) setNotice(`Pesapal reports ${result.pesapalStatus || result.paymentStatus || 'a transaction status'}, but its amount/currency does not match the Tidori record. The payment remains unpaid and has been flagged for review.`);
+      else if (result.paymentStatus === 'paid' && result.currencyConverted) setNotice(`Payment verified and recorded as paid. Tidori order: ${money(row.amount, row.currency || 'UGX')}; Pesapal collected: ${money(result.amount, result.currency || row.currency || 'UGX')} after currency conversion.`);
       else if (result.paymentStatus === 'paid') setNotice(`Payment verified successfully: ${money(row.amount, row.currency || 'UGX')} is now recorded as paid.`);
       else setNotice(`Pesapal currently reports this transaction as ${result.paymentStatus || 'pending'}. No paid status was applied.`);
       await load();

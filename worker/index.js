@@ -1090,6 +1090,7 @@ async function paymentStatus(request, env) {
         pesapalStatus: verified.pesapalStatus || verified.paymentStatus,
         requiresReview: Boolean(verified.requiresReview),
         amountMatches: verified.amountMatches !== false,
+        currencyConverted: Boolean(verified.currencyConverted),
         pesapalAmount: verified.amount ?? null,
         pesapalCurrency: verified.currency ?? null,
       });

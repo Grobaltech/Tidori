@@ -818,7 +818,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
   }
 
   const records = await supabaseRequest(env,
-    `donation_pledges?select=id,amount,currency,status,pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(merchantReference)}&limit=1`
+    `donation_pledges?select=id,amount,currency,pesapal_amount,exchange_rate_used,status,pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(merchantReference)}&limit=1`
   );
   const donation = records?.[0];
   if (!donation) throw new Error("No matching donation record exists for this Pesapal transaction.");
@@ -826,7 +826,10 @@ async function verifyPayment(env, trackingId, merchantReference) {
   // The order reference and tracking ID are verified above. Same-currency
   // payments must still match the recorded donation amount; a completed
   // provider-side currency conversion is accepted and retained in the result.
-  const amountCheck = comparePesapalAmount(data.amount, data.currency, donation.amount, donation.currency);
+  const expectedCollectedAmount = donation.pesapal_amount != null
+    ? Number(donation.pesapal_amount)
+    : String(donation.currency || "UGX").toUpperCase() === "UGX" ? Number(donation.amount) : NaN;
+  const amountCheck = comparePesapalAmount(data.amount, data.currency, expectedCollectedAmount, "UGX");
   const amountMatches = amountCheck.matches;
   if (!amountMatches) console.error("Pesapal donation amount/currency requires review:", {
     trackingId, merchantReference, pesapalAmount: data.amount ?? null,
@@ -855,6 +858,17 @@ async function verifyPayment(env, trackingId, merchantReference) {
   return { paymentStatus: amountMatches ? paymentStatus : "pending", pesapalStatus: paymentStatus,
     amount: data.amount, currency: data.currency, paymentMethod: data.payment_method,
     amountMatches, currencyConverted: amountCheck.converted, requiresReview: !amountMatches };
+}
+
+function usdToUgxRate(env) {
+  const rate = Number(String(env.USD_TO_UGX_RATE || "").trim());
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
+async function publicGivingExchangeRate(env) {
+  const rate = usdToUgxRate(env);
+  if (!rate) return json({ error: "USD giving is temporarily unavailable. Please contact Tidori Ministries." }, 503);
+  return json({ base: "USD", quote: "UGX", rate, configured: true });
 }
 
 async function createPayment(request, env) {
@@ -891,6 +905,7 @@ async function createPayment(request, env) {
     body: JSON.stringify([{
       name, email, amount: Number(amount.toFixed(2)), project_id: projectId,
       status: "pending", currency, merchant_reference: merchantReference, phone: phone || null,
+      pesapal_amount: pesapalAmount, exchange_rate_used: rate,
     }]),
   });
   if (!rows?.[0]?.id) throw new Error("Could not save your donation record.");
@@ -902,8 +917,8 @@ async function createPayment(request, env) {
     const notificationId = ipnRegistration.ipn_id;
     const order = await pesapalCall(env, "/api/Transactions/SubmitOrderRequest", token, {
       id: merchantReference,
-      currency,
-      amount: Number(amount.toFixed(2)),
+      currency: pesapalCurrency,
+      amount: pesapalAmount,
       description: "Donation to Tidori Ministries",
       callback_url: `${origin}/api/payments/pesapal/callback`,
       redirect_mode: "PARENT_WINDOW",
@@ -1423,6 +1438,7 @@ export default {
       }
       if (url.pathname === "/api/bursary/payment" && request.method === "POST") return await createBursaryPayment(request, env);
       if (url.pathname === "/api/bursary/applications" && ["GET", "POST"].includes(request.method)) return await bursaryApplicantApi(request, env);
+      if (url.pathname === "/api/payments/exchange-rate" && request.method === "GET") return await publicGivingExchangeRate(env);
       if (url.pathname === "/api/payments/pesapal/create" && request.method === "POST") {
         return await createPayment(request, env);
       }

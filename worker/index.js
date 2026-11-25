@@ -892,9 +892,9 @@ async function createPayment(request, env) {
     return json({ error: "Enter a valid donation amount greater than zero." }, 400);
   }
 
-  const allowedCurrencies = new Set(["UGX","USD","EUR","GBP","KES","TZS","RWF","MWK","ZMW"]);
   const currency = clean(input.currency || "UGX", 3).toUpperCase();
   if (!["UGX", "USD"].includes(currency)) return json({ error: "Giving is currently available in UGX or USD." }, 400);
+  if (currency === "UGX" && !Number.isInteger(amount)) return json({ error: "Enter UGX donations as whole shillings." }, 400);
   const rate = currency === "USD" ? usdToUgxRate(env) : null;
   if (currency === "USD" && !rate) return json({ error: "USD giving is temporarily unavailable because the exchange rate has not been configured." }, 503);
   const pesapalAmount = currency === "USD" ? Math.round(amount * rate) : Math.round(amount);
@@ -1088,7 +1088,7 @@ async function paymentStatus(request, env) {
     trackingField = "pesapal_order_tracking_id"; select = "payment_status,currency,application_fee,paid_at,pesapal_order_tracking_id"; notFound = "Bursary payment not found.";
   } else if (/^TIDORI-[0-9a-f-]{36}$/i.test(reference)) {
     table = "donation_pledges"; filter = "merchant_reference"; statusField = "status";
-    trackingField = "pesapal_order_tracking_id"; select = "status,currency,amount,paid_at,pesapal_order_tracking_id"; notFound = "Donation not found.";
+    trackingField = "pesapal_order_tracking_id"; select = "status,currency,amount,pesapal_amount,exchange_rate_used,paid_at,pesapal_order_tracking_id"; notFound = "Donation not found.";
   } else return json({ error: "Invalid reference." }, 400);
 
   const rows = await supabaseRequest(env,

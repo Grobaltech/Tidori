@@ -862,7 +862,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
 
 function usdToUgxRate(env) {
   const rate = Number(String(env.USD_TO_UGX_RATE || "").trim());
-  return Number.isFinite(rate) && rate > 0 ? rate : null;
+  return Number.isFinite(rate) && rate > 0 ? Number(rate.toFixed(4)) : null;
 }
 
 async function publicGivingExchangeRate(env) {
@@ -895,9 +895,11 @@ async function createPayment(request, env) {
   const currency = clean(input.currency || "UGX", 3).toUpperCase();
   if (!["UGX", "USD"].includes(currency)) return json({ error: "Giving is currently available in UGX or USD." }, 400);
   if (currency === "UGX" && !Number.isInteger(amount)) return json({ error: "Enter UGX donations as whole shillings." }, 400);
+  if (currency === "USD" && Math.abs(amount - Number(amount.toFixed(2))) > 0.000001) return json({ error: "Enter USD donations to a maximum of two decimal places." }, 400);
+  const donorAmount = currency === "USD" ? Number(amount.toFixed(2)) : amount;
   const rate = currency === "USD" ? usdToUgxRate(env) : null;
   if (currency === "USD" && !rate) return json({ error: "USD giving is temporarily unavailable because the exchange rate has not been configured." }, 503);
-  const pesapalAmount = currency === "USD" ? Math.round(amount * rate) : Math.round(amount);
+  const pesapalAmount = currency === "USD" ? Math.round(donorAmount * rate) : Math.round(donorAmount);
   if (!Number.isSafeInteger(pesapalAmount) || pesapalAmount <= 0) return json({ error: "The converted donation amount is outside the supported range." }, 400);
   const pesapalCurrency = "UGX";
   const merchantReference = `TIDORI-${crypto.randomUUID()}`;
@@ -908,7 +910,7 @@ async function createPayment(request, env) {
     method: "POST",
     headers: { prefer: "return=representation" },
     body: JSON.stringify([{
-      name, email, amount: Number(amount.toFixed(2)), project_id: projectId,
+      name, email, amount: currency === "USD" ? donorAmount : Number(donorAmount.toFixed(0)), project_id: projectId,
       status: "pending", currency, merchant_reference: merchantReference, phone: phone || null,
       pesapal_amount: pesapalAmount, exchange_rate_used: rate,
     }]),

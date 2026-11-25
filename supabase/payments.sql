@@ -7,7 +7,9 @@ alter table public.donation_pledges
   add column if not exists pesapal_order_tracking_id text,
   add column if not exists payment_method text,
   add column if not exists confirmation_code text,
-  add column if not exists paid_at timestamptz;
+  add column if not exists paid_at timestamptz,
+  add column if not exists pesapal_amount numeric(14,0),
+  add column if not exists exchange_rate_used numeric(14,4);
 
 alter table public.donation_pledges alter column currency set default 'UGX';
 
@@ -24,3 +26,6 @@ create index if not exists donation_pledges_status_created_idx
 
 -- Payment rows are created and updated by the Cloudflare Worker using the
 -- Supabase service-role key. Visitors retain no read or update access.
+
+-- Preserve both the donor's original amount/currency and the exact UGX
+-- amount submitted to Pesapal, together with the rate used at checkout.

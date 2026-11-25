@@ -1,4 +1,9 @@
-const PESAPAL_BASE = "https://pay.pesapal.com/v3";
+function pesapalBase(env) {
+  // Keep live as the safe default; sandbox must be enabled explicitly in Cloudflare.
+  return String(env.PESAPAL_ENV || "").trim().toLowerCase() === "sandbox"
+    ? "https://cybqa.pesapal.com/pesapalv3"
+    : "https://pay.pesapal.com/v3";
+}
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -32,7 +37,7 @@ async function supabaseRequest(env, path, options = {}) {
 }
 
 async function pesapalToken(env) {
-  const response = await fetch(`${PESAPAL_BASE}/api/Auth/RequestToken`, {
+  const response = await fetch(`${pesapalBase(env)}/api/Auth/RequestToken`, {
     method: "POST",
     headers: { accept: "application/json", "content-type": "application/json" },
     body: JSON.stringify({
@@ -46,7 +51,7 @@ async function pesapalToken(env) {
 }
 
 async function pesapalCall(env, path, token, body) {
-  const response = await fetch(`${PESAPAL_BASE}${path}`, {
+  const response = await fetch(`${pesapalBase(env)}${path}`, {
     method: "POST",
     headers: { accept: "application/json", "content-type": "application/json", authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
@@ -59,7 +64,7 @@ async function pesapalCall(env, path, token, body) {
 }
 
 async function getPesapalIpnList(token) {
-  const response = await fetch(`${PESAPAL_BASE}/api/URLSetup/GetIpnList`, {
+  const response = await fetch(`${pesapalBase(env)}/api/URLSetup/GetIpnList`, {
     headers: { accept: "application/json", authorization: `Bearer ${token}` },
   });
   const data = await response.json();
@@ -683,7 +688,7 @@ async function bursaryApplicantApi(request, env) {
 
 async function verifyPayment(env, trackingId, merchantReference) {
   const token = await pesapalToken(env);
-  const url = new URL(`${PESAPAL_BASE}/api/Transactions/GetTransactionStatus`);
+  const url = new URL(`${pesapalBase(env)}/api/Transactions/GetTransactionStatus`);
   url.searchParams.set("orderTrackingId", trackingId);
   const response = await fetch(url, { headers: { accept: "application/json", authorization: `Bearer ${token}` } });
   const data = await response.json();

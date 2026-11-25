@@ -1057,7 +1057,16 @@ async function paymentStatus(request, env) {
       const refreshed = await supabaseRequest(env,
         `${table}?select=${select.replace("," + trackingField, "")}&${filter}=eq.${encodeURIComponent(reference)}&limit=1`
       );
-      return json({ ...(refreshed?.[0] || record), status: refreshed?.[0]?.[statusField] || verified.paymentStatus, verification: verified.paymentStatus });
+      return json({
+        ...(refreshed?.[0] || record),
+        status: refreshed?.[0]?.[statusField] || verified.paymentStatus,
+        verification: verified.paymentStatus,
+        pesapalStatus: verified.pesapalStatus || verified.paymentStatus,
+        requiresReview: Boolean(verified.requiresReview),
+        amountMatches: verified.amountMatches !== false,
+        pesapalAmount: verified.amount ?? null,
+        pesapalCurrency: verified.currency ?? null,
+      });
     } catch (error) {
       console.error("Payment status refresh failed:", reference, error);
       return json({ status: currentStatus, ...record, verification: "pending" });

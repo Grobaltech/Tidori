@@ -104,7 +104,7 @@ export default function GiveForm({ projectId = null, dark = false }) {
         {currencyOptions.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
       </select>
       <p className={`mb-3 text-sm ${dark ? 'text-white/75' : 'text-ink/70'}`}>There is no fixed giving amount. Enter your donation in UGX or USD. Tidori converts USD to UGX using its configured exchange rate, and Pesapal receives the payment request in UGX.</p>
-      <input className={`${cls} mb-4`} type="number" min="0.01" step="any" placeholder={`Enter amount (${currency})`} value={custom} onChange={(e) => setCustom(e.target.value)} />
+      <input className={`${cls} mb-4`} type="number" min="0.01" step={currency === "UGX" ? "1" : "0.01"} placeholder={`Enter amount (${currency})`} value={custom} onChange={(e) => setCustom(e.target.value)} />
       {custom && Number.isFinite(Number(custom)) && Number(custom) > 0 && <div className={`-mt-2 mb-4 text-sm ${dark ? 'text-white' : 'text-ink'}`}><p className="font-semibold">Donation total: {formatAmount(Number(custom))}</p>{currency === 'USD' && (usdRate ? <p className="mt-1">Estimated Pesapal charge: {new Intl.NumberFormat().format(checkoutAmount)} UGX (1 USD = {new Intl.NumberFormat().format(usdRate)} UGX)</p> : <p className="mt-1 text-amber-600">{rateError || 'Loading exchange rate…'}</p>)}{currency === 'UGX' && <p className="mt-1">Pesapal charge: {new Intl.NumberFormat().format(checkoutAmount)} UGX</p>}</div>}
       <input className="hidden" tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => setTrap(e.target.value)} aria-hidden="true" />
       <button className={`btn-custom ${dark ? 'btn-light' : ''}`} disabled={status === 'sending' || (currency === 'USD' && !usdRate)}>

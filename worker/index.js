@@ -894,7 +894,12 @@ async function createPayment(request, env) {
 
   const allowedCurrencies = new Set(["UGX","USD","EUR","GBP","KES","TZS","RWF","MWK","ZMW"]);
   const currency = clean(input.currency || "UGX", 3).toUpperCase();
-  if (!allowedCurrencies.has(currency)) return json({ error: "Please select a supported giving currency." }, 400);
+  if (!["UGX", "USD"].includes(currency)) return json({ error: "Giving is currently available in UGX or USD." }, 400);
+  const rate = currency === "USD" ? usdToUgxRate(env) : null;
+  if (currency === "USD" && !rate) return json({ error: "USD giving is temporarily unavailable because the exchange rate has not been configured." }, 503);
+  const pesapalAmount = currency === "USD" ? Math.round(amount * rate) : Math.round(amount);
+  if (!Number.isSafeInteger(pesapalAmount) || pesapalAmount <= 0) return json({ error: "The converted donation amount is outside the supported range." }, 400);
+  const pesapalCurrency = "UGX";
   const merchantReference = `TIDORI-${crypto.randomUUID()}`;
   const [firstName, ...lastParts] = name.split(/\s+/);
   const lastName = lastParts.join(" ");

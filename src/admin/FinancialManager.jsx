@@ -16,7 +16,7 @@ export default function FinancialManager() {
   const [pendingAppointments, setPendingAppointments] = useState([]);
   const [pendingBursaries, setPendingBursaries] = useState([]);
   const [bursaries, setBursaries] = useState([]);
-  const [reconciling, setReconciling] = useState('');
+  const [reconciling, setReconciling] = useState(() => new Set());
   const [appointments, setAppointments] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,7 @@ export default function FinancialManager() {
   const reconcilePayment = async row => {
     const reference = row.merchant_reference;
     if (!reference) { setError('This pending record has no Pesapal merchant reference.'); return; }
-    setReconciling(reference); setError(''); setNotice('');
+    setReconciling(current => new Set(current).add(reference)); setError(''); setNotice('');
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -115,7 +115,7 @@ export default function FinancialManager() {
       else setNotice(`Pesapal currently reports this transaction as ${result.paymentStatus || 'pending'}. No paid status was applied.`);
       await load();
     } catch (err) { setError(err.message || 'Could not reconcile this payment.'); }
-    finally { setReconciling(''); }
+    finally { setReconciling(current => { const next = new Set(current); next.delete(reference); return next; }); }
   };
 
   const deleteExpense = async row => {
@@ -175,7 +175,7 @@ export default function FinancialManager() {
     <section className="admin-card overflow-hidden">
       <div className="border-b border-gray-100 px-5 py-4"><h2 className="admin-section-title">Pending Pesapal payments</h2><p className="admin-muted mt-1">Recheck payments against Pesapal when the merchant dashboard shows completion but Tidori remains pending. This action is restricted to the super administrator.</p></div>
       <div className="overflow-x-auto"><table className="admin-table w-full min-w-[720px]"><thead><tr><th>Date</th><th>Type</th><th>Payer</th><th>Amount</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead><tbody>
-        {pendingPayments.map(row=><tr key={row.payment_type+row.id}><td>{dateLabel(row.created_at)}</td><td>{row.payment_type}</td><td>{row.payer}</td><td>{money(row.amount,row.currency || 'UGX')}</td><td className="font-mono text-xs">{row.reference}</td><td><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Pending</span></td><td><button type="button" disabled={Boolean(reconciling)} onClick={()=>reconcilePayment({ ...row, merchant_reference: row.reference })} className="rounded-lg bg-[#009cff] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{reconciling===row.reference?'Checking Pesapal…':'Recheck Pesapal'}</button></td></tr>)}
+        {pendingPayments.map(row=><tr key={row.payment_type+row.id}><td>{dateLabel(row.created_at)}</td><td>{row.payment_type}</td><td>{row.payer}</td><td>{money(row.amount,row.currency || 'UGX')}</td><td className="font-mono text-xs">{row.reference}</td><td><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Pending</span></td><td><button type="button" disabled={reconciling.has(row.reference)} onClick={()=>reconcilePayment({ ...row, merchant_reference: row.reference })} className="rounded-lg bg-[#009cff] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{reconciling.has(row.reference)?'Checking Pesapal…':'Recheck Pesapal'}</button></td></tr>)}
       </tbody></table>{!loading&&!pendingPayments.length&&<div className="admin-empty">No pending Pesapal payments.</div>}</div>
     </section>
       <div className="border-b border-gray-100 px-5 py-4"><h2 className="admin-section-title">Verified income transactions</h2><p className="admin-muted mt-1">Only payments confirmed as paid by the database are included.</p></div>

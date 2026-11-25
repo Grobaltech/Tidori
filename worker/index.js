@@ -829,8 +829,16 @@ async function verifyPayment(env, trackingId, merchantReference) {
   const expectedCollectedAmount = donation.pesapal_amount != null
     ? Number(donation.pesapal_amount)
     : String(donation.currency || "UGX").toUpperCase() === "UGX" ? Number(donation.amount) : NaN;
-  const amountCheck = comparePesapalAmount(data.amount, data.currency, expectedCollectedAmount, "UGX");
-  const amountMatches = amountCheck.matches;
+  const providerDonationAmount = Number(typeof data.amount === "string" ? data.amount.replace(/,/g, "").trim() : data.amount);
+  const providerDonationCurrency = String(data.currency || "").trim().toUpperCase();
+  // Tidori now submits every donation in UGX, so donation verification is
+  // intentionally strict: require UGX and the exact saved checkout amount.
+  const amountMatches = providerDonationCurrency === "UGX"
+    && Number.isFinite(providerDonationAmount)
+    && Number.isFinite(expectedCollectedAmount)
+    && expectedCollectedAmount > 0
+    && Math.abs(providerDonationAmount - expectedCollectedAmount) <= 0.01;
+  const amountCheck = { matches: amountMatches, converted: false };
   if (!amountMatches) console.error("Pesapal donation amount/currency requires review:", {
     trackingId, merchantReference, pesapalAmount: data.amount ?? null,
     pesapalCurrency: data.currency ?? null, recordedAmount: donation.amount ?? null,

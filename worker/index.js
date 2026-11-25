@@ -715,7 +715,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
     throw new Error(reason);
   }
 
-  const status = String(data.payment_status_description || data.status_description || data.status || "").trim().toUpperCase().replace(/[\\s-]+/g, "_");
+  const status = String(data.payment_status_description || data.status_description || data.status || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
   const statusCode = Number(data.status_code ?? data.payment_status_code ?? data.status);
   const paymentStatus = ["COMPLETED", "COMPLETE", "SUCCESS", "SUCCESSFUL", "PAID"].includes(status) || statusCode === 1
     ? "paid"
@@ -854,7 +854,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
   }
   return { paymentStatus: amountMatches ? paymentStatus : "pending", pesapalStatus: paymentStatus,
     amount: data.amount, currency: data.currency, paymentMethod: data.payment_method,
-    amountMatches, requiresReview: !amountMatches };
+    amountMatches, currencyConverted: amountCheck.converted, requiresReview: !amountMatches };
 }
 
 async function createPayment(request, env) {

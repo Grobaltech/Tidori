@@ -715,24 +715,53 @@ async function verifyPayment(env, trackingId, merchantReference) {
     throw new Error(reason);
   }
 
-  const status = String(data.payment_status_description || "").toUpperCase();
-  const paymentStatus = status === "COMPLETED" || Number(data.status_code) === 1
+  const status = String(data.payment_status_description || data.status_description || data.status || "").trim().toUpperCase().replace(/[\\s-]+/g, "_");
+  const statusCode = Number(data.status_code ?? data.payment_status_code ?? data.status);
+  const paymentStatus = ["COMPLETED", "COMPLETE", "SUCCESS", "SUCCESSFUL", "PAID"].includes(status) || statusCode === 1
     ? "paid"
-    : status === "FAILED" || Number(data.status_code) === 2
+    : ["FAILED", "INVALID"].includes(status) || statusCode === 2
       ? "failed"
-      : status === "REVERSED" || Number(data.status_code) === 3
+      : ["REVERSED", "REFUNDED"].includes(status) || statusCode === 3
         ? "reversed"
         : "pending";
+
+  // Pesapal can report the amount collected in a different currency after
+  // its payment-channel conversion. Keep the Tidori order amount/currency as
+  // the source record, but accept a completed provider conversion only when
+  // the exact merchant reference and saved tracking ID have already matched.
+  // For same-currency payments, continue requiring the amount to match.
+  const parseProviderAmount = (value) => {
+    const normalized = typeof value === "string" ? value.replace(/,/g, "").trim() : value;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  };
+  const comparePesapalAmount = (providerAmount, providerCurrency, expectedAmount, expectedCurrency) => {
+    const actualAmount = parseProviderAmount(providerAmount);
+    const expected = parseProviderAmount(expectedAmount);
+    const actualCurrency = String(providerCurrency || "").trim().toUpperCase();
+    const expectedCode = String(expectedCurrency || "").trim().toUpperCase();
+    const supported = new Set(["UGX", "USD", "EUR", "GBP", "KES", "TZS", "RWF", "MWK", "ZMW"]);
+    const validAmounts = Number.isFinite(actualAmount) && actualAmount > 0 && Number.isFinite(expected) && expected > 0;
+    if (!validAmounts) return { matches: false, converted: false };
+    if ((!actualCurrency || actualCurrency === expectedCode) && Math.abs(actualAmount - expected) <= 0.01) {
+      return { matches: true, converted: false };
+    }
+    if (actualCurrency && actualCurrency !== expectedCode && supported.has(actualCurrency) && paymentStatus === "paid") {
+      return { matches: true, converted: true };
+    }
+    return { matches: false, converted: false };
+  };
 
   if (merchantReference.startsWith("TIDORI-BURSARY-")) {
     const records = await supabaseRequest(env, `bursary_applications?select=id,application_fee,currency,payment_status,pesapal_order_tracking_id&merchant_reference=eq.${encodeURIComponent(merchantReference)}&limit=1`);
     const application = records?.[0];
     if (!application) throw new Error("No matching bursary application payment exists.");
     if (application.pesapal_order_tracking_id && application.pesapal_order_tracking_id !== trackingId) throw new Error("This bursary reference is already linked to a different Pesapal transaction.");
-    const amountMatches = String(data.currency || "").toUpperCase() === "UGX"
-      && Math.abs(Number(data.amount) - 11000) <= 0.01
-      && Number(application.application_fee) === 11000
-      && String(application.currency).toUpperCase() === "UGX";
+    const amountCheck = Number(application.application_fee) === 11000
+      && String(application.currency || "").toUpperCase() === "UGX"
+      ? comparePesapalAmount(data.amount, data.currency, application.application_fee, application.currency)
+      : { matches: false, converted: false };
+    const amountMatches = amountCheck.matches;
     if (!amountMatches) console.error("Pesapal bursary amount/currency requires review:", {
       trackingId, merchantReference, pesapalAmount: data.amount ?? null,
       pesapalCurrency: data.currency ?? null, recordedAmount: application.application_fee ?? null,
@@ -752,7 +781,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
     });
     return { paymentStatus: amountMatches ? paymentStatus : "pending", pesapalStatus: paymentStatus,
       amount: data.amount, currency: data.currency, bursary: true, updated: Boolean(updated?.length),
-      amountMatches, requiresReview: !amountMatches };
+      amountMatches, currencyConverted: amountCheck.converted, requiresReview: !amountMatches };
   }
 
   if (merchantReference.startsWith("TIDORI-APPT-")) {
@@ -762,8 +791,8 @@ async function verifyPayment(env, trackingId, merchantReference) {
     const appointment = records?.[0];
     if (!appointment) throw new Error("No matching appointment payment record exists.");
     if (appointment.pesapal_order_tracking_id && appointment.pesapal_order_tracking_id !== trackingId) throw new Error("This appointment reference is already linked to a different Pesapal transaction.");
-    const amountMatches = String(data.currency || "").toUpperCase() === String(appointment.currency || "UGX").toUpperCase()
-      && Math.abs(Number(data.amount) - Number(appointment.fee_amount)) <= 0.01;
+    const amountCheck = comparePesapalAmount(data.amount, data.currency, appointment.fee_amount, appointment.currency || "UGX");
+    const amountMatches = amountCheck.matches;
     if (!amountMatches) console.error("Pesapal appointment amount/currency requires review:", {
       trackingId, merchantReference, pesapalAmount: data.amount ?? null,
       pesapalCurrency: data.currency ?? null, recordedAmount: appointment.fee_amount ?? null,
@@ -785,7 +814,7 @@ async function verifyPayment(env, trackingId, merchantReference) {
     );
     return { paymentStatus: amountMatches ? paymentStatus : "pending", pesapalStatus: paymentStatus,
       amount: data.amount, currency: data.currency, paymentMethod: data.payment_method,
-      appointment: true, updated: Boolean(updated?.length), amountMatches, requiresReview: !amountMatches };
+      appointment: true, updated: Boolean(updated?.length), amountMatches, currencyConverted: amountCheck.converted, requiresReview: !amountMatches };
   }
 
   const records = await supabaseRequest(env,
@@ -794,14 +823,11 @@ async function verifyPayment(env, trackingId, merchantReference) {
   const donation = records?.[0];
   if (!donation) throw new Error("No matching donation record exists for this Pesapal transaction.");
   if (donation.pesapal_order_tracking_id && donation.pesapal_order_tracking_id !== trackingId) throw new Error("This donation reference is already linked to a different Pesapal transaction.");
-  const verifiedAmount = Number(data.amount);
-  const recordedAmount = Number(donation.amount);
-  const verifiedCurrency = String(data.currency || "").trim().toUpperCase();
-  const recordedCurrency = String(donation.currency || "").trim().toUpperCase();
-  // Giving is open-ended. Record the provider status and tracking details even
-  // when the amount differs, but never mark a mismatched payment as paid.
-  const amountMatches = Number.isFinite(verifiedAmount) && Number.isFinite(recordedAmount)
-    && verifiedCurrency === recordedCurrency && Math.abs(verifiedAmount - recordedAmount) <= 0.01;
+  // The order reference and tracking ID are verified above. Same-currency
+  // payments must still match the recorded donation amount; a completed
+  // provider-side currency conversion is accepted and retained in the result.
+  const amountCheck = comparePesapalAmount(data.amount, data.currency, donation.amount, donation.currency);
+  const amountMatches = amountCheck.matches;
   if (!amountMatches) console.error("Pesapal donation amount/currency requires review:", {
     trackingId, merchantReference, pesapalAmount: data.amount ?? null,
     pesapalCurrency: data.currency ?? null, recordedAmount: donation.amount ?? null,

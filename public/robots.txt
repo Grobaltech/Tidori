@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /profile
+Disallow: /members
+Disallow: /notifications
+Disallow: /meeting/
+
+Sitemap: https://tidoriministries.org/sitemap.xml

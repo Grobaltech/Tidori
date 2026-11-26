@@ -1392,9 +1392,13 @@ async function publicSitemap(env) {
   if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
       const settings = await supabaseRequest(env, "site_content?select=content&id=eq.main&limit=1");
-      const allowIndexing = settings?.[0]?.content?.seo?.allowIndexing !== false;
+      const seoSettings = settings?.[0]?.content?.seo || {};
+      const allowIndexing = seoSettings.allowIndexing !== false;
       if (!allowIndexing) urls = [];
       else {
+        const pageSettings = seoSettings.pages || {};
+        urls = SEO_STATIC_PATHS.filter(path => pageSettings[path]?.noindex !== true)
+          .map(path => `<url><loc>${SEO_ORIGIN}${path}</loc></url>`);
         const posts = await supabaseRequest(env, "posts?select=slug,published_at,seo_noindex&published=eq.true&seo_noindex=eq.false&order=published_at.desc&limit=5000");
         for (const post of posts || []) {
           if (!post.slug) continue;

@@ -43,7 +43,7 @@ export default function Contact() {
           {ministryLocations.length > 0 && <section className="mt-16" aria-labelledby="locations-heading">
             <SectionHeader kicker="Find Us" title="Our Locations" />
             <p className="mx-auto mb-8 max-w-2xl text-center text-gray-600">
-              Visit Tidori Ministries at either of our Kampala locations. Select a location to view it on the map and get directions.
+              Select a location to view it on the map and get directions.
             </p>
 
             <div className="grid gap-4 md:grid-cols-2">

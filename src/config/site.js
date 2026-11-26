@@ -18,8 +18,7 @@ export const site = {
   giveUrl: import.meta.env.VITE_GIVE_URL || '',
   videoUrl: import.meta.env.VITE_VIDEO_URL || '',
   serviceTimes: '',
-  // Placeholder numbers: replace with your real figures
-  // Impact figures are intentionally empty until verified figures are published in the CMS.
+  // Only verified impact figures entered through the CMS are displayed.
   facts: [],
   homepage: {
     sections: {

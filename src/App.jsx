@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useAsync } from './hooks/hooks';
+import { getSiteContent } from './lib/api';
 import Layout from './components/Layout';
 import Seo from './components/Seo';
 import Home from './pages/Home';
@@ -42,14 +44,18 @@ const pageSeo = {
 
 function RouteSeo() {
   const { pathname } = useLocation();
+  const { data: cmsSite } = useAsync(getSiteContent);
+  const seoDefaults = cmsSite?.seo || {};
   if (/^\/blog\/[^/]+\/?$/.test(pathname)) return null;
   const privateRoute = /^\/(admin|login|register|profile|members|notifications|meeting)(\/|$)/.test(pathname)
     || pathname === '/appointments/book';
   const sectionMatch = pathname.match(/^\/about\/([^/]+)\/?$/);
-  const [title, description] = sectionMatch
+  const [routeTitle, routeDescription] = sectionMatch
     ? [`${sectionMatch[1].replace(/-/g, ' ')} | About Tidori Ministries`, 'Learn more about the mission, work and values of Tidori Ministries.']
     : (pageSeo[pathname.replace(/\/$/, '')] || ['Page Not Found | Tidori Ministries', 'Explore Tidori Ministries and discover our faith, community and service initiatives.']);
-  return <Seo title={title} description={description} path={pathname} noindex={privateRoute || !pageSeo[pathname.replace(/\/$/, '')] && !sectionMatch} />;
+  const title = pathname === '/' && seoDefaults.title ? seoDefaults.title : routeTitle;
+  const description = seoDefaults.description || routeDescription;
+  return <Seo title={title} description={description} image={seoDefaults.imageUrl} path={pathname} noindex={privateRoute || seoDefaults.allowIndexing === false || !pageSeo[pathname.replace(/\/$/, '')] && !sectionMatch} />;
 }
 
 export default function App() {

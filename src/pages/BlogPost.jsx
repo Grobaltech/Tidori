@@ -103,9 +103,13 @@ export default function BlogPost() {
         )}
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#081a20]/95 via-[#081a20]/55 to-[#081a20]/20" />
         <div className="container-page relative z-10 w-full pb-12 pt-28 sm:pb-16">
-          <Link to="/blog" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-white/85 transition hover:text-gold">
-            <FaArrowLeft /> All articles
-          </Link>
+          <nav aria-label="Breadcrumb" className="mb-8 flex flex-wrap items-center gap-2 text-sm font-semibold">
+            <Link to="/" className="text-white/75 transition hover:text-gold">Home</Link>
+            <span aria-hidden="true" className="text-gold/80">/</span>
+            <Link to="/blog" className="text-white/75 transition hover:text-gold">Blog &amp; News</Link>
+            <span aria-hidden="true" className="text-gold/80">/</span>
+            <span aria-current="page" className="max-w-[min(70vw,36rem)] truncate text-gold">{post.title}</span>
+          </nav>
           <div className="mb-5 flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[.18em] text-gold">
             <span className="rounded-full border border-gold/60 bg-black/20 px-4 py-2">{presentation.category || 'Tidori Journal'}</span>
             <span className="h-1 w-1 rounded-full bg-gold" />

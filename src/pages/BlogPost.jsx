@@ -8,7 +8,7 @@ import Loading from '../components/Loading';
 import Seo from '../components/Seo';
 import PostCard from '../components/PostCard';
 import { useAsync } from '../hooks/hooks';
-import { getPost, getPosts } from '../lib/api';
+import { getPost, getPosts, getSiteContent } from '../lib/api';
 import { dateLong } from '../lib/format';
 
 const allowedArticleTags = new Set(['P','H1','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','U','BLOCKQUOTE','A','IMG','BR','HR','SPAN','DIV']);
@@ -44,6 +44,7 @@ export default function BlogPost() {
   const { slug } = useParams();
   const { data: post, loading } = useAsync(() => getPost(slug), [slug]);
   const { data: posts = [] } = useAsync(getPosts);
+  const { data: cmsSite } = useAsync(getSiteContent);
   const [copied, setCopied] = useState(false);
 
   const paragraphs = useMemo(
@@ -97,8 +98,8 @@ export default function BlogPost() {
         title={post.seo_title || `${post.title} | Tidori Ministries`}
         description={post.seo_description || post.excerpt || `${post.title} — Read the latest story and update from Tidori Ministries.`}
         path={`/blog/${encodeURIComponent(post.slug || slug)}`}
-        image={post.seo_image || post.image_url}
-        noindex={post.noindex === true}
+        image={post.seo_image || post.image_url || cmsSite?.seo?.imageUrl}
+        noindex={post.seo_noindex === true || cmsSite?.seo?.allowIndexing === false}
       />
       <section className={`relative isolate flex items-end overflow-hidden bg-[#142c35] ${presentation.hero_style === 'minimal' ? 'min-h-[250px]' : presentation.hero_style === 'compact' ? 'min-h-[320px]' : 'min-h-[390px] sm:min-h-[500px]'}`}>
         {post.image_url && presentation.show_featured_image !== false && presentation.hero_style !== 'minimal' && (

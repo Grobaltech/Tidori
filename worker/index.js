@@ -1382,7 +1382,9 @@ const SEO_ORIGIN = "https://tidoriministries.org";
 const SEO_STATIC_PATHS = ["/", "/about", "/outreach", "/events", "/blog", "/ministries", "/team", "/give", "/bursaries", "/volunteer", "/contact"];
 
 function xmlEscape(value) {
-  return String(value ?? "").replace(/[<>&\'"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\'": "&apos;", '"\': "&quot;" }[char]));
+  return String(value ?? "")
+    .replace(/[<>&"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[char]))
+    .replace(/'/g, "&apos;");
 }
 
 async function publicSitemap(env) {

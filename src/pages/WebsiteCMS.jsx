@@ -46,7 +46,7 @@ export default function WebsiteCMS() {
     ]);
     const failed = results.find(r => r.error);
     if (failed) setError(failed.error.message);
-    if (results[0].data?.content) setSite({...emptySite,...results[0].data.content, social:{...emptySite.social,...results[0].data.content.social}, about:{...emptySite.about,...results[0].data.content.about}});
+    if (results[0].data?.content) setSite({...emptySite,...results[0].data.content, social:{...emptySite.social,...results[0].data.content.social}, about:{...emptySite.about,...results[0].data.content.about}, seo:{...emptySite.seo,...results[0].data.content.seo}});
     setPublished(results[0].data?.published ?? true);
     setSlides(results[1].data || []); setMinistries(results[2].data || []); setFacts(results[3].data || []);
     setEvents(results[4].data || []); setOutreach(results[5].data || []); setPosts(results[6].data || []); setLeaders(results[7].data || []);

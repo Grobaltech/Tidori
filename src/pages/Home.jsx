@@ -13,7 +13,7 @@ import { site } from '../config/site';
 import { useAsync, useDocTitle } from '../hooks/hooks';
 import { getOutreach, getEvents, getPosts, getSiteContent, getMinistries as getPublishedMinistries, getSiteFacts } from '../lib/api';
 
-function AboutTabs() {
+function AboutTabs({ section = {} }) {
   const [tab, setTab] = useState('about');
   const { data: cmsSite } = useAsync(getSiteContent);
   const activeSite = cmsSite || site;
@@ -36,7 +36,8 @@ function AboutTabs() {
       <div className="container-page grid min-w-0 items-center gap-10 lg:grid-cols-2">
         <div className="h-[420px] bg-cover bg-center lg:h-[560px]" style={{ backgroundImage: `url('${activeSite.about?.imageUrl || '/img/about.jpg'}')` }} role="img" aria-label="Tidori Ministries community" />
         <div className="min-w-0 w-full">
-          <SectionHeader center={false} kicker="Learn About Us" title="Faith in action. Transforming lives. Building communities." />
+          <SectionHeader center={false} kicker={section.kicker || "Learn About Us"} title={section.title || "Faith in action. Transforming lives. Building communities."} />
+          {section.description && <p className="mb-4 leading-7">{section.description}</p>}
           <div className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden overscroll-x-contain border-b border-gray-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="About Tidori Ministries">
             <div className="flex w-max min-w-full flex-nowrap gap-1">
             {sections.map((item) => (
@@ -59,13 +60,15 @@ function AboutTabs() {
   );
 }
 
-function Ministries() {
+function Ministries({ section = {} }) {
   const { data: ministries } = useAsync(getPublishedMinistries);
-  const items = ministries?.length ? ministries : site.ministries;
+  const items = ministries || [];
+  if (!items.length) return null;
   return (
     <section className="py-11">
       <div className="container-page">
-        <SectionHeader kicker="What We Do" title="We believe we can change lives together with you" />
+        <SectionHeader kicker={section.kicker || "What We Do"} title={section.title || "We believe we can change lives together with you"} />
+        {section.description && <p className="mx-auto mb-8 max-w-3xl text-center leading-7">{section.description}</p>}
         <div className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
           {items.map((m) => (
             <div key={m.title} className="flex">
@@ -82,22 +85,30 @@ function Ministries() {
   );
 }
 
-export function Facts() {
+export function Facts({ section = {} }) {
   const { data: cmsFacts } = useAsync(getSiteFacts);
-  const facts = cmsFacts?.length ? cmsFacts : site.facts;
+  const facts = cmsFacts || [];
+  if (!facts.length) return null;
   return (
-    <section className="facts my-11 flex min-h-[400px] items-center bg-black/50 bg-cover bg-fixed bg-center bg-blend-overlay"
+    <section className="facts my-11 flex min-h-[300px] items-center bg-black/50 bg-cover bg-fixed bg-center bg-blend-overlay"
       style={{ backgroundImage: "url('/img/facts.jpg')" }}>
-      <div className="container-page grid gap-6 py-10 sm:grid-cols-2 lg:grid-cols-4">
-        {facts.map((f) => (
-          <div key={f.label} className="flex items-center">
-            <i className={`${f.icon} text-[60px] leading-[60px] text-gold`} />
-            <div className="pl-5">
-              <h3 className="text-[45px] font-bold leading-none !text-white"><Counter value={f.value} suffix="+" /></h3>
-              <p className="text-white">{f.label}</p>
+      <div className="container-page w-full py-10">
+        {(section.kicker || section.title || section.description) && <div className="mb-8 text-center">
+          {section.kicker && <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-gold">{section.kicker}</p>}
+          {section.title && <h2 className="text-3xl font-bold text-white">{section.title}</h2>}
+          {section.description && <p className="mx-auto mt-3 max-w-3xl text-white/90">{section.description}</p>}
+        </div>}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {facts.map((f) => (
+            <div key={f.id || f.label} className="flex items-center">
+              <i className={`${f.icon || 'flaticon-home'} text-[60px] leading-[60px] text-gold`} />
+              <div className="pl-5">
+                <h3 className="text-[45px] font-bold leading-none !text-white"><Counter value={f.value} suffix={f.suffix || '+'} /></h3>
+                <p className="text-white">{f.label}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -108,53 +119,41 @@ export default function Home() {
   const outreach = useAsync(getOutreach);
   const events = useAsync(getEvents);
   const posts = useAsync(getPosts);
-
-  return (
-    <>
-      <Hero />
-      <AboutTabs />
-      <Ministries />
-      <Facts />
-
-      <section className="py-11">
-        <div className="container-page">
-          <SectionHeader kicker="Outreach" title="Projects your giving makes possible" />
-          {outreach.loading ? <Loading /> : <Slider items={outreach.data} render={(it) => <OutreachCard item={it} />} />}
-        </div>
-      </section>
-
-      <section className="my-11 bg-cover bg-fixed bg-center py-16"
-        style={{ backgroundImage: "linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55)), url('/img/donate.jpg')" }}>
+  const { data: cmsSite } = useAsync(getSiteContent);
+  const defaults = site.homepage.sections;
+  const configured = cmsSite?.homepage?.sections || {};
+  const sections = Object.entries(defaults).map(([key, value]) => [key, { ...value, ...(configured[key] || {}) }])
+    .sort((a, b) => Number(a[1].order ?? 999) - Number(b[1].order ?? 999));
+  const renderSection = (key, section) => {
+    if (section.enabled === false) return null;
+    switch (key) {
+      case 'hero': return <Hero />;
+      case 'about': return <AboutTabs section={section} />;
+      case 'ministries': return <Ministries section={section} />;
+      case 'facts': return <Facts section={section} />;
+      case 'outreach': return <section className="py-11"><div className="container-page">
+        <SectionHeader kicker={section.kicker || 'Outreach'} title={section.title || 'Projects your giving makes possible'} />
+        {section.description && <p className="mx-auto mb-8 max-w-3xl text-center leading-7">{section.description}</p>}
+        {outreach.loading ? <Loading /> : outreach.data.length ? <Slider items={outreach.data} render={(it) => <OutreachCard item={it} />} /> : <p className="py-6 text-center text-gray-600">Outreach projects will be published here soon.</p>}
+      </div></section>;
+      case 'giving': return <section className="my-11 bg-cover bg-fixed bg-center py-16" style={{ backgroundImage: "linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55)), url('/img/donate.jpg')" }}>
         <div className="container-page grid items-center gap-10 lg:grid-cols-[7fr_5fr]">
-          <div>
-            <SectionHeader center={false} kicker="Give" title="Partner with us to bless those in need" />
-            <p className="text-white">Every gift, large or small, helps us feed families, support children and share hope. Thank you for your generosity.</p>
-          </div>
+          <div><SectionHeader center={false} kicker={section.kicker || 'Give'} title={section.title || 'Partner with us to bless those in need'} /><p className="text-white">{section.description || 'Every gift, large or small, helps us serve people and communities. Thank you for your generosity.'}</p></div>
           <GiveForm dark />
         </div>
-      </section>
-
-      <section className="py-11">
-        <div className="container-page">
-          <SectionHeader kicker="Upcoming Events" title="Be ready for our upcoming gatherings" />
-          {events.loading ? <Loading /> : (
-            <div className="grid gap-8 lg:grid-cols-2">
-              {events.data.slice(0, 2).map((ev) => <EventCard key={ev.id} ev={ev} />)}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="py-11">
-        <div className="container-page">
-          <SectionHeader kicker="Latest Posts" title="Devotionals and church news" />
-          {posts.loading ? <Loading /> : (
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {posts.data.slice(0, 3).map((p) => <PostCard key={p.id} post={p} />)}
-            </div>
-          )}
-        </div>
-      </section>
-    </>
-  );
+      </section>;
+      case 'events': return <section className="py-11"><div className="container-page">
+        <SectionHeader kicker={section.kicker || 'Upcoming Events'} title={section.title || 'Be ready for our upcoming gatherings'} />
+        {section.description && <p className="mx-auto mb-8 max-w-3xl text-center leading-7">{section.description}</p>}
+        {events.loading ? <Loading /> : events.data.length ? <div className="grid gap-8 lg:grid-cols-2">{events.data.filter(ev => !ev.ends_at || new Date(ev.ends_at) >= new Date()).slice(0, 2).map(ev => <EventCard key={ev.id} ev={ev} />)}</div> : <p className="py-6 text-center text-gray-600">New events will be announced here. Please check back soon.</p>}
+      </div></section>;
+      case 'blog': return <section className="py-11"><div className="container-page">
+        <SectionHeader kicker={section.kicker || 'Latest Posts'} title={section.title || 'Devotionals and church news'} />
+        {section.description && <p className="mx-auto mb-8 max-w-3xl text-center leading-7">{section.description}</p>}
+        {posts.loading ? <Loading /> : posts.data.length ? <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">{posts.data.slice(0, 3).map(p => <PostCard key={p.id} post={p} />)}</div> : <p className="py-6 text-center text-gray-600">News and reflections will be published here soon.</p>}
+      </div></section>;
+      default: return null;
+    }
+  };
+  return <>{sections.map(([key, section]) => <div key={key}>{renderSection(key, section)}</div>)}</>;
 }

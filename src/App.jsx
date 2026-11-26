@@ -54,7 +54,7 @@ function RouteSeo() {
     ? [`${sectionMatch[1].replace(/-/g, ' ')} | About Tidori Ministries`, 'Learn more about the mission, work and values of Tidori Ministries.']
     : (pageSeo[pathname.replace(/\/$/, '')] || ['Page Not Found | Tidori Ministries', 'Explore Tidori Ministries and discover our faith, community and service initiatives.']);
   const title = pathname === '/' && seoDefaults.title ? seoDefaults.title : routeTitle;
-  const description = seoDefaults.description || routeDescription;
+  const description = pathname === '/' ? (seoDefaults.description || routeDescription) : routeDescription;
   return <Seo title={title} description={description} image={seoDefaults.imageUrl} path={pathname} noindex={privateRoute || seoDefaults.allowIndexing === false || !pageSeo[pathname.replace(/\/$/, '')] && !sectionMatch} />;
 }
 

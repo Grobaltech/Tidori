@@ -30,7 +30,7 @@ function AboutTabs({ section = {} }) {
   ];
   const selected = sections.find((item) => item.key === tab) || sections[0];
   const cmsPreview = activeSite.about?.[tab];
-  const preview = typeof cmsPreview === 'string' && cmsPreview.trim() ? cmsPreview : selected.preview;
+  const preview = typeof cmsPreview === 'string' && cmsPreview.trim() ? cmsPreview : 'Information about this area of Tidori Ministries is being prepared. Please check back soon.';
   return (
     <section className="py-11">
       <div className="container-page grid min-w-0 items-center gap-10 lg:grid-cols-2">
@@ -51,7 +51,7 @@ function AboutTabs({ section = {} }) {
           <div className="min-w-0 pt-5" role="tabpanel">
             <h3 className="mb-3 text-2xl font-semibold text-navy">{selected.title}</h3>
             <p className="leading-7">{preview}</p>
-            <p className="mt-3 text-sm leading-6 text-gray-600">{selected.more}</p>
+            
             <Link to={`/about/${selected.key}`} className="btn-custom mt-5 inline-flex">View More <span className="ml-2" aria-hidden="true">→</span></Link>
           </div>
         </div>

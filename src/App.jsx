@@ -1,5 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
+import Seo from './components/Seo';
 import Home from './pages/Home';
 import About from './pages/About';
 import AboutDetail from './pages/AboutDetail';
@@ -24,10 +25,38 @@ import Community from './pages/Community';
 import Notifications from './pages/Notifications';
 import Bursaries from './pages/Bursaries';
 
+const pageSeo = {
+  '/': ['Tidori Ministries | Faith, Hope & Service', 'Tidori Ministries brings people together through faith, compassionate service, community development and opportunities to make a difference.'],
+  '/about': ['About Tidori Ministries | Our Mission & Vision', 'Learn about Tidori Ministries, our Christian mission, vision, values and commitment to serving communities.'],
+  '/outreach': ['Community Outreach | Tidori Ministries', 'Discover Tidori Ministries outreach initiatives and our work supporting individuals, families and communities.'],
+  '/events': ['Church Events & Gatherings | Tidori Ministries', 'Explore upcoming Tidori Ministries gatherings, church events and opportunities to connect with our community.'],
+  '/blog': ['Blog & News | Tidori Ministries', 'Read devotionals, ministry updates, community stories and news from Tidori Ministries.'],
+  '/ministries': ['Our Ministries | Tidori Ministries', 'Explore the ministries of Tidori Ministries and find ways to grow in faith, serve and connect.'],
+  '/team': ['Our Team | Tidori Ministries', 'Meet the people serving through Tidori Ministries and supporting our mission and community work.'],
+  '/give': ['Give & Support Our Work | Tidori Ministries', 'Support the work of Tidori Ministries and help strengthen faith, compassion and community development.'],
+  '/bursaries': ['Bursaries & Education Support | Tidori Ministries', 'Learn about Tidori Ministries bursary opportunities and education support initiatives.'],
+  '/volunteer': ['Volunteer With Us | Tidori Ministries', 'Offer your time and skills to support the mission and community initiatives of Tidori Ministries.'],
+  '/contact': ['Contact Tidori Ministries', 'Get in touch with Tidori Ministries for enquiries, prayer, partnerships and ways to get involved.'],
+  '/appointments': ['Appointments | Tidori Ministries', 'Connect with Tidori Ministries through an appointment request.'],
+};
+
+function RouteSeo() {
+  const { pathname } = useLocation();
+  if (/^\/blog\/[^/]+\/?$/.test(pathname)) return null;
+  const privateRoute = /^\/(admin|login|register|profile|members|notifications|meeting)(\/|$)/.test(pathname)
+    || pathname === '/appointments/book';
+  const sectionMatch = pathname.match(/^\/about\/([^/]+)\/?$/);
+  const [title, description] = sectionMatch
+    ? [`${sectionMatch[1].replace(/-/g, ' ')} | About Tidori Ministries`, 'Learn more about the mission, work and values of Tidori Ministries.']
+    : (pageSeo[pathname.replace(/\/$/, '')] || ['Page Not Found | Tidori Ministries', 'Explore Tidori Ministries and discover our faith, community and service initiatives.']);
+  return <Seo title={title} description={description} path={pathname} noindex={privateRoute || !pageSeo[pathname.replace(/\/$/, '')] && !sectionMatch} />;
+}
+
 export default function App() {
   return (
     <>
     <MobileAppBridge />
+    <RouteSeo />
     <Routes>
       <Route path="/admin/*" element={<AdminDashboard />} />
       <Route element={<Layout />}>

@@ -11,7 +11,7 @@ const emptySite = {
     hero:{enabled:true,order:0,kicker:'',title:'',description:''},
     about:{enabled:true,order:1,kicker:'Learn About Us',title:'Faith in action. Transforming lives. Building communities.',description:''},
     ministries:{enabled:true,order:2,kicker:'What We Do',title:'We believe we can change lives together with you',description:''},
-    facts:{enabled:true,order:3,kicker:'',title:'',description:''},
+    facts:{enabled:false,order:3,kicker:'',title:'',description:''},
     outreach:{enabled:true,order:4,kicker:'Outreach',title:'Projects your giving makes possible',description:''},
     giving:{enabled:true,order:5,kicker:'Give',title:'Partner with us to bless those in need',description:'Every gift, large or small, helps us feed families, support children and share hope. Thank you for your generosity.'},
     events:{enabled:true,order:6,kicker:'Upcoming Events',title:'Be ready for our upcoming gatherings',description:''},

@@ -5,18 +5,12 @@ import VideoModal from './VideoModal';
 import { useAsync } from '../hooks/hooks';
 import { getHomepageSlides, getSiteContent } from '../lib/api';
 
-const defaults = [
-  { img: '/img/carousel-1.jpg', title: 'Welcome to Tidori Ministries', text: 'A community of faith, hope and service. Come as you are and grow with us.' },
-  { img: '/img/carousel-2.jpg', title: 'Get involved with a helping hand', text: 'Serve alongside our church family as we love our neighbours in practical ways.' },
-  { img: '/img/carousel-3.jpg', title: 'Bringing hope to our community', text: 'Your giving and prayers help us reach families in need.' },
-];
-
 export default function Hero() {
   const ref = useRef(null);
   const [video, setVideo] = useState(false);
   const { data: remoteSlides, loading: slidesLoading } = useAsync(getHomepageSlides);
   const { data: remoteSite } = useAsync(getSiteContent);
-  const slides = remoteSlides?.length ? remoteSlides : defaults;
+  const slides = remoteSlides || [];
   const activeSite = remoteSite || site;
 
   useEffect(() => {
@@ -34,6 +28,8 @@ export default function Hero() {
       if (carousel.hasClass('owl-loaded')) carousel.trigger('destroy.owl.carousel');
     };
   }, [slides, slidesLoading]);
+
+  if (!slides.length) return null;
 
   return (
     <>

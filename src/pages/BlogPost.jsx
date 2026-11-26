@@ -5,6 +5,7 @@ import {
   FaWhatsapp, FaFacebookF, FaLink, FaQuoteLeft, FaBookOpen,
 } from 'react-icons/fa';
 import Loading from '../components/Loading';
+import Seo from '../components/Seo';
 import PostCard from '../components/PostCard';
 import { useAsync } from '../hooks/hooks';
 import { getPost, getPosts } from '../lib/api';
@@ -92,6 +93,13 @@ export default function BlogPost() {
 
   return (
     <main className="pb-16">
+      <Seo
+        title={post.seo_title || `${post.title} | Tidori Ministries`}
+        description={post.seo_description || post.excerpt || `${post.title} — Read the latest story and update from Tidori Ministries.`}
+        path={`/blog/${encodeURIComponent(post.slug || slug)}`}
+        image={post.seo_image || post.image_url}
+        noindex={post.noindex === true}
+      />
       <section className={`relative isolate flex items-end overflow-hidden bg-[#142c35] ${presentation.hero_style === 'minimal' ? 'min-h-[250px]' : presentation.hero_style === 'compact' ? 'min-h-[320px]' : 'min-h-[390px] sm:min-h-[500px]'}`}>
         {post.image_url && presentation.show_featured_image !== false && presentation.hero_style !== 'minimal' && (
           <img

@@ -8,29 +8,17 @@ import { site } from '../config/site';
 import { useAsync } from '../hooks/hooks';
 import { getSiteContent } from '../lib/api';
 
-const ministryLocations = [
-  {
-    name: 'Tidori Ministries Uganda',
-    plusCode: '9QC3+6V Kampala',
-    mapQuery: '9QC3+6V Kampala Uganda',
-  },
-  {
-    name: 'Prayer Chambers for Tidori Ministries',
-    plusCode: '7HRC+2C Kampala',
-    mapQuery: '7HRC+2C Kampala Uganda',
-  },
-];
-
 export default function Contact() {
   const { data: cmsSite } = useAsync(getSiteContent);
   const activeSite = cmsSite || site;
+  const ministryLocations = Array.isArray(activeSite.locations) ? activeSite.locations.filter(location => location.name && location.mapQuery) : [];
   const [selectedLocation, setSelectedLocation] = useState(0);
-  const currentLocation = ministryLocations[selectedLocation];
+  const currentLocation = ministryLocations[selectedLocation] || ministryLocations[0];
   const info = [
     [FaMapMarkerAlt, 'Address', activeSite.address],
     [FaPhoneAlt, 'Phone', activeSite.phone],
     [FaEnvelope, 'Email', activeSite.email],
-  ];
+  ].filter(([, , value]) => typeof value === 'string' && value.trim());
 
   return (
     <>
@@ -46,13 +34,13 @@ export default function Contact() {
                   <div><h3 className="text-xl">{label}</h3><p>{val}</p></div>
                 </div>
               ))}
-              <p><strong className="text-navy">Service times:</strong> {activeSite.serviceTimes}</p>
+              {activeSite.serviceTimes?.trim() && <p><strong className="text-navy">Service times:</strong> {activeSite.serviceTimes}</p>}
               <img src="/img/contact.jpg" alt="" className="mt-6 w-full" loading="lazy" />
             </div>
             <ContactForm />
           </div>
 
-          <section className="mt-16" aria-labelledby="locations-heading">
+          {ministryLocations.length > 0 && <section className="mt-16" aria-labelledby="locations-heading">
             <SectionHeader kicker="Find Us" title="Our Locations" />
             <p className="mx-auto mb-8 max-w-2xl text-center text-gray-600">
               Visit Tidori Ministries at either of our Kampala locations. Select a location to view it on the map and get directions.
@@ -111,7 +99,7 @@ export default function Contact() {
                 allowFullScreen
               />
             </div>
-          </section>
+          </section>}
 
           <div className="mt-12"><AppointmentForm /></div>
         </div>

@@ -96,6 +96,7 @@ export default function AppointmentForm() {
 
   return (
     <section className="bg-mist p-5 sm:p-8">
+      <style>{`@keyframes tidori-price-grow { 0% { opacity: 0; transform: scaleX(.18) scale(.88); transform-origin: left center; } 65% { opacity: 1; transform: scaleX(1.04) scale(1.02); transform-origin: left center; } 100% { opacity: 1; transform: scaleX(1) scale(1); transform-origin: left center; } } .tidori-price-grow { display: inline-block; animation: tidori-price-grow .55s cubic-bezier(.2,.8,.2,1) both; } @media (prefers-reduced-motion: reduce) { .tidori-price-grow { animation: none; } }`}</style>
       <div className="mb-6">
         <p className="mb-2 text-gold">Pastoral appointments</p>
         <h2 className="text-2xl sm:text-3xl">Choose your appointment package</h2>
@@ -218,7 +219,7 @@ export default function AppointmentForm() {
                   <span className={'block text-[9px] font-bold uppercase tracking-[.16em] ' + (index === 1 ? 'text-[#d8c27f]' : 'text-[#9b7b35]')}>
                     {currencyLabel(displayCurrency)}
                   </span>
-                  <span className={'mt-1 block break-words text-[26px] font-extrabold leading-tight tracking-tight sm:text-[30px] ' + (index === 1 ? 'text-[#f1d98d]' : 'text-[#24242a]')}>
+                  <span key={displayCurrency} className={'tidori-price-grow mt-1 block break-words text-[26px] font-extrabold leading-tight tracking-tight sm:text-[30px] ' + (index === 1 ? 'text-[#f1d98d]' : 'text-[#24242a]')}>
                     {pkg
                       ? (convertedAmount(pkg.amount, pkg.currency || 'UGX', displayCurrency, usdToUgx) === null
                           ? (rateLoading ? 'Loading…' : money(pkg.amount, pkg.currency || 'UGX'))
@@ -296,7 +297,7 @@ export default function AppointmentForm() {
         <label className="text-sm font-semibold">Preferred time<input className="field mt-1" type="time" name="time" value={form.time} onChange={update} required /></label>
         <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm sm:col-span-2">
           <span className="text-gray-500">{universal ? 'Support request' : 'Selected package fee'}</span>
-          <strong className="ml-2 text-lg text-[#191c24]">
+          <strong key={displayCurrency} className="tidori-price-grow ml-2 text-lg text-[#191c24]">
             {universal
               ? 'No package fee'
               : selectedPackage

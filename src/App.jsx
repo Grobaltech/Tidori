@@ -53,9 +53,11 @@ function RouteSeo() {
   const [routeTitle, routeDescription] = sectionMatch
     ? [`${sectionMatch[1].replace(/-/g, ' ')} | About Tidori Ministries`, 'Learn more about the mission, work and values of Tidori Ministries.']
     : (pageSeo[pathname.replace(/\/$/, '')] || ['Page Not Found | Tidori Ministries', 'Explore Tidori Ministries and discover our faith, community and service initiatives.']);
-  const title = pathname === '/' && seoDefaults.title ? seoDefaults.title : routeTitle;
-  const description = pathname === '/' ? (seoDefaults.description || routeDescription) : routeDescription;
-  return <Seo title={title} description={description} image={seoDefaults.imageUrl} path={pathname} noindex={privateRoute || seoDefaults.allowIndexing === false || !pageSeo[pathname.replace(/\/$/, '')] && !sectionMatch} />;
+  const normalizedPath = pathname.replace(/\/$/, '') || '/';
+  const pageSettings = seoDefaults.pages?.[normalizedPath] || {};
+  const title = pageSettings.title || (pathname === '/' && seoDefaults.title ? seoDefaults.title : routeTitle);
+  const description = pageSettings.description || (pathname === '/' ? (seoDefaults.description || routeDescription) : routeDescription);
+  return <Seo title={title} description={description} image={seoDefaults.imageUrl} path={pathname} noindex={privateRoute || pageSettings.noindex === true || seoDefaults.allowIndexing === false || !pageSeo[normalizedPath] && !sectionMatch} />;
 }
 
 export default function App() {

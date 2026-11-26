@@ -24,6 +24,8 @@ export default function Seo({
     const canonicalUrl = new URL(path || window.location.pathname, ORIGIN).toString();
     const cleanTitle = title || 'Tidori Ministries';
     const cleanDescription = String(description || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    let resolvedImage = DEFAULT_IMAGE;
+    try { resolvedImage = new URL(image || DEFAULT_IMAGE, ORIGIN).toString(); } catch { /* keep the safe default image */ }
     document.title = cleanTitle;
 
     setMeta('meta[name="description"]', 'name', 'description', cleanDescription);
@@ -33,11 +35,11 @@ export default function Seo({
     setMeta('meta[property="og:title"]', 'property', 'og:title', cleanTitle);
     setMeta('meta[property="og:description"]', 'property', 'og:description', cleanDescription);
     setMeta('meta[property="og:url"]', 'property', 'og:url', canonicalUrl);
-    setMeta('meta[property="og:image"]', 'property', 'og:image', image || DEFAULT_IMAGE);
+    setMeta('meta[property="og:image"]', 'property', 'og:image', resolvedImage);
     setMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
     setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', cleanTitle);
     setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', cleanDescription);
-    setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', image || DEFAULT_IMAGE);
+    setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', resolvedImage);
 
     let canonical = document.head.querySelector('link[rel="canonical"]');
     if (!canonical) {

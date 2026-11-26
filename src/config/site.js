@@ -4,6 +4,7 @@ export const site = {
   shortName: 'Tidori',
   tagline: 'A community of faith, hope and service',
   address: '',
+  locations: [],
   phone: '',
   email: '',
   // Leave '' to hide a social icon

@@ -102,20 +102,21 @@ export default function AppointmentForm() {
         <p className="mt-2 text-sm leading-6 text-gray-600">Each package includes the benefits of the tier below it. Crisis support, emergency pastoral intervention, therapist referrals and needs-based benevolence remain available regardless of package.</p>
       </div>
 
-      <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-bold text-[#191c24]">Display prices in</p>
-          <p className="text-xs text-gray-500">Choose the currency you are most comfortable with</p>
+      <div className="mb-4 flex items-center justify-end gap-3">
+        <span className="text-xs font-bold uppercase tracking-[.14em] text-[#4a4c70]">Currency</span>
+        <div role="group" aria-label="Currency" className="inline-flex rounded-full bg-[#f3f6ff] p-1 shadow-[inset_3px_3px_7px_rgba(74,76,112,.12),inset_-3px_-3px_7px_rgba(255,255,255,.95)]">
+          {['UGX','USD'].map(currency => (
+            <button
+              key={currency}
+              type="button"
+              aria-pressed={displayCurrency === currency}
+              onClick={() => setDisplayCurrency(currency)}
+              className={'min-w-[62px] rounded-full px-4 py-2 text-xs font-extrabold transition-all ' + (displayCurrency === currency ? 'bg-[#4a4c70] text-white shadow-md' : 'text-[#4a4c70] hover:bg-white/70')}
+            >
+              {currency}
+            </button>
+          ))}
         </div>
-        <select
-          aria-label="Display currency"
-          className="field w-full sm:max-w-[230px]"
-          value={displayCurrency}
-          onChange={event => setDisplayCurrency(event.target.value)}
-        >
-          <option value="UGX">🇺🇬 UGX · Ugandan Shilling</option>
-          <option value="USD">🇺🇸 USD · US Dollar</option>
-        </select>
       </div>
 
       <div className="mb-7 -mx-4 grid grid-cols-1 items-stretch gap-4 sm:mx-0 sm:grid-cols-2 xl:grid-cols-3">

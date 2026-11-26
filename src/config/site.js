@@ -4,7 +4,10 @@ export const site = {
   shortName: 'Tidori',
   tagline: 'A community of faith, hope and service',
   address: '',
-  locations: [],
+  locations: [
+    { name: 'Tidori Ministries Uganda', plusCode: '9QC3+6V Kampala', mapQuery: '9QC3+6V Kampala Uganda' },
+    { name: 'Prayer Chambers for Tidori Ministries', plusCode: '7HRC+2C Kampala', mapQuery: '7HRC+2C Kampala Uganda' },
+  ],
   phone: '',
   email: '',
   // Leave '' to hide a social icon

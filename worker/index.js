@@ -1378,10 +1378,36 @@ async function cloudflareTurnIceServers(env) {
   return payload.iceServers;
 }
 
+const SEO_ORIGIN = "https://tidoriministries.org";
+const SEO_STATIC_PATHS = ["/", "/about", "/outreach", "/events", "/blog", "/ministries", "/team", "/give", "/bursaries", "/volunteer", "/contact"];
+
+function xmlEscape(value) {
+  return String(value ?? "").replace(/[<>&\'"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\'": "&apos;", '"\': "&quot;" }[char]));
+}
+
+async function publicSitemap(env) {
+  const urls = SEO_STATIC_PATHS.map(path => `<url><loc>${SEO_ORIGIN}${path}</loc></url>`);
+  if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const posts = await supabaseRequest(env, "posts?select=slug,published_at&published=eq.true&order=published_at.desc&limit=5000");
+      for (const post of posts || []) {
+        if (!post.slug) continue;
+        const loc = `${SEO_ORIGIN}/blog/${encodeURIComponent(post.slug)}`;
+        const lastmod = post.published_at ? `<lastmod>${xmlEscape(new Date(post.published_at).toISOString())}</lastmod>` : "";
+        urls.push(`<url><loc>${xmlEscape(loc)}</loc>${lastmod}</url>`);
+      }
+    } catch (error) { console.error("Tidori sitemap could not load published posts:", error); }
+  }
+  return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`, {
+    headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=900, s-maxage=900" }
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
+      if (url.pathname === "/sitemap.xml" && request.method === "GET") return await publicSitemap(env);
       const videoIceMatch = url.pathname.match(/^\/api\/video\/rooms\/([0-9a-f-]{36})\/ice$/i);
       if (videoIceMatch && request.method === "GET") {
         if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return json({ error: "Video calling is not configured." }, 503);

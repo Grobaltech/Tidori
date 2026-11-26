@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const emptySite = {
-  name:'Tidori Ministries', shortName:'Tidori', logoUrl:'/img/grok_1793864104245.jpg', tagline:'', motto:'', registrationNumber:'', foundingDate:'', websiteUrl:'', postalAddress:'', address:'', locations:[], phone:'', email:'',
+  name:'Tidori Ministries', shortName:'Tidori', logoUrl:'/img/grok_1793864104245.jpg', tagline:'', motto:'', registrationNumber:'', foundingDate:'', websiteUrl:'', postalAddress:'', address:'', locations:[{name:'Tidori Ministries Uganda',plusCode:'9QC3+6V Kampala',mapQuery:'9QC3+6V Kampala Uganda'},{name:'Prayer Chambers for Tidori Ministries',plusCode:'7HRC+2C Kampala',mapQuery:'7HRC+2C Kampala Uganda'}], phone:'', email:'',
   serviceTimes:'', videoUrl:'',
   social:{ facebook:'', twitter:'', youtube:'', instagram:'', linkedin:'' },
   about:{ about:'', history:'', mission:'', vision:'', beliefs:'', objectives:'', values:'', imageUrl:'/img/about.jpg' },
